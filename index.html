@@ -1,0 +1,2426 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CADARN | Hub Estratégico</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* ==================================================== */
+        /* VARIÁVEIS GERAIS (MODO ESCURO POR PADRÃO)            */
+        /* ==================================================== */
+        :root {
+            --cadarn-grafite: #1a1a19;      
+            --cadarn-roxo: #832EFF;        
+            --cadarn-roxo-claro: #a86bff;
+            --cadarn-branco: #F8FAFC;
+            --cadarn-cinza: #a1a1aa;
+            --bg-body: #050505; 
+            --bg-card: rgba(20, 20, 20, 0.65); 
+            --border-color: rgba(255, 255, 255, 0.08);
+            --border-hover: rgba(131, 46, 255, 0.5);
+            --glow-roxo: rgba(131, 46, 255, 0.25);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease; }
+
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-body); color: var(--cadarn-branco); padding-bottom: 70px; overflow-x: hidden; -webkit-font-smoothing: antialiased; position: relative; transition: color 0.3s ease, background-color 0.3s ease; margin-top: 0;}
+        
+        body::before {
+            content: ''; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -2;
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+        .ambient-light-1 { position: fixed; top: -10%; left: -5%; width: 40vw; height: 40vw; background: rgba(131, 46, 255, 0.08); border-radius: 50%; filter: blur(120px); z-index: -1; pointer-events: none; }
+        .ambient-light-2 { position: fixed; bottom: -10%; right: -5%; width: 30vw; height: 30vw; background: rgba(32, 201, 151, 0.03); border-radius: 50%; filter: blur(120px); z-index: -1; pointer-events: none; }
+
+        ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: rgba(131, 46, 255, 0.5); border-radius: 10px; }
+        *:focus-visible { outline: 2px solid var(--cadarn-roxo); outline-offset: 2px; border-radius: 4px; }
+
+        /* --- OFFLINE BANNER --- */
+        #offline-banner { display: none; position: relative; width: 100%; background: #dc3545; color: white; text-align: center; padding: 6px 15px; font-size: 12px; font-weight: 600; z-index: 10000; letter-spacing: 0.5px; }
+
+        /* ==================================================== */
+        /* MODO CLARO (LIGHT THEME) OVERRIDES                   */
+        /* ==================================================== */
+        body.light-mode {
+            --bg-body: #f1f5f9; 
+            --bg-card: rgba(255, 255, 255, 0.85); 
+            --cadarn-branco: #0f172a; 
+            --cadarn-cinza: #64748b;
+            --cadarn-grafite: #e2e8f0;
+            --border-color: rgba(0, 0, 0, 0.08);
+            --glow-roxo: rgba(131, 46, 255, 0.15);
+        }
+        body.light-mode::before { background-image: linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px); }
+        body.light-mode header { background: rgba(255, 255, 255, 0.85); }
+        body.light-mode .card { box-shadow: 0 10px 30px rgba(0,0,0,0.03); }
+        body.light-mode .cmd-key { background: rgba(0,0,0,0.05); color: var(--cadarn-branco); border-color: rgba(0,0,0,0.1); }
+        body.light-mode .project-row:hover { background: rgba(131, 46, 255, 0.05); }
+        body.light-mode .kanban-col { background: rgba(0,0,0,0.02); }
+        body.light-mode .kanban-card { background: #ffffff; border-color: rgba(0,0,0,0.05); box-shadow: 0 4px 6px rgba(0,0,0,0.02); }
+        body.light-mode .dir-button { background: linear-gradient(145deg, #ffffff, #f8fafc); }
+        body.light-mode .quote-card, body.light-mode .sla-card { background: linear-gradient(145deg, rgba(131, 46, 255, 0.05), #ffffff); }
+        body.light-mode .modal-content, body.light-mode .cmd-modal, body.light-mode .side-panel, body.light-mode .side-widget { background: rgba(255,255,255,0.98); }
+        body.light-mode .modal-input, body.light-mode .cmd-search, body.light-mode .edit-input, body.light-mode .edit-textarea, body.light-mode .edit-select, body.light-mode .widget-area { background: #f8fafc; color: var(--cadarn-branco); border-color: rgba(0,0,0,0.1); }
+        body.light-mode .sp-header, body.light-mode .widget-header { background: rgba(0,0,0,0.02); }
+        body.light-mode .skeleton-line, body.light-mode .skeleton-box { background: linear-gradient(90deg, rgba(0,0,0,0.03) 25%, rgba(0,0,0,0.06) 50%, rgba(0,0,0,0.03) 75%); background-size: 200% 100%; }
+        body.light-mode .team-item { background: rgba(0,0,0,0.03); }
+        body.light-mode .step-icon { background: #ffffff; border-color: rgba(0,0,0,0.1); }
+        body.light-mode .sp-desc { background: rgba(0,0,0,0.02); border-color: rgba(0,0,0,0.05); color: #334155; }
+        body.light-mode .btn-icon:hover, body.light-mode .btn-refresh:hover { background: rgba(0,0,0,0.05); color: var(--cadarn-branco); }
+        body.light-mode .view-btn.active { background: rgba(0,0,0,0.05); color: var(--cadarn-branco); }
+        body.light-mode .view-toggle { background: rgba(0,0,0,0.03); }
+        body.light-mode .news-card { background: #ffffff; }
+        body.light-mode .news-card:hover { background: rgba(131, 46, 255, 0.03); }
+        body.light-mode #briefing-news-list { background: rgba(0,0,0,0.02) !important; border-color: rgba(0,0,0,0.05) !important; }
+        body.light-mode .briefing-news-item a { color: var(--cadarn-branco); }
+        body.light-mode .briefing-news-item a:hover { color: var(--cadarn-roxo); }
+        body.light-mode .lixeira-controls { background: rgba(0,0,0,0.02); }
+        body.light-mode .pres-box { background: rgba(0,0,0,0.02); border-color: rgba(0,0,0,0.05); }
+        body.light-mode .sla-text strong { color: var(--cadarn-branco); }
+        body.light-mode .autocomplete-items { background: #f8fafc; border-color: rgba(0,0,0,0.1); }
+        body.light-mode .autocomplete-items div { background-color: #ffffff; border-color: rgba(0,0,0,0.05); color: var(--cadarn-branco); }
+        body.light-mode .autocomplete-items div:hover { background-color: rgba(131, 46, 255, 0.1); }
+        body.light-mode .prof-list-item { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.05); }
+        body.light-mode .prof-list-item:hover { background: rgba(131, 46, 255, 0.05); border-color: rgba(131, 46, 255, 0.2); }
+
+        /* --- HEADER --- */
+        header { background: rgba(10, 10, 10, 0.75); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); padding: 12px 5%; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 30px rgba(0,0,0,0.6); }
+        .brand-container { display: flex; align-items: center; gap: 15px; }
+        .company-logo { height: 32px; width: auto; object-fit: contain; filter: drop-shadow(0 0 8px rgba(255,255,255,0.2)); }
+        .logo-text { font-weight: 800; font-size: 20px; letter-spacing: -0.5px; border-left: 1px solid var(--border-color); padding-left: 15px; }
+        .logo-text span { color: var(--cadarn-roxo-claro); font-weight: 500; text-shadow: 0 0 15px var(--glow-roxo); }
+        .header-controls { display: flex; align-items: center; gap: 20px; }
+        .cmd-hint { background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); padding: 6px 12px; border-radius: 6px; font-size: 12px; color: var(--cadarn-cinza); display: flex; align-items: center; gap: 8px; cursor: pointer; transition: 0.2s; }
+        .cmd-hint:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); }
+        .cmd-key { background: rgba(0,0,0,0.5); padding: 2px 6px; border-radius: 4px; font-weight: 600; font-family: monospace; color: white; }
+        
+        .btn-icon { background: transparent; border: none; color: var(--cadarn-cinza); font-size: 18px; cursor: pointer; transition: 0.2s; padding: 5px; border-radius: 5px;}
+        .btn-icon:hover { color: white; background: rgba(255,255,255,0.1); }
+        
+        .btn-refresh { background: transparent; border: none; color: var(--cadarn-cinza); cursor: pointer; padding: 6px; border-radius: 6px; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; }
+        .btn-refresh:hover { color: white; background: rgba(255,255,255,0.1); }
+        .btn-refresh.loading { animation: spin 1s linear infinite; pointer-events: none; opacity: 0.5; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        .btn-presenca { background: linear-gradient(135deg, #20c997, #157347); color: white; text-decoration: none; padding: 8px 18px; border-radius: 30px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; border: 1px solid rgba(255, 255, 255, 0.1); display: flex; align-items: center; gap: 8px; box-shadow: 0 0 15px rgba(32, 201, 151, 0.2); transition: all 0.3s ease; cursor: pointer; }
+        .btn-presenca:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(32, 201, 151, 0.5); }
+        .clock-widget { text-align: right; font-size: 11px; color: var(--cadarn-cinza); line-height: 1.4; border-left: 1px solid var(--border-color); padding-left: 15px; }
+        .clock-widget strong { color: var(--cadarn-branco); font-size: 14px; font-weight: 700; display: block; letter-spacing: 0.5px; }
+        .user-menu { display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 4px 4px 4px 12px; border-radius: 40px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); transition: all 0.3s; }
+        .user-menu:hover { border-color: var(--border-hover); background: rgba(131, 46, 255, 0.08); box-shadow: 0 0 15px var(--glow-roxo); }
+        .user-text { text-align: right; }
+        .nome-gradiente { background: linear-gradient(90deg, #ffffff, #b68aff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 13px; font-weight: 700; display: block; }
+        .user-subtext { font-size: 9px; color: var(--cadarn-cinza); display: block; text-transform: uppercase; letter-spacing: 1px; margin-top: 2px;}
+        .avatar { width: 34px; height: 34px; background: linear-gradient(135deg, var(--cadarn-roxo), #420a9a); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; color: white; border: 2px solid rgba(255,255,255,0.1); box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
+
+        /* --- CONTAINER & CARDS --- */
+        .container { width: 92%; max-width: 1440px; margin: 30px auto; display: flex; flex-direction: column; gap: 30px; }
+        .section-header { font-size: 17px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; color: #f4f4f5; justify-content: space-between; flex-wrap: wrap; }
+        .section-header-title { display: flex; align-items: center; gap: 10px; color: var(--cadarn-branco); }
+        .section-header-title::before { content: ''; display: block; width: 4px; height: 16px; background: var(--cadarn-roxo); border-radius: 4px; box-shadow: 0 0 8px var(--cadarn-roxo); }
+        .section-header-controls { display: flex; align-items: center; gap: 10px; margin-left: auto; flex-wrap: wrap; }
+        
+        .card { background: var(--bg-card); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid var(--border-color); border-radius: 16px; padding: 24px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); animation: slideUp 0.6s ease-out backwards; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        .card:hover { border-color: rgba(131, 46, 255, 0.3); box-shadow: 0 15px 40px rgba(0,0,0,0.5); }
+
+        .anim-1 { animation-delay: 0.1s; } .anim-2 { animation-delay: 0.2s; } .anim-3 { animation-delay: 0.3s; } .anim-4 { animation-delay: 0.4s; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- VISÃO EXECUTIVA (KPIs) --- */
+        .visao-executiva-wrapper { display: grid; grid-template-columns: 180px 1fr 1.3fr; gap: 20px; align-items: stretch; }
+        .visao-chart { width: 180px; height: 180px; margin: 0 auto;}
+        .visao-stats { display: flex; flex-direction: column; gap: 15px; width: 100%; justify-content: center;}
+        
+        /* Flex Horizontal Layout for Top Colabs & Highlight */
+        .team-availability-wrapper { position: relative; display: flex; flex-direction: row; background: rgba(0,0,0,0.15); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); width: 100%; overflow: hidden; align-items: stretch; }
+        .team-list-container { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+        .colab-mes-container { width: 160px; border-left: 1px solid var(--border-color); padding-left: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; }
+
+        #teamAvailabilityContainer { display: flex; gap: 18px; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+        #teamAvailabilityContainer::-webkit-scrollbar { display: none; }
+
+        /* --- PROJETOS: LISTA, KANBAN, TAGS, EQUIPE, LIXEIRA --- */
+        .project-row { padding: 15px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; border-radius: 8px; cursor: pointer; transition: all 0.2s; background: rgba(255,255,255,0.01); margin-bottom: 5px; }
+        .project-row:hover { background: rgba(131, 46, 255, 0.1); border-color: transparent; transform: translateX(5px); box-shadow: inset 2px 0 0 var(--cadarn-roxo); }
+        
+        .kanban-board { display: flex; gap: 20px; overflow-x: auto; padding-bottom: 10px; align-items: flex-start; }
+        .kanban-col { flex: 1; min-width: 280px; min-height: 400px; background: rgba(0,0,0,0.2); border-radius: 12px; padding: 15px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 10px; height: max-content; }
+        
+        .kanban-col-header { font-size: 13px; font-weight: 700; color: var(--cadarn-cinza); text-transform: uppercase; letter-spacing: 1px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .kanban-card { background: rgba(20,20,20,0.8); border: 1px solid var(--border-color); padding: 16px; border-radius: 10px; cursor: pointer; transition: all 0.2s; position: relative;}
+        .kanban-card:hover { border-color: var(--cadarn-roxo); transform: translateY(-4px); box-shadow: 0 10px 20px rgba(0,0,0,0.4); }
+        .kanban-card-title { font-size: 15px; font-weight: 600; margin-bottom: 8px; color: var(--cadarn-branco); padding-right: 25px; }
+        .kanban-card-meta { font-size: 12px; color: var(--cadarn-cinza); margin-bottom: 12px; }
+        
+        /* TEAM MATRIX (EQUIPE) */
+        .team-matrix-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 15px; }
+        .team-member-card { background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 10px; transition: 0.3s; cursor: pointer; }
+        .team-member-card:hover { border-color: var(--cadarn-roxo-claro); box-shadow: 0 5px 15px rgba(131,46,255,0.1); transform: translateY(-2px); }
+        .tm-header { display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
+        .tm-info { font-size: 14px; font-weight: 600; color: var(--cadarn-branco); }
+        .tm-sub { font-size: 11px; color: var(--cadarn-cinza); font-weight: 400; }
+        .tm-body { font-size: 12px; color: var(--cadarn-cinza); line-height: 1.6; }
+
+        /* LIXEIRA */
+        .lixeira-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 10px 15px; background: rgba(0,0,0,0.2); border-radius: 8px; border: 1px solid var(--border-color); }
+        .checkbox-lixeira { width: 18px; height: 18px; cursor: pointer; accent-color: #dc3545; }
+
+        /* SLA BADGES */
+        .badge-danger { background: rgba(220,53,69,0.2); color: #ff8793; border: 1px solid rgba(220,53,69,0.5); padding: 2px 6px; border-radius: 4px; font-size: 9px; text-transform: uppercase; font-weight: bold; margin-left: auto;}
+        .badge-warning { background: rgba(255,193,7,0.2); color: #ffc107; border: 1px solid rgba(255,193,7,0.5); padding: 2px 6px; border-radius: 4px; font-size: 9px; text-transform: uppercase; font-weight: bold; margin-left: auto;}
+
+        /* BOTÃO DE APRESENTAÇÃO PREMIUM */
+        .btn-present {
+            background: linear-gradient(135deg, rgba(131, 46, 255, 0.8), rgba(66, 10, 154, 0.8));
+            color: white; border: 1px solid rgba(131, 46, 255, 0.5); padding: 6px 14px; border-radius: 8px;
+            font-size: 13px; font-family: 'Inter', sans-serif; font-weight: 600; cursor: pointer; transition: all 0.3s ease;
+            display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(131, 46, 255, 0.2);
+        }
+        .btn-present:hover {
+            background: linear-gradient(135deg, rgba(131, 46, 255, 1), rgba(66, 10, 154, 1));
+            box-shadow: 0 6px 20px rgba(131, 46, 255, 0.4); transform: translateY(-1px);
+        }
+        .btn-present svg { width: 14px; height: 14px; fill: currentColor; }
+
+        #tags-filter-container { display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; }
+        .tag-pill { display: inline-block; background: rgba(131, 46, 255, 0.15); color: #c5a3ff; font-size: 10px; font-weight: 700; padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(131,46,255,0.3); margin-right: 5px; margin-bottom: 5px; }
+        .tag-filter-btn { background: rgba(255,255,255,0.05); color: var(--cadarn-cinza); border: 1px solid var(--border-color); padding: 6px 14px; border-radius: 20px; font-size: 11px; font-weight: 600; cursor: pointer; transition: 0.2s; white-space: nowrap; }
+        .tag-filter-btn:hover { background: rgba(255,255,255,0.1); color: var(--cadarn-branco); }
+        .tag-filter-btn.active { background: var(--cadarn-roxo); color: white; border-color: var(--cadarn-roxo); }
+
+        .view-toggle { display: flex; gap: 5px; background: rgba(0,0,0,0.5); padding: 4px; border-radius: 8px; border: 1px solid var(--border-color); overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+        .view-toggle::-webkit-scrollbar { display: none; }
+        .view-btn { background: transparent; color: var(--cadarn-cinza); border: none; padding: 6px 12px; border-radius: 4px; font-size: 12px; cursor: pointer; font-weight: 600; }
+        .view-btn.active { background: rgba(255,255,255,0.1); color: var(--cadarn-branco); }
+
+        .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; flex-shrink: 0; }
+        .dot-ativo { background: #b68aff; box-shadow: 0 0 8px #b68aff; animation: pulse-roxo 2s infinite; }
+        .dot-concluido { background: #47e299; }
+        .dot-pendente { background: #666; }
+        @keyframes pulse-roxo { 0% { box-shadow: 0 0 0 0 rgba(182,138,255,0.7); } 70% { box-shadow: 0 0 0 6px rgba(182,138,255,0); } 100% { box-shadow: 0 0 0 0 rgba(182,138,255,0); } }
+
+        /* --- SKELETONS REFINADOS --- */
+        .skeleton-line { background: linear-gradient(90deg, rgba(255,255,255,0.02) 25%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.02) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite linear; border-radius: 4px; }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        
+        .skeleton-card-refined { padding: 15px; border-bottom: 1px solid var(--border-color); margin-bottom: 5px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .skeleton-card-title { height: 16px; width: 60%; margin-bottom: 10px; }
+        .skeleton-card-tags { display: flex; gap: 8px; margin-bottom: 10px; }
+        .skeleton-card-tag { height: 18px; width: 50px; border-radius: 10px; }
+        .skeleton-card-meta { height: 12px; width: 40%; }
+
+        /* --- NOTÍCIAS E FRASE DO DIA --- */
+        #noticias-container { max-height: 380px; overflow-y: auto; padding-right: 10px; }
+        .news-card { display: block; text-decoration: none; background: rgba(255,255,255,0.015); padding: 16px; border-radius: 10px; margin-bottom: 12px; border: 1px solid var(--border-color); transition: all 0.2s; }
+        .news-card:hover { border-color: var(--border-hover); background: rgba(131, 46, 255, 0.05); transform: scale(1.01); box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .news-card h4 { color: var(--cadarn-branco); font-size: 13.5px; line-height: 1.5; margin-bottom: 12px; font-weight: 500; }
+        .news-meta { display: flex; align-items: center; gap: 10px; }
+        .portal-flag { background: rgba(131, 46, 255, 0.2); border: 1px solid rgba(131,46,255,0.5); color: #c5a3ff; font-size: 9px; font-weight: 700; padding: 3px 8px; border-radius: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .time-flag { color: var(--cadarn-cinza); font-size: 10px; }
+
+        /* Caixa: Insight / Frase do Dia */
+        .quote-card {
+            background: linear-gradient(145deg, rgba(131, 46, 255, 0.1), rgba(20, 20, 20, 0.8));
+            border: 1px solid rgba(131, 46, 255, 0.3);
+            border-radius: 12px;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        .quote-card::before { content: '“'; position: absolute; top: -10px; right: 15px; font-size: 80px; color: rgba(131, 46, 255, 0.15); font-family: Georgia, serif; line-height: 1; pointer-events: none; }
+        .quote-title { font-size: 10px; text-transform: uppercase; color: var(--cadarn-roxo-claro); font-weight: 700; letter-spacing: 1px; display: flex; align-items: center; gap: 6px; }
+        .quote-text { font-size: 14px; font-style: italic; color: var(--cadarn-branco); line-height: 1.5; position: relative; z-index: 1; }
+        .quote-author { font-size: 11px; color: var(--cadarn-cinza); text-align: right; font-weight: 600; }
+
+        /* --- SLA RADAR --- */
+        .sla-card { background: rgba(20, 20, 20, 0.65); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; display: flex; flex-direction: column; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+        .sla-list { display: flex; flex-direction: column; gap: 10px; max-height: 200px; overflow-y: auto; padding-right: 5px;}
+        .sla-item { font-size: 12px; color: var(--cadarn-cinza); line-height: 1.4; display: flex; gap: 10px; align-items: flex-start; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.02); cursor: pointer; transition: 0.2s;}
+        .sla-item:hover { background-color: rgba(255,255,255,0.05); border-radius: 4px; }
+        .sla-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        .sla-time { font-weight: 600; font-size: 10px; flex-shrink: 0; padding-top: 2px;}
+        .sla-text strong { color: var(--cadarn-branco); font-weight: 600; }
+
+        .directory-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+        .dir-button { background: linear-gradient(145deg, rgba(30,30,30,0.6), rgba(15,15,15,0.8)); backdrop-filter: blur(10px); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; display: flex; align-items: center; gap: 16px; text-decoration: none; color: var(--cadarn-branco); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .dir-button:hover { transform: translateY(-4px); border-color: var(--cadarn-roxo); box-shadow: 0 10px 20px rgba(0,0,0,0.4), inset 0 0 15px rgba(131,46,255,0.1); }
+        .dir-icon { font-size: 22px; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.5)); transition: transform 0.3s; }
+        .dir-button:hover .dir-icon { transform: scale(1.15) rotate(-5deg); }
+        .dir-label { font-size: 13px; font-weight: 500; letter-spacing: 0.2px; }
+
+        .hero-grid { display: grid; grid-template-columns: 1.5fr 1.2fr; gap: 20px; align-items: start; }
+        .commodities-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
+        .commodity-item { height: 160px; padding: 10px; }
+        .heatmap-container { height: 500px; padding: 10px; }
+        footer { position: fixed; bottom: 0; width: 100%; height: 45px; background: rgba(0,0,0,0.9); border-top: 1px solid var(--cadarn-roxo); z-index: 1000; box-shadow: 0 -5px 20px rgba(0,0,0,0.5); }
+        iframe { border: none; width: 100%; height: 100%; border-radius: 8px; }
+
+        /* --- AUTOCOMPLETE --- */
+        .autocomplete-items { position: absolute; border: 1px solid var(--border-color); border-top: none; z-index: 99; top: 100%; left: 0; right: 0; background: var(--bg-card); border-radius: 0 0 6px 6px; overflow: hidden; max-height: 150px; overflow-y: auto;}
+        .autocomplete-items div { padding: 10px; cursor: pointer; background-color: rgba(0,0,0,0.8); border-bottom: 1px solid var(--border-color); color: var(--cadarn-branco); font-size: 13px; font-family: 'Inter'; }
+        .autocomplete-items div:hover { background-color: rgba(131, 46, 255, 0.4); }
+
+        /* --- MODAIS GERAIS E TOASTS --- */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(15px); display: flex; align-items: center; justify-content: center; z-index: 9999; visibility: hidden; opacity: 0; transition: 0.4s; }
+        .modal-overlay.active { visibility: visible; opacity: 1; }
+        .modal-content { background: rgba(20,20,20,0.95); padding: 40px; border-radius: 20px; border: 1px solid rgba(131,46,255,0.4); text-align: center; width: 90%; max-width: 380px; box-shadow: 0 30px 60px rgba(0,0,0,0.8); transform: scale(0.95); transition: transform 0.4s; max-height: 90vh; overflow-y: auto;}
+        .modal-overlay.active .modal-content { transform: scale(1); }
+        .modal-input { width: 100%; padding: 16px; margin: 25px 0; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.4); color: white; text-align: center; outline: none; font-size: 16px; transition: all 0.3s; }
+        .modal-input:focus { border-color: var(--cadarn-roxo); box-shadow: 0 0 15px rgba(131,46,255,0.3); }
+
+        /* TOASTS NÂO-BLOQUEANTES */
+        .toast-container { position: fixed; bottom: 65px; right: 30px; display: flex; flex-direction: column; gap: 10px; z-index: 10000; pointer-events: none; }
+        .toast { background: rgba(20,20,20,0.95); backdrop-filter: blur(15px); border: 1px solid var(--border-color); color: var(--cadarn-branco); padding: 14px 20px; border-radius: 8px; font-size: 13px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: space-between; gap: 20px; min-width: 300px; pointer-events: auto; transform: translateX(120%); animation: slideInToast 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        .toast-success { border-left: 4px solid #47e299; }
+        .toast-danger { border-left: 4px solid #ff8793; }
+        .toast-warning { border-left: 4px solid #ffc107; }
+        .toast-info { border-left: 4px solid var(--cadarn-roxo-claro); }
+        .toast-undo { background: rgba(255,255,255,0.1); border: none; color: white; padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer; transition: 0.2s; flex-shrink: 0; }
+        .toast-undo:hover { background: rgba(255,255,255,0.2); }
+        @keyframes slideInToast { to { transform: translateX(0); } }
+        @keyframes slideOutToast { to { transform: translateX(120%); opacity: 0; } }
+
+        .briefing-card { text-align: left; padding: 30px; max-width: 450px; }
+        .briefing-stat { background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; font-size: 14px; border: 1px solid var(--border-color); }
+        .briefing-alert { border-color: rgba(220,53,69,0.5); background: rgba(220,53,69,0.1); }
+        .briefing-news-item { font-size: 13px; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; gap: 4px; }
+        .briefing-news-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        .briefing-news-item a { color: var(--cadarn-branco); text-decoration: none; transition: 0.2s; line-height: 1.4; }
+        .briefing-news-item a:hover { color: var(--cadarn-roxo-claro); }
+        .briefing-news-item span { font-size: 10px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 600; }
+
+        .cmd-modal { background: rgba(20,20,20,0.95); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; width: 90%; max-width: 600px; box-shadow: 0 30px 80px rgba(0,0,0,0.8); overflow: hidden; transform: translateY(-50px); transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .modal-overlay.active .cmd-modal { transform: translateY(0); }
+        .cmd-search { width: 100%; padding: 20px; border: none; border-bottom: 1px solid rgba(255,255,255,0.1); background: transparent; color: var(--cadarn-branco); font-size: 18px; font-family: 'Inter'; outline: none; }
+        .cmd-results { max-height: 350px; overflow-y: auto; padding: 10px; }
+        .cmd-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 15px; border-radius: 8px; cursor: pointer; color: var(--cadarn-cinza); text-decoration: none; font-size: 14px; transition: 0.2s; }
+        .cmd-item:hover, .cmd-item.active { background: rgba(131, 46, 255, 0.15); color: var(--cadarn-branco); }
+        .cmd-item-type { font-size: 10px; text-transform: uppercase; background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px; }
+
+        /* --- MODO APRESENTAÇÃO (SLIDES) --- */
+        .presentation-modal .modal-content { max-width: 1200px; width: 95%; height: 85vh; padding: 40px; display: flex; flex-direction: column; justify-content: space-between; text-align: left; background: var(--bg-card); backdrop-filter: blur(40px); }
+        .pres-header { border-bottom: 1px solid var(--border-color); padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: flex-start; }
+        .pres-title { font-size: 36px; font-weight: 800; color: var(--cadarn-branco); margin-bottom: 10px; line-height: 1.2;}
+        .pres-client { font-size: 16px; color: var(--cadarn-roxo-claro); font-weight: 600; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 15px; display: inline-block; background: rgba(131,46,255,0.15); padding: 4px 12px; border-radius: 20px;}
+        .pres-meta-info { display: flex; gap: 20px; color: var(--cadarn-cinza); font-size: 14px; font-weight: 500;}
+        .pres-body { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; flex-grow: 1; overflow-y: auto; padding-right: 10px;}
+        .pres-box { background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); padding: 25px; border-radius: 16px; }
+        .pres-box-title { font-size: 13px; text-transform: uppercase; color: var(--cadarn-cinza); font-weight: 700; letter-spacing: 1px; margin-bottom: 15px; }
+        .pres-desc { font-size: 16px; color: var(--cadarn-branco); line-height: 1.6; }
+        .pres-controls { display: flex; justify-content: space-between; align-items: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border-color); }
+        .pres-btn { background: var(--cadarn-roxo); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 14px; }
+        .pres-btn:hover { background: var(--cadarn-roxo-claro); }
+        .pres-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        .pres-counter { color: var(--cadarn-cinza); font-weight: 600; letter-spacing: 2px; }
+        .pres-close { position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: var(--cadarn-branco); width: 40px; height: 40px; border-radius: 50%; font-size: 18px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center;}
+        .pres-close:hover { background: rgba(220, 53, 69, 0.8); border-color: transparent;}
+
+        /* --- MODAL PERFIL DO COLABORADOR --- */
+        .profile-card { text-align: left !important; max-width: 500px !important; padding: 30px !important; }
+        .profile-header { display: flex; gap: 20px; align-items: center; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--border-color); }
+        .profile-avatar-container { position: relative; cursor: pointer; width: 80px; height: 80px; border-radius: 50%; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.5); flex-shrink: 0; }
+        .profile-avatar-container:hover .avatar-overlay { opacity: 1; }
+        .avatar-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); color: white; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; opacity: 0; transition: 0.3s; text-transform: uppercase; text-align: center; }
+        .profile-avatar-container.dragover { border: 2px dashed var(--cadarn-roxo); opacity: 0.8; }
+        .profile-name { font-size: 22px; font-weight: 800; color: var(--cadarn-branco); margin-bottom: 5px; }
+        .profile-alloc { font-size: 13px; font-weight: 600; }
+        .prof-section-title { font-size: 11px; text-transform: uppercase; color: var(--cadarn-cinza); font-weight: 700; letter-spacing: 1px; margin: 15px 0 10px 0; }
+        .prof-list { max-height: 150px; overflow-y: auto; padding-right: 5px; display: flex; flex-direction: column; gap: 8px; }
+        .prof-list-item { background: rgba(255,255,255,0.02); padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 13px; cursor: pointer; transition: 0.2s; display: flex; justify-content: space-between; }
+        .prof-list-item:hover { background: rgba(131, 46, 255, 0.1); border-color: rgba(131, 46, 255, 0.3); }
+
+        /* FABS (Anotações e Elogio) */
+        .fab-container { position: fixed; bottom: 70px; right: 30px; display: flex; flex-direction: column; gap: 15px; z-index: 990; }
+        .fab-btn { width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, var(--cadarn-roxo), #420a9a); color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; box-shadow: 0 10px 25px rgba(131,46,255,0.4); transition: 0.3s; border: 1px solid rgba(255,255,255,0.1); }
+        .fab-btn:hover { transform: scale(1.1) rotate(10deg); }
+
+        /* Scratchpad e Painéis Laterais */
+        .side-widget { position: fixed; bottom: 130px; right: 30px; width: 320px; height: 400px; background: rgba(20,20,20,0.95); backdrop-filter: blur(20px); border: 1px solid var(--border-color); border-radius: 16px; box-shadow: 0 20px 50px rgba(0,0,0,0.7); z-index: 990; display: flex; flex-direction: column; transform: translateY(20px); opacity: 0; visibility: hidden; transition: 0.3s; overflow: hidden; }
+        .side-widget.active { transform: translateY(0); opacity: 1; visibility: visible; }
+        .widget-header { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); font-weight: 600; font-size: 14px; display: flex; justify-content: space-between; background: rgba(0,0,0,0.3); align-items: center;}
+        .widget-area { flex-grow: 1; width: 100%; border: none; background: transparent; color: var(--cadarn-branco); padding: 15px; font-family: 'Inter'; font-size: 13px; outline: none; resize: none; line-height: 1.5; overflow-y: auto;}
+
+        /* --- SIDE-PANEL --- */
+        .side-panel-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(8px); z-index: 9998; opacity: 0; visibility: hidden; transition: all 0.3s ease; } .side-panel-overlay.active { opacity: 1; visibility: visible; }
+        .side-panel { position: fixed; top: 0; right: -500px; width: 100%; max-width: 500px; height: 100vh; background: rgba(20,20,20,0.98); border-left: 1px solid var(--cadarn-roxo); box-shadow: -10px 0 30px rgba(0,0,0,0.8); z-index: 9999; transition: right 0.4s cubic-bezier(0.175, 0.885, 0.32, 1); display: flex; flex-direction: column; overflow-y: auto; } .side-panel.active { right: 0; }
+        .sp-header { padding: 25px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: flex-start; background: rgba(0,0,0,0.3); }
+        .sp-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end;}
+        .sp-btn-edit { background: rgba(131, 46, 255, 0.2); border: 1px solid var(--cadarn-roxo); color: var(--cadarn-branco); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; transition: 0.2s; } .sp-btn-edit:hover { background: var(--cadarn-roxo); color: white;}
+        .sp-close { background: rgba(255,255,255,0.1); border: none; color: var(--cadarn-branco); width: 30px; height: 30px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; transition: 0.2s; } .sp-close:hover { background: rgba(220, 53, 69, 0.8); color: white; }
+        .sp-client-badge { display: inline-block; background: rgba(131, 46, 255, 0.15); color: #c5a3ff; font-size: 10px; font-weight: 700; padding: 4px 10px; border-radius: 20px; text-transform: uppercase; margin-bottom: 10px; border: 1px solid rgba(131,46,255,0.3); }
+        .sp-title { font-size: 24px; font-weight: 700; color: var(--cadarn-branco); line-height: 1.2; }
+        .sp-body { padding: 25px; flex-grow: 1; }
+        .sp-section-title { font-size: 12px; text-transform: uppercase; color: var(--cadarn-cinza); font-weight: 700; letter-spacing: 1px; margin-bottom: 12px; margin-top: 25px;} .sp-section-title:first-child { margin-top: 0; }
+        .sp-desc { font-size: 14px; color: var(--cadarn-cinza); line-height: 1.6; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); }
+        .sp-licoes-destaque { border-left: 4px solid #20c997; background: rgba(32, 201, 151, 0.05); }
+        .team-list { display: flex; flex-direction: column; gap: 8px;} .team-item { display: flex; align-items: center; gap: 10px; font-size: 14px; background: rgba(255,255,255,0.02); padding: 10px 15px; border-radius: 8px;} .team-active::before { content: ''; display: block; width: 8px; height: 8px; border-radius: 50%; background: #198754; box-shadow: 0 0 8px #198754;} .team-inactive { color: var(--cadarn-cinza); opacity: 0.8;} .team-inactive::before { content: ''; display: block; width: 8px; height: 8px; border-radius: 50%; background: #666; }
+        .stepper { display: flex; flex-direction: column; gap: 15px; position: relative; margin-top: 15px;} .stepper::before { content: ''; position: absolute; left: 11px; top: 10px; bottom: 10px; width: 2px; background: rgba(255,255,255,0.1); z-index: 1;} .step { display: flex; align-items: flex-start; gap: 15px; position: relative; z-index: 2;} .step-icon { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; background: var(--cadarn-grafite); border: 2px solid var(--border-color); color: var(--cadarn-cinza); transition: all 0.3s; flex-shrink: 0;} .step.concluido .step-icon { background: #198754; border-color: #198754; color: white; } .step.ativo .step-icon { background: var(--cadarn-roxo); border-color: var(--cadarn-roxo); color: white; box-shadow: 0 0 10px var(--cadarn-roxo); animation: pulse-roxo 2s infinite;} .step-text { font-size: 14px; padding-top: 3px; width: 100%; display: flex; align-items: center;} .step.concluido .step-text { color: var(--cadarn-cinza); text-decoration: line-through; } .step.ativo .step-text { color: var(--cadarn-branco); font-weight: 600; } .step.pendente .step-text { color: #666; }
+        .edit-input { width: 100%; background: rgba(0,0,0,0.5); border: 1px solid var(--cadarn-roxo); color: var(--cadarn-branco); padding: 10px; border-radius: 6px; font-family: 'Inter'; font-size: 14px; margin-bottom: 10px;} .edit-textarea { width: 100%; background: rgba(0,0,0,0.5); border: 1px solid var(--cadarn-roxo); color: var(--cadarn-branco); padding: 10px; border-radius: 6px; font-family: 'Inter'; font-size: 14px; min-height: 80px; resize: vertical; } .edit-select { background: rgba(0,0,0,0.8); color: var(--cadarn-branco); border: 1px solid var(--cadarn-roxo); padding: 5px; border-radius: 4px; font-size: 12px; margin-left: 10px; } .btn-danger { background: rgba(220, 53, 69, 0.1); border: 1px solid rgba(220, 53, 69, 0.5); color: #ff8793; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; margin-left: auto; transition: 0.2s;} .btn-danger:hover { background: rgba(220, 53, 69, 0.3); }
+
+        /* ==================================================== */
+        /* RESPONSIVIDADE E ADAPTAÇÃO PARA COMPONENTES NOVOS    */
+        /* ==================================================== */
+        @media (min-width: 1001px) {
+            .team-availability-wrapper { flex-direction: row; justify-content: space-between; align-items: center; }
+        }
+
+        @media (max-width: 1000px) {
+            .visao-executiva-wrapper { grid-template-columns: 1fr; align-items: stretch; justify-items: stretch; }
+            .visao-stats { text-align: center; max-width: 100%; align-items: center; }
+            .visao-stats > div:nth-child(2) { flex-direction: column; width: 100%; } 
+            .team-availability-wrapper { width: 100%; flex-direction: column; align-items: stretch; padding: 15px; overflow: hidden; gap: 20px;}
+            #teamAvailabilityContainer { justify-content: flex-start !important; overflow-x: auto; padding-bottom: 15px; width: 100%; -webkit-overflow-scrolling: touch; }
+            .colab-mes-container { width: 100%; border-left: none; border-top: 1px solid var(--border-color); padding-left: 0; padding-top: 15px; }
+        }
+
+        @media (max-width: 900px) {
+            .hero-grid { grid-template-columns: 1fr; align-items: stretch; } 
+            .directory-grid { grid-template-columns: repeat(2, 1fr); }
+            .commodities-grid { grid-template-columns: repeat(2, 1fr); }
+            .pres-body { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 600px) {
+            html, body { overflow-x: hidden !important; width: 100%; max-width: 100vw; position: relative; }
+            .container { max-width: 100vw; overflow-x: hidden; }
+            .card { width: 100%; max-width: 100%; overflow: hidden; }
+            body { padding-bottom: 90px; }
+            
+            .edit-input, .edit-textarea, .modal-input, .cmd-search { font-size: 16px !important; }
+            .view-btn, .sp-btn-edit, .tag-filter-btn { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+            #offline-banner { position: fixed; top: 0; left: 0; width: 100%; z-index: 10001; }
+
+            header { flex-direction: column; gap: 15px; align-items: flex-start; padding: 15px 5%; margin-top: 10px;}
+            .header-controls { width: 100%; justify-content: space-between; }
+            .btn-icon.tv-btn { display: none; } 
+            .clock-widget { display: none; } 
+            
+            .container { width: 95%; margin: 20px auto; }
+            .card { padding: 15px; }
+
+            .section-header-controls { width: 100%; margin-top: 10px; justify-content: space-between; }
+            
+            #tags-filter-container { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 8px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+            #tags-filter-container::-webkit-scrollbar { display: none; } 
+            
+            .kanban-board { scroll-snap-type: x mandatory; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; padding-bottom: 20px;}
+            .kanban-col { min-width: 85vw; scroll-snap-align: center; }
+
+            .directory-grid { grid-template-columns: 1fr; gap: 10px; }
+            .commodities-grid { grid-template-columns: 1fr; gap: 10px; }
+            .heatmap-container { height: 400px; }
+
+            .side-panel { max-width: 100%; padding-top: 0; }
+            
+            .sp-header { position: sticky; top: 0; z-index: 100; background: rgba(20,20,20,0.95); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border-color); padding: 15px; }
+            body.light-mode .sp-header { background: rgba(255,255,255,0.98); }
+
+            .sp-body { padding: 15px; }
+            .sp-actions { width: 100%; justify-content: flex-start; }
+            .sp-close { position: absolute; top: 15px; right: 15px; min-height: auto; }
+            
+            .project-row { flex-direction: column; align-items: flex-start; gap: 10px; }
+            .project-row > div:nth-child(2) { width: 100%; justify-content: flex-end; }
+
+            .side-widget { width: 90vw; right: 5vw; bottom: 80px; height: 350px; }
+            .cmd-modal { width: 95%; max-width: none; }
+            
+            .presentation-modal .modal-content { padding: 20px; height: 95vh; }
+            .pres-title { font-size: 24px; }
+            .pres-meta-info { flex-direction: column; gap: 5px; }
+            
+            .toast-container { right: 5%; bottom: auto; top: 10px; width: 90%; left: 5%; }
+            .toast { min-width: 0; width: 100%; transform: translateY(-120%); animation: slideDownToast 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+            @keyframes slideDownToast { to { transform: translateY(0); } }
+
+            .fab-container { bottom: 85px; right: 15px; z-index: 990; }
+        }
+
+        input.profile-field[readonly] {
+            background: transparent !important;
+            border: 1px solid transparent !important;
+            box-shadow: none !important;
+            outline: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            height: auto !important;
+            cursor: default !important;
+            pointer-events: none !important;
+            color: var(--cadarn-branco) !important;
+            font-size: 15px !important;
+            font-weight: 500 !important;
+        }    
+    </style>
+</head>
+<body>
+
+<div id="offline-banner">⚠️ Você está offline. As alterações serão salvas apenas localmente.</div>
+
+<div class="ambient-light-1"></div>
+<div class="ambient-light-2"></div>
+
+<div id="toast-container" class="toast-container"></div>
+
+<div class="fab-container">
+    <div class="fab-btn" onclick="abrirModalElogio()" title="Enviar Elogio">⭐</div>
+    <div class="fab-btn" onclick="toggleNotes()" title="Anotações Rápidas">📝</div>
+</div>
+
+<div class="side-widget" id="scratchpad">
+    <div class="widget-header">Anotações <span style="color:var(--cadarn-cinza); font-weight:normal;">Auto-save 🟢</span></div>
+    <textarea class="widget-area" id="scratch-text" placeholder="Digite uma anotação rápida aqui..."></textarea>
+</div>
+
+<div id="elogio-modal" class="modal-overlay" onclick="fecharModalElogio(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <button class="sp-close" onclick="fecharModalElogio(event)" style="position:absolute; top:20px; right:20px;">✕</button>
+        <h3 style="font-weight: 700; margin-bottom: 15px; font-size: 20px; color: #ffc107;">⭐ Enviar Elogio</h3>
+        <p style="color: var(--cadarn-cinza); font-size: 13px; margin-bottom: 20px;">Reconheça o bom trabalho da equipe. Elogios ficam visíveis apenas para você e quem receber (salvo o destaque do mês).</p>
+        
+        <select id="elogio-para" class="modal-input" style="text-align:left; padding: 12px; margin-top: 0;"></select>
+        <textarea id="elogio-texto" class="modal-input" style="height: 100px; text-align:left; resize:vertical; margin-top:0;" placeholder="Deixe sua mensagem..."></textarea>
+        
+        <button onclick="enviarElogio()" style="width:100%; padding:14px; border:none; background: var(--cadarn-roxo); color:white; border-radius:8px; cursor:pointer; font-weight:600; margin-top:10px;">ENVIAR ELOGIO</button>
+    </div>
+</div>
+
+<div id="cmd-modal" class="modal-overlay" onclick="fecharCmd(event)">
+    <div class="cmd-modal" onclick="event.stopPropagation()">
+        <input type="text" id="cmd-input" class="cmd-search" placeholder="Buscar projetos, lições ou descrições..." autocomplete="off">
+        <div class="cmd-results" id="cmd-results"></div>
+    </div>
+</div>
+
+<div id="login-modal" class="modal-overlay">
+    <div class="modal-content">
+        <h3 id="modal-greeting" style="font-weight: 700; margin-bottom: 8px; font-size: 24px;">Bem-vindo</h3>
+        <p style="color: var(--cadarn-cinza); font-size: 14px;">Identifique-se para acessar o Terminal.</p>
+        
+        <select id="login-select" class="modal-input" onchange="checkNewUser()"></select>
+        <input type="text" id="name-input" class="modal-input" placeholder="Digite seu nome (Novo)" autocomplete="off" style="display:none;" onkeydown="if(event.key === 'Enter') salvarNome()">
+        
+        <button onclick="salvarNome()" style="width:100%; padding:16px; border:none; background: linear-gradient(135deg, var(--cadarn-roxo), #5a1ec2); color:white; border-radius:12px; cursor:pointer; font-weight:700; font-size: 14px; letter-spacing: 1px; transition: all 0.3s; box-shadow: 0 4px 15px rgba(131,46,255,0.4);">INICIAR SESSÃO</button>
+    </div>
+</div>
+
+<div id="profile-modal" class="modal-overlay" onclick="fecharPerfil(event)">
+    <div class="modal-content profile-card" onclick="event.stopPropagation()">
+        <div class="profile-header">
+            <div class="profile-avatar-container" id="profile-avatar-box" title="Clique ou arraste uma foto" ondragover="event.preventDefault(); this.classList.add('dragover');" ondragleave="this.classList.remove('dragover');" ondrop="handleDropFoto(event)" onclick="document.getElementById('profile-foto-input').click()">
+                <div id="profile-avatar-render"></div>
+                <div class="avatar-overlay">Trocar<br>Foto</div>
+                <input type="file" id="profile-foto-input" accept="image/*" style="display:none;" onchange="handleFileFoto(event)">
+            </div>
+            <div style="flex-grow: 1;">
+                <div class="profile-name" id="profile-name">Nome</div>
+                <div class="profile-alloc" id="profile-alloc">0% Alocado</div>
+                <div id="profile-private-stars" style="font-size:12px; color:#ffc107; font-weight:bold; margin-top:4px;"></div>
+            </div>
+            <button class="sp-close" onclick="document.getElementById('profile-modal').classList.remove('active')" style="align-self: flex-start;">✕</button>
+        </div>
+        
+        <div id="profile-elogios-section" style="display:none; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 25px;">
+            <div style="font-size: 11px; text-transform: uppercase; color: var(--cadarn-cinza); font-weight: 700; letter-spacing: 1px; margin-bottom:10px;">⭐ Meus Elogios (Privado)</div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div>
+                    <strong style="font-size:11px; color:#c5a3ff;">Recebidos</strong>
+                    <div id="elogios-recebidos-list" style="margin-top:5px; max-height:120px; overflow-y:auto; scrollbar-width: thin; padding-right:5px;"></div>
+                </div>
+                <div>
+                    <strong style="font-size:11px; color:#c5a3ff;">Enviados</strong>
+                    <div id="elogios-enviados-list" style="margin-top:5px; max-height:120px; overflow-y:auto; scrollbar-width: thin; padding-right:5px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div style="background: rgba(0,0,0,0.2); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 25px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 12px; margin-bottom: 15px;">
+                <div style="font-size: 12px; text-transform: uppercase; color: var(--cadarn-cinza); font-weight: 700; letter-spacing: 1px;">Dados do Colaborador</div>
+                <button class="sp-btn-edit" id="btn-edit-profile" onclick="toggleEditProfile()" style="padding: 5px 12px; font-size: 11px; background: rgba(131, 46, 255, 0.1); border-color: var(--cadarn-roxo); color: #c5a3ff; border-radius: 6px;">✏️ Editar</button>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr; gap: 15px;">
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <label style="font-size: 10px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">📱 Celular</label>
+                    <input type="text" id="profile-phone" class="edit-input profile-field" style="margin:0; font-size:14px; padding: 10px 12px;" placeholder="Não informado" readonly>
+                </div>
+                
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <label style="font-size: 10px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">✉️ E-mail</label>
+                    <input type="email" id="profile-email" class="edit-input profile-field" style="margin:0; font-size:14px; padding: 10px 12px;" placeholder="Não informado" readonly>
+                </div>
+                
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <label style="font-size: 10px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">🎂 Data de Aniversário</label>
+                    <input type="date" id="profile-birthday" class="edit-input profile-field" style="margin:0; font-size:14px; padding: 10px 12px;" readonly>
+                </div>
+            </div>
+            
+            <button id="btn-save-profile" class="sp-btn-edit" style="width: 100%; margin-top: 20px; background: #198754; color: white; border-color: #198754; padding: 12px; font-size: 13px; display: none; font-weight: 700; letter-spacing: 0.5px; border-radius: 8px;" onclick="salvarDadosPerfilManual()">💾 Salvar Informações</button>
+        </div>
+
+        <div class="prof-section-title">Projetos em Execução</div>
+        <div class="prof-list" id="profile-active-list"></div>
+        
+        <div class="prof-section-title" style="margin-top: 20px;">Projetos Concluídos (Histórico)</div>
+        <div class="prof-list" id="profile-past-list"></div>
+        
+        <button class="sp-btn-edit" style="width: 100%; margin-top: 20px; background: var(--cadarn-roxo); color: white; padding: 12px; font-size: 14px;" onclick="filtrarProjetosDestePerfil()">🔍 Ver Projetos no Painel</button>
+    </div>
+</div>
+
+<div id="briefing-modal" class="modal-overlay">
+    <div class="modal-content briefing-card">
+        <h3 style="font-weight: 700; margin-bottom: 15px; font-size: 20px; display:flex; align-items:center; gap:8px;">☕ Bom dia, <span id="briefing-name"></span></h3>
+        <p style="color: var(--cadarn-cinza); font-size: 13px; margin-bottom: 25px;">Aqui está o seu panorama estratégico para começar o dia com clareza.</p>
+        
+        <div id="briefing-birthday-alert" style="display:none; background: linear-gradient(135deg, rgba(131, 46, 255, 0.2), rgba(32, 201, 151, 0.1)); border: 1px solid var(--cadarn-roxo); padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 13px;">
+            🎉 <strong>Hoje é aniversário de:</strong> <span id="briefing-birthday-names" style="font-weight:700; color:var(--cadarn-branco);"></span>. Não esqueça de parabenizar!
+        </div>
+        
+        <div class="briefing-stat">
+            <span>📈 Projetos em Execução</span>
+            <strong id="briefing-ativos" style="font-size:16px; color:#b68aff;">0</strong>
+        </div>
+        
+        <div class="briefing-stat" id="briefing-alert-box">
+            <span>⚠️ Etapas Atrasadas</span>
+            <strong id="briefing-atrasos" style="font-size:16px;">0</strong>
+        </div>
+
+        <div style="margin-top: 25px; text-align: left;">
+            <span style="font-size: 11px; text-transform: uppercase; color: var(--cadarn-cinza); font-weight: 700; letter-spacing: 1px;">📰 Top Notícias do Dia</span>
+            <div id="briefing-news-list" style="margin-top: 10px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color);">
+                <div class="skeleton-line" style="height: 15px; margin-bottom: 8px;"></div>
+                <div class="skeleton-line" style="height: 15px;"></div>
+            </div>
+        </div>
+
+        <button onclick="fecharBriefing()" style="width:100%; margin-top:25px; padding:14px; border:none; background: var(--cadarn-roxo); color:white; border-radius:8px; cursor:pointer; font-weight:600; font-size: 13px; transition: 0.2s;">COMEÇAR O DIA</button>
+    </div>
+</div>
+
+<div id="presentation-modal" class="modal-overlay presentation-modal">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <button class="pres-close" onclick="closePresentation()" title="Sair da Apresentação (Esc)">✕</button>
+        
+        <div id="presentation-slide-content" style="display:flex; flex-direction:column; height: 100%;">
+            <div class="pres-header">
+                <div>
+                    <div class="pres-client" id="pres-client">CLIENTE</div>
+                    <div class="pres-title" id="pres-title">Nome do Projeto</div>
+                    <div class="pres-meta-info">
+                        <span id="pres-lider">👤 Líder: ---</span>
+                        <span id="pres-status">🎯 Status: ---</span>
+                        <span id="pres-leadtime">⏱️ Lead Time: ---</span>
+                    </div>
+                </div>
+            </div>
+            <div class="pres-body">
+                <div style="display: flex; flex-direction: column; gap: 20px;">
+                    <div class="pres-box">
+                        <div class="pres-box-title">Descrição Estratégica</div>
+                        <div class="pres-desc" id="pres-desc">...</div>
+                    </div>
+                    <div class="pres-box">
+                        <div class="pres-box-title">Lições Aprendidas</div>
+                        <div class="pres-desc" id="pres-licoes" style="color: #20c997; font-style: italic;">...</div>
+                    </div>
+                </div>
+                <div class="pres-box">
+                    <div class="pres-box-title">Andamento e SLAs (Etapas)</div>
+                    <div class="stepper" id="pres-etapas"></div>
+                </div>
+            </div>
+            <div class="pres-controls">
+                <button class="pres-btn" id="pres-btn-prev" onclick="prevSlide()">← Anterior</button>
+                <div class="pres-counter" id="pres-counter">1 / 10</div>
+                <button class="pres-btn" id="pres-btn-next" onclick="nextSlide()">Próximo →</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="side-panel-overlay" id="panel-overlay" onclick="fecharProjeto()"></div>
+<div class="side-panel" id="side-panel">
+    <div class="sp-header">
+        <div id="sp-view-header">
+            <div class="sp-client-badge" id="sp-cliente">Cliente</div>
+            <h2 class="sp-title" id="sp-titulo">Nome do Projeto</h2>
+        </div>
+        <div id="sp-edit-header" style="display: none; width: 100%;">
+            <input type="text" id="edit-cliente" class="edit-input" placeholder="Nome do Cliente">
+            <input type="text" id="edit-titulo" class="edit-input" placeholder="Nome do Projeto" style="font-size: 18px; font-weight: bold;">
+        </div>
+        <div class="sp-actions">
+            <button class="sp-btn-edit" id="btn-edit" onclick="iniciarEdicao()">✏️ Editar</button>
+            <button class="sp-btn-edit" id="btn-delete" onclick="arquivarProjeto()" style="display: none; background: rgba(220, 53, 69, 0.2); border-color: #dc3545; color: #ff8793;">📥 Arquivar</button>
+            
+            <button class="sp-btn-edit" id="btn-restore" onclick="restaurarProjeto()" style="display: none; background: rgba(71, 226, 153, 0.2); border-color: #47e299; color: #47e299;">♻️ Restaurar</button>
+            <button class="sp-btn-edit" id="btn-perm-delete" onclick="excluirPermanente()" style="display: none; background: rgba(220, 53, 69, 0.2); border-color: #dc3545; color: #ff8793;">🗑️ Excluir Permanente</button>
+
+            <button class="sp-btn-edit" id="btn-save" onclick="salvarEdicao()" style="display: none; background: #198754; border-color: #198754;">💾 Salvar</button>
+            <button class="sp-close" onclick="fecharProjeto()">✕</button>
+        </div>
+    </div>
+    <div class="sp-body">
+        
+        <div class="sp-section-title">Tempo de Ciclo (Lead Time)</div>
+        <div class="sp-desc" id="sp-leadtime" style="font-family: monospace; font-size: 13px; color: #47e299; font-weight: 600;">Calculando...</div>
+
+        <div class="sp-section-title">Líder do Projeto</div>
+        <div class="sp-desc" id="sp-lider-view">A definir</div>
+        <input type="text" id="edit-lider" class="edit-input" style="display: none;" placeholder="Nome do Líder">
+
+        <div class="sp-section-title">Categorias / Tags Estratégicas</div>
+        <div id="sp-tags-container"></div>
+        <input type="text" id="edit-tags" class="edit-input" style="display: none;" placeholder="Ex: Financeiro, TI, Urgente (Separado por vírgula)">
+
+        <div class="sp-section-title">Descrição Estratégica</div>
+        <div class="sp-desc" id="sp-desc">Detalhes...</div>
+        <textarea id="edit-desc" class="edit-textarea" style="display: none;"></textarea>
+
+        <div class="sp-section-title">Lições Aprendidas (Pós-Projeto)</div>
+        <div class="sp-desc sp-licoes-destaque" id="sp-licoes">Nenhuma lição registrada ainda.</div>
+        <textarea id="edit-licoes" class="edit-textarea" style="display: none; border-color: #20c997;" placeholder="O que a equipe aprendeu neste escopo que servirá para o futuro?"></textarea>
+
+        <div class="sp-section-title">Membros da Equipe</div>
+        <div id="sp-equipe-container"><ul class="team-list" id="sp-equipe"></ul></div>
+        <div style="position: relative;">
+            <input type="text" id="edit-equipe" class="edit-input" style="display: none;" placeholder="Ex: Ana, Carlos">
+        </div>
+        
+        <div class="sp-section-title" id="titulo-eq-antiga" style="margin-top: 10px;">Ex-Membros / Realocados</div>
+        <div id="sp-equipe-antiga-container"><ul class="team-list" id="sp-equipe-antiga"></ul></div>
+        <input type="text" id="edit-equipe-antiga" class="edit-input" style="display: none;" placeholder="Membros que saíram">
+
+        <div class="sp-section-title">Andamento das Etapas (SLA)</div>
+        <div class="stepper" id="sp-etapas"></div>
+        <button class="sp-btn-edit" id="btn-add-etapa" onclick="adicionarEtapa()" style="display: none; width: 100%; margin-top: 15px; text-align: center; background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1);">➕ Adicionar Etapa</button>
+
+    </div>
+</div>
+
+<header>
+    <div class="brand-container">
+        <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAAcCAMAAABF0y+mAAAAUVBMVEVHcEzXzOlUMpliQ6FMJ5Te1e1OKZVMJpSAZ7NKJJNdPZ5mSKKGbrZJIpNePp5pTKRrT6VKI5OciMOFbLZ6Ya9WNJrr4vZzWap6YK6lksqHbreDBgMvAAAAG3RSTlMAJcm2OTr//1L/3PNz//zd1f9YQJP/CK26QCfR2khpAAAAo0lEQVR4AXXLBQ7EAAwDwRR9LjP9/6FXxsRCa7SyznFd15Fjnuv6ci0IEQbH+YEwMSJM/AE2RrRxDm2MCVqYpEBGA2MyLwxMSrCyMCNjyXWcQ1QWZkQkBiYEagszMBIDmxRhrSFbp8vIQjRM+yNU8Ag1xLCGo4pz2GIOVZzDcg51nEOkc6ihSEOEk4FdCHhiYF/OoYFOSx7hjOkTXdc9Q+mP8wd7Owtgvc9xfgAAAABJRU5ErkJggg==" alt="Logo Cadarn" class="company-logo" onerror="this.style.display='none'">
+        <div class="logo-text">CADARN <span>HUB</span></div>
+    </div>
+    <div class="header-controls">
+        <div class="cmd-hint" onclick="abrirCmd()">Busca Global <span class="cmd-key">Ctrl+K</span></div>
+        <button class="btn-icon" id="theme-toggle" onclick="toggleTheme()" title="Modo Claro">☀️</button>
+        <button class="btn-icon tv-btn" onclick="toggleFullScreen()" title="Modo TV (Tela Cheia)">⛶</button>
+        <a href="https://script.google.com/a/macros/cadarnconsultoria.com.br/s/AKfycbzg0ROCbiPrpH9jowKDPpQKNdjMxJGv7dgH3_HwhU5adYYc_vZBnAgkpj8m5c1-8q7LrA/exec" target="_blank" class="btn-presenca">⏱️ Presença</a>
+        <div class="clock-widget"><strong id="live-time">00:00</strong><span id="live-date">...</span></div>
+        <button class="user-menu" onclick="abrirMeuPerfil()" title="Meu Perfil">
+            <div class="user-text"><span id="display-greeting" style="font-size:10px; color:var(--cadarn-cinza); text-transform:uppercase; letter-spacing:0.5px;">Olá,</span><span id="display-name" class="nome-gradiente">Colaborador</span></div>
+            <div class="avatar" id="display-avatar">C</div>
+        </button>
+    </div>
+</header>
+
+<div class="container">
+    
+    <section class="anim-1" style="margin-bottom: 30px;">
+        <h2 class="section-header">Visão Executiva do Portfólio</h2>
+        <div class="card visao-executiva-wrapper">
+            
+            <div class="visao-chart">
+                <canvas id="kpiChart"></canvas>
+            </div>
+            
+            <div class="visao-stats">
+                <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border-left: 4px solid var(--cadarn-roxo); border-color: var(--border-color);">
+                    <div style="font-size: 11px; color: var(--cadarn-cinza); text-transform: uppercase;">Total de Projetos (Ativos)</div>
+                    <div style="font-size: 28px; font-weight: 800;" id="kpi-total">0</div>
+                </div>
+                <div style="display: flex; gap: 15px;">
+                    <div style="background: rgba(182, 138, 255, 0.1); padding: 15px; border-radius: 8px; flex: 1; border: 1px solid rgba(182, 138, 255, 0.3);">
+                        <div style="font-size: 11px; color: #b68aff; text-transform: uppercase;">Em Execução</div>
+                        <div style="font-size: 22px; font-weight: 700; color: #b68aff;" id="kpi-ativos">0</div>
+                    </div>
+                    <div style="background: rgba(71, 226, 153, 0.1); padding: 15px; border-radius: 8px; flex: 1; border: 1px solid rgba(71, 226, 153, 0.3);">
+                        <div style="font-size: 11px; color: #47e299; text-transform: uppercase;">Concluídos</div>
+                        <div style="font-size: 22px; font-weight: 700; color: #47e299;" id="kpi-concluidos">0</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="team-availability-wrapper">
+                <div class="team-list-container">
+                    <h4 style="padding-bottom: 10px; font-size: 11px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Top Colaboradores Alocados</h4>
+                    <div id="teamAvailabilityContainer">
+                    </div>
+                </div>
+                <div class="colab-mes-container" id="colaborador-mes-container">
+                    <div style="font-size:10px; color:var(--cadarn-cinza); text-transform:uppercase;">Nenhum destaque ainda</div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <section class="hero-grid">
+        <div class="card anim-2">
+            <h2 class="section-header">
+                <div class="section-header-title">Status de Projetos Estratégicos</div>
+                <div class="section-header-controls">
+                    <div class="view-toggle">
+                        <button class="view-btn active" id="btn-view-list" onclick="setVisualizacao('list')">Lista</button>
+                        <button class="view-btn" id="btn-view-kanban" onclick="setVisualizacao('kanban')">Kanban</button>
+                        <button class="view-btn" id="btn-view-roadmap" onclick="setVisualizacao('roadmap')">Roadmap</button>
+                        <button class="view-btn" id="btn-view-equipe" onclick="setVisualizacao('equipe')">Equipe</button>
+                        <button class="view-btn" id="btn-view-lixeira" onclick="setVisualizacao('lixeira')">Lixeira</button>
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                        <button class="btn-present" onclick="startPresentation()" title="Iniciar Modo Apresentação">
+                            <svg viewBox="0 0 24 24"><path d="M5 3l14 9-14 9V3z"/></svg> Apresentar
+                        </button>
+                        <button class="sp-btn-edit" style="background: rgba(131, 46, 255, 0.15); border: 1px solid var(--cadarn-roxo); padding: 5px 12px; border-radius: 6px;" onclick="novoProjeto()">➕ Novo</button>
+                    </div>
+                </div>
+            </h2>
+
+            <div id="tags-filter-container"></div>
+
+            <div id="main-projects-container" style="display: flex; flex-direction: column; gap: 10px; max-height: 580px; overflow-y: auto; padding-right: 5px;">
+                <div class="skeleton-card-refined" style="background: rgba(255,255,255,0.01);">
+                    <div style="flex-grow: 1;">
+                        <div class="skeleton-line skeleton-card-title"></div>
+                        <div class="skeleton-card-tags"><div class="skeleton-line skeleton-card-tag"></div><div class="skeleton-line skeleton-card-tag"></div></div>
+                        <div class="skeleton-line skeleton-card-meta"></div>
+                    </div>
+                </div>
+                <div class="skeleton-card-refined" style="background: rgba(255,255,255,0.01);">
+                    <div style="flex-grow: 1;">
+                        <div class="skeleton-line skeleton-card-title" style="width: 40%;"></div>
+                        <div class="skeleton-card-tags"><div class="skeleton-line skeleton-card-tag"></div></div>
+                        <div class="skeleton-line skeleton-card-meta" style="width: 30%;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+            <div class="quote-card anim-2" id="quote-card">
+                <div class="quote-title">💡 Insight do Dia</div>
+                <div class="quote-text" id="quote-text">...</div>
+                <div class="quote-author" id="quote-author">...</div>
+            </div>
+
+            <div class="sla-card anim-2">
+                <div class="quote-title" style="margin-bottom: 15px; color:#ffc107;">🔥 SLA Radar (48h)</div>
+                <div class="sla-list" id="sla-radar-list">
+                    <div style="color:var(--cadarn-cinza); font-size:12px;">Calculando prazos críticos...</div>
+                </div>
+            </div>
+
+            <div class="card anim-2" style="display: flex; flex-direction: column;">
+                <h2 class="section-header" style="display: flex; justify-content: space-between; width: 100%;">
+                    <div class="section-header-title">Radar Multifeed</div>
+                    <button class="btn-refresh" id="btn-refresh-news" onclick="forceFetchNews()" title="Atualizar Notícias">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"></path>
+                            <path d="M21 3v5h-5"></path>
+                        </svg>
+                    </button>
+                </h2>
+                <div id="noticias-container" style="flex-grow: 1;">
+                    <div class="skeleton-line" style="height: 15px; margin-bottom: 8px; width: 80%;"></div>
+                    <div class="skeleton-line" style="height: 10px; margin-bottom: 20px; width: 30%;"></div>
+                    <div class="skeleton-line" style="height: 15px; margin-bottom: 8px; width: 90%;"></div>
+                    <div class="skeleton-line" style="height: 10px; margin-bottom: 20px; width: 40%;"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="anim-3">
+        <h2 class="section-header"><div class="section-header-title">Serviços e Diretórios Internos</div></h2>
+        <div class="directory-grid">
+            <a href="https://drive.google.com/file/d/1RKHUkuPZPeolzje-HikthNGqtps_xuK-/view?usp=drive_link" target="_blank" class="dir-button">⚖️ <span class="dir-label">Código de Ética</span></a>
+            <a href="https://drive.google.com/file/d/1CigLKTZtqWxr40aALXQ95zU74uH7cRyX/view?usp=drive_link" target="_blank" class="dir-button">📘 <span class="dir-label">Manual do Colaborador</span></a>
+            <a href="https://drive.google.com/file/d/1Wl0Xz9n1G4r3JUojXeteMwZ4CAUV_nNZ/view?usp=drive_link" target="_blank" class="dir-button">📣 <span class="dir-label">Marketing Colaboradores</span></a>
+            <a href="https://drive.google.com/file/d/1ybiUfZeZw82ldBaYbip7_JcCbJ4HZOVP/view?usp=drive_link" target="_blank" class="dir-button">🎨 <span class="dir-label">Manual de Marca</span></a>
+            <a href="https://docs.google.com/spreadsheets/d/1D84AOgeyGl1AN_CovkOXtaxqttq5OvWs/edit?usp=drive_link" target="_blank" class="dir-button">💳 <span class="dir-label">Planilha de Reembolso</span></a>
+            <a href="https://drive.google.com/file/d/1TaiAdJtBooj8UIWfKoXJXgeXhfoGJ2Tn/view?usp=drive_link" target="_blank" class="dir-button">🏆 <span class="dir-label">Premiação Comercial</span></a>
+            <a href="https://drive.google.com/drive/folders/1gCOf6_1Qc0EIdXR_dG2IJgosSvWJloJF?usp=drive_link" target="_blank" class="dir-button">🖥️ <span class="dir-label">Fundos de Tela</span></a>
+            <a href="https://drive.google.com/drive/folders/1rxAEZeuuovUB79zpaJChYBXrjEbCAPWu?usp=drive_link" target="_blank" class="dir-button">🗂️ <span class="dir-label">Logos Institucionais</span></a>
+            <a href="https://drive.google.com/drive/folders/0AJhfMsvskcP5Uk9PVA" target="_blank" class="dir-button">📈 <span class="dir-label">Projetos Passados</span></a>
+        </div>
+    </section>
+
+    <section class="anim-4">
+        <h2 class="section-header"><div class="section-header-title">Radar de Commodities</div></h2>
+        <div class="commodities-grid">
+            <div class="card commodity-item"><iframe id="tv-widget-1" src="https://www.tradingview.com/embed-widget/mini-symbol-overview/?locale=br&symbol=TVC%3AUKOIL&colorTheme=dark&trendLineColor=%23832EFF&isTransparent=true"></iframe></div>
+            <div class="card commodity-item"><iframe id="tv-widget-2" src="https://www.tradingview.com/embed-widget/mini-symbol-overview/?locale=br&symbol=TVC%3AGOLD&colorTheme=dark&trendLineColor=%23832EFF&isTransparent=true"></iframe></div>
+            <div class="card commodity-item"><iframe id="tv-widget-3" src="https://www.tradingview.com/embed-widget/mini-symbol-overview/?locale=br&symbol=CAPITALCOM%3ACOPPER&colorTheme=dark&trendLineColor=%23832EFF&isTransparent=true"></iframe></div>
+            <div class="card commodity-item"><iframe id="tv-widget-4" src="https://www.tradingview.com/embed-widget/mini-symbol-overview/?locale=br&symbol=OANDA%3ANATGASUSD&colorTheme=dark&trendLineColor=%23832EFF&isTransparent=true"></iframe></div>
+        </div>
+    </section>
+
+    <section class="anim-4">
+        <h2 class="section-header"><div class="section-header-title">Análise Macro Global (S&P 500)</div></h2>
+        <div class="card heatmap-container">
+            <iframe id="tv-widget-5" src="https://www.tradingview.com/embed-widget/stock-heatmap/?locale=br#%7B%22dataSource%22%3A%22S&P500%22%2C%22blockSize%22%3A%22market_cap_basic%22%2C%22blockColor%22%3A%22change%22%2C%22grouping%22%3A%22sector%22%2C%22colorTheme%22%3A%22dark%22%2C%22hasSymbolTooltip%22%3Atrue%2C%22isTransparent%22%3Atrue%2C%22width%22%3A%22100%25%22%2C%22height%22%3A%22100%25%22%7D"></iframe>
+        </div>
+    </section>
+</div>
+
+<footer>
+    <div class="tradingview-widget-container">
+        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
+        {
+          "symbols": [
+            {"proName": "BMFBOVESPA:IBOV", "title": "IBOVESPA"},
+            {"proName": "FOREXCOM:SPXUSD", "title": "S&P 500"},
+            {"proName": "FX_IDC:USDBRL", "title": "DÓLAR / BRL"},
+            {"proName": "BMFBOVESPA:VALE3", "title": "VALE3 (MINÉRIO)"},
+            {"proName": "NYSE:RIO", "title": "RIO TINTO (MINÉRIO GLOBAL)"}
+          ],
+          "colorTheme": "dark", "isTransparent": true, "locale": "br"
+        }
+        </script>
+    </div>
+</footer>
+
+<script>
+    let usuarioLogado = localStorage.getItem('cadarn_user') || '';
+
+    /* ========================================== */
+    /* CONFIGURAÇÃO DE EQUIPE (FOTOS E GÊNERO)    */
+    /* ========================================== */
+    let configColaboradores = JSON.parse(localStorage.getItem('cadarn_colabs')) || {};
+
+    function autoDetectGender(name) {
+        const first = name.toLowerCase().split(' ')[0];
+        if (first.endsWith('a') && !['luca', 'andrea', 'micha'].includes(first)) return 'F';
+        if (['ellen', 'caroline', 'aline', 'viviane', 'raquel', 'iris'].includes(first)) return 'F';
+        return 'M';
+    }
+
+    function getAvatarHtml(nome, size = 40) {
+        const conf = configColaboradores[nome] || { foto: '', genero: autoDetectGender(nome), celular: '', email: '' };
+        
+        if (conf.foto) {
+            return `<div style="width:${size}px; height:${size}px; background-image:url('${conf.foto}'); background-size:cover; background-position:center; border-radius:50%; border: 2px solid rgba(255,255,255,0.1); box-shadow: 0 4px 10px rgba(0,0,0,0.3);"></div>`;
+        }
+        
+        const isF = conf.genero === 'F';
+        const grad = isF ? 'linear-gradient(135deg, #ff6b9e, #ff8a65)' : 'linear-gradient(135deg, #2e8bc0, #832EFF)';
+        const iconPath = isF 
+            ? `<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle><path d="M8 10c0 3.5 2 5 4 5s4-1.5 4-5" stroke-dasharray="2 2" stroke-opacity="0.6"></path>` 
+            : `<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle>`; 
+            
+        return `
+            <div style="width:${size}px; height:${size}px; background:${grad}; border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; border: 2px solid rgba(255,255,255,0.15); box-shadow: inset 0 -2px 5px rgba(0,0,0,0.2), 0 4px 10px rgba(0,0,0,0.3);">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: ${size*0.5}px; height: ${size*0.5}px;">
+                    ${iconPath}
+                </svg>
+            </div>
+        `;
+    }
+
+    /* ========================================== */
+    /* LOGICA DO PERFIL DO COLABORADOR            */
+    /* ========================================== */
+    let perfilAtualNome = '';
+
+    function abrirMeuPerfil() {
+        if(usuarioLogado) {
+            abrirPerfil(usuarioLogado);
+        } else {
+            abrirModal();
+        }
+    }
+
+    function abrirPerfil(nome) {
+        perfilAtualNome = nome;
+        const conf = configColaboradores[nome] || { foto: '', genero: autoDetectGender(nome), celular: '', email: '', nascimento: '', elogiosRecebidos: [], elogiosEnviados: [] };
+        
+        document.getElementById('profile-name').innerText = sanitize(nome);
+        document.getElementById('profile-avatar-render').innerHTML = getAvatarHtml(nome, 80);
+        
+        // Preenche os campos com os dados salvos
+        document.getElementById('profile-phone').value = conf.celular || '';
+        document.getElementById('profile-email').value = conf.email || '';
+        document.getElementById('profile-birthday').value = conf.nascimento || ''; 
+
+        // Seção Elogios (Privado, apenas se for o usuário logado)
+        const elogiosSection = document.getElementById('profile-elogios-section');
+        const privateStars = document.getElementById('profile-private-stars');
+        if(nome === usuarioLogado) {
+            elogiosSection.style.display = 'block';
+            let rec = (conf.elogiosRecebidos || []).map(e => `<div style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05); font-size:12px; color:var(--cadarn-branco); line-height:1.4;"><strong>De ${sanitize(e.de)}:</strong><br>${sanitize(e.texto)}</div>`).join('');
+            let env = (conf.elogiosEnviados || []).map(e => `<div style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05); font-size:12px; color:var(--cadarn-branco); line-height:1.4;"><strong>Para ${sanitize(e.para)}:</strong><br>${sanitize(e.texto)}</div>`).join('');
+            
+            document.getElementById('elogios-recebidos-list').innerHTML = rec || '<div style="font-size:11px; color:var(--cadarn-cinza);">Nenhum recebido.</div>';
+            document.getElementById('elogios-enviados-list').innerHTML = env || '<div style="font-size:11px; color:var(--cadarn-cinza);">Nenhum enviado.</div>';
+            privateStars.innerText = `${conf.elogiosRecebidos ? conf.elogiosRecebidos.length : 0} ⭐ (Apenas você vê)`;
+        } else {
+            elogiosSection.style.display = 'none';
+            privateStars.innerText = '';
+        }
+
+        let ativos = []; let concluidos = [];
+        let pCount = 0; const MAX_PROJECTS = 5;
+
+        for (const [id, proj] of Object.entries(bdProjetos)) {
+            if (proj.arquivado) continue;
+            
+            const emEquipe = (proj.equipeAtual || []).some(m => m.split('(')[0].trim() === nome);
+            const exEquipe = (proj.equipeAntiga || []).some(m => m.split('(')[0].trim() === nome);
+            
+            if (emEquipe || exEquipe) {
+                const todasConcluidas = proj.etapas && proj.etapas.length > 0 && proj.etapas.every(e => e.status === 'concluido');
+                const htmlItem = `<div class="prof-list-item" onclick="abrirProjeto('${id}'); document.getElementById('profile-modal').classList.remove('active');">
+                                    <div><strong>${sanitize(proj.nome)}</strong><br><span style="font-size:11px; color:var(--cadarn-cinza);">${sanitize(proj.cliente)}</span></div>
+                                    <div style="font-size:10px; opacity:0.7; padding-top:2px;">${exEquipe && !todasConcluidas ? '(Ex-Membro)' : ''}</div>
+                                  </div>`;
+                if (todasConcluidas) {
+                    concluidos.push(htmlItem);
+                } else if (emEquipe) {
+                    ativos.push(htmlItem);
+                    pCount++;
+                }
+            }
+        }
+
+        const pct = Math.min(Math.round((pCount / MAX_PROJECTS) * 100), 100);
+        let colorAlloc = '#47e299'; if(pct>=80) colorAlloc='#ff8793'; else if(pct>=50) colorAlloc='#ffc107';
+        document.getElementById('profile-alloc').innerHTML = `<span style="color:${colorAlloc}">${pct}% Alocado</span> (${pCount} projetos ativos)`;
+        
+        document.getElementById('profile-active-list').innerHTML = ativos.length ? ativos.join('') : '<div style="font-size:12px; color:var(--cadarn-cinza);">Nenhum projeto em execução.</div>';
+        document.getElementById('profile-past-list').innerHTML = concluidos.length ? concluidos.join('') : '<div style="font-size:12px; color:var(--cadarn-cinza);">Nenhum projeto concluído.</div>';
+
+        document.getElementById('profile-modal').classList.add('active');
+    }
+
+    function fecharPerfil(e) {
+        if(e.target === document.getElementById('profile-modal')) {
+            document.getElementById('profile-modal').classList.remove('active');
+        }
+    }
+
+    function salvarPerfilDado(prop, val) {
+        if(!perfilAtualNome) return;
+        if(!configColaboradores[perfilAtualNome]) configColaboradores[perfilAtualNome] = { genero: autoDetectGender(perfilAtualNome) };
+        
+        // Atualiza o valor
+        configColaboradores[perfilAtualNome][prop] = val;
+        
+        // Salva localmente (backup offline)
+        localStorage.setItem('cadarn_colabs', JSON.stringify(configColaboradores));
+        
+        // Sincroniza com o Google Sheets (Nuvem)
+        if(navigator.onLine) {
+            fetch(API_NUVEM, { 
+                method: 'POST', 
+                body: JSON.stringify({ 
+                    action: 'save_colabs', 
+                    data: configColaboradores 
+                }) 
+            }).then(() => {
+                showToast('Informação sincronizada na nuvem.', 'success');
+            }).catch(e => {
+                console.log("Erro ao sincronizar colaboradores:", e);
+                showToast('Salvo localmente. Sincronizará quando houver rede.', 'warning');
+            });
+        } else {
+            showToast('Salvo localmente (Offline).', 'warning');
+        }
+    }
+
+    function handleDropFoto(e) {
+        e.preventDefault();
+        e.currentTarget.classList.remove('dragover');
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+            processarFotoPerfil(e.dataTransfer.files[0]);
+        }
+    }
+
+    function handleFileFoto(e) {
+        if (e.target.files && e.target.files[0]) {
+            processarFotoPerfil(e.target.files[0]);
+        }
+    }
+
+    function processarFotoPerfil(file) {
+        if(!file.type.startsWith('image/')) { showToast('Por favor, selecione uma imagem.', 'warning'); return; }
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const size = 150;
+                canvas.width = size; canvas.height = size;
+                const ctx = canvas.getContext('2d');
+                
+                const min = Math.min(img.width, img.height);
+                const sx = (img.width - min) / 2; const sy = (img.height - min) / 2;
+                
+                ctx.drawImage(img, sx, sy, min, min, 0, 0, size, size);
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.7); 
+                
+                salvarPerfilDado('foto', dataUrl);
+                
+                document.getElementById('profile-avatar-render').innerHTML = getAvatarHtml(perfilAtualNome, 80);
+                renderTeamAvailability();
+                if(modoVisualizacao === 'equipe') renderMainProjects();
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    /* ========================================== */
+    /* LOGICA ELOGIOS E COLABORADOR DO MÊS        */
+    /* ========================================== */
+
+    function abrirModalElogio() {
+        if(!usuarioLogado) {
+            abrirModal();
+            showToast('Identifique-se primeiro para mandar um elogio.', 'warning');
+            return;
+        }
+
+        const sel = document.getElementById('elogio-para');
+        let opts = '<option value="">Escolha um colega...</option>';
+        
+        // Busca de todos os membros nos projetos + config salva
+        let todosMembros = new Set(Object.keys(configColaboradores));
+        Object.values(bdProjetos).forEach(p => {
+            (p.equipeAtual || []).forEach(m => todosMembros.add(m.split('(')[0].trim()));
+            (p.equipeAntiga || []).forEach(m => todosMembros.add(m.split('(')[0].trim()));
+        });
+
+        // Ordena alfabeticamente e adiciona ao select
+        Array.from(todosMembros).sort().forEach(nome => {
+            if(nome && nome !== usuarioLogado) {
+                opts += `<option value="${sanitize(nome)}">${sanitize(nome)}</option>`;
+            }
+        });
+
+        sel.innerHTML = opts;
+        document.getElementById('elogio-texto').value = '';
+        
+        document.getElementById('elogio-modal').classList.add('active');
+    }
+
+    function fecharModalElogio(e) {
+        if(!e || e.target === document.getElementById('elogio-modal') || e.target.classList.contains('sp-close')) {
+            document.getElementById('elogio-modal').classList.remove('active');
+        }
+    }
+
+    function enviarElogio() {
+        const de = usuarioLogado;
+        const para = document.getElementById('elogio-para').value;
+        const texto = document.getElementById('elogio-texto').value.trim();
+        
+        if(!para) { showToast("Selecione para quem vai o elogio.", "warning"); return; }
+        if(!texto) { showToast("Escreva a mensagem do elogio.", "warning"); return; }
+
+        if(!configColaboradores[para]) configColaboradores[para] = {};
+        if(!configColaboradores[para].elogiosRecebidos) configColaboradores[para].elogiosRecebidos = [];
+        configColaboradores[para].elogiosRecebidos.push({ de, texto, data: new Date().toISOString() });
+
+        if(!configColaboradores[de]) configColaboradores[de] = {};
+        if(!configColaboradores[de].elogiosEnviados) configColaboradores[de].elogiosEnviados = [];
+        configColaboradores[de].elogiosEnviados.push({ para, texto, data: new Date().toISOString() });
+
+        localStorage.setItem('cadarn_colabs', JSON.stringify(configColaboradores));
+        
+        if(navigator.onLine) {
+            fetch(API_NUVEM, { method: 'POST', body: JSON.stringify({ action: 'save_colabs', data: configColaboradores }) }).catch(e=>console.log(e));
+        }
+
+        showToast(`⭐ Elogio enviado para ${sanitize(para)}!`, 'success');
+        fecharModalElogio();
+        atualizarColaboradorDoMes();
+    }
+
+    function atualizarColaboradorDoMes() {
+        let topColab = null;
+        let maxEstrelas = 0;
+        
+        for(let [nome, data] of Object.entries(configColaboradores)) {
+            let estrelas = data.elogiosRecebidos ? data.elogiosRecebidos.length : 0;
+            if(estrelas > maxEstrelas) {
+                maxEstrelas = estrelas;
+                topColab = nome;
+            }
+        }
+        
+        const container = document.getElementById('colaborador-mes-container');
+        if(topColab && maxEstrelas > 0) {
+            container.innerHTML = `
+                <div style="font-size:10px; color:var(--cadarn-roxo-claro); text-transform:uppercase; font-weight:800; margin-bottom:10px; text-align:center; letter-spacing:1px;">⭐ Colaborador do Mês</div>
+                <div style="cursor:pointer;" onclick="abrirPerfil('${sanitize(topColab)}')">${getAvatarHtml(topColab, 54)}</div>
+                <div style="font-size:13px; font-weight:700; margin-top:8px; color:var(--cadarn-branco); text-align:center;">${sanitize(topColab).split(' ')[0]}</div>
+                <div style="font-size:11px; color:#ffc107; font-weight:600; text-align:center;">${maxEstrelas} Estrela(s)</div>
+            `;
+        } else {
+            container.innerHTML = `<div style="font-size:10px; color:var(--cadarn-cinza); text-transform:uppercase; text-align:center;">Nenhum destaque ainda</div>`;
+        }
+    }
+
+
+    /* ========================================== */
+    /* TOASTS (NOTIFICAÇÕES NÃO BLOQUEANTES)      */
+    /* ========================================== */
+    function showToast(message, type='info', onUndo=null) {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        
+        let undoHtml = onUndo ? `<button class="toast-undo">Desfazer</button>` : '';
+        toast.innerHTML = `<span>${message}</span> ${undoHtml}`;
+        container.appendChild(toast);
+
+        let timeout;
+        if(onUndo) {
+            toast.querySelector('.toast-undo').onclick = () => {
+                onUndo();
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+                clearTimeout(timeout);
+            };
+        }
+        
+        timeout = setTimeout(() => {
+            if (document.body.contains(toast)) {
+                toast.style.opacity = '0';
+                setTimeout(() => { if (document.body.contains(toast)) toast.remove(); }, 300);
+            }
+        }, 6000);
+    }
+
+    window.addEventListener('offline', () => {
+        document.getElementById('offline-banner').style.display = 'block';
+        showToast('Conexão perdida. Alterações serão salvas localmente.', 'warning');
+    });
+
+    window.addEventListener('online', () => {
+        document.getElementById('offline-banner').style.display = 'none';
+        showToast('Conexão restabelecida. Sincronizando...', 'success');
+        fetch(API_NUVEM, { method: 'POST', body: JSON.stringify(bdProjetos) }).catch(e => console.log(e));
+    });
+
+    function toggleTheme() {
+        const body = document.body;
+        const isLight = body.classList.toggle('light-mode');
+        const btn = document.getElementById('theme-toggle');
+        if (isLight) { btn.innerHTML = '🌙'; btn.title = 'Modo Escuro'; localStorage.setItem('cadarn_theme', 'light'); updateIframesTheme('light'); } 
+        else { btn.innerHTML = '☀️'; btn.title = 'Modo Claro'; localStorage.setItem('cadarn_theme', 'dark'); updateIframesTheme('dark'); }
+        atualizarDashboard(); 
+    }
+
+    function updateIframesTheme(theme) {
+        const iframesToUpdate = ['tv-widget-1', 'tv-widget-2', 'tv-widget-3', 'tv-widget-4', 'tv-widget-5'];
+        iframesToUpdate.forEach(id => {
+            const ifr = document.getElementById(id);
+            if (ifr) { ifr.src = ifr.src.replace(theme === 'light' ? 'colorTheme=dark' : 'colorTheme=light', theme === 'light' ? 'colorTheme=light' : 'colorTheme=dark'); }
+        });
+    }
+
+    function loadTheme() {
+        const savedTheme = localStorage.getItem('cadarn_theme');
+        const btn = document.getElementById('theme-toggle');
+        if (savedTheme === 'light') { document.body.classList.add('light-mode'); btn.innerHTML = '🌙'; btn.title = 'Modo Escuro'; updateIframesTheme('light'); }
+    }
+
+    function sanitize(str) {
+        if (!str) return '';
+        const temp = document.createElement('div'); temp.textContent = str; return temp.innerHTML;
+    }
+
+    function diasEntre(dataInicial, dataFinal) {
+        if(!dataInicial) return 0;
+        const fim = dataFinal ? new Date(dataFinal) : new Date();
+        const diffTempo = Math.abs(fim - new Date(dataInicial));
+        return Math.ceil(diffTempo / (1000 * 60 * 60 * 24)); 
+    }
+
+    const API_NUVEM = "https://script.google.com/macros/s/AKfycbwamR1iuNWesetuAulDr2Bmd66CDijx8_l5Gl866IVgnCZ3CL7yJ45rj64nsDSdMy7Yvw/exec"; 
+
+    let bdProjetos = {};
+    let projetoAbertoAtual = null;
+    let isEditingProjeto = false;
+    let modoVisualizacao = 'list'; 
+    let filtroAtual = 'Todos';
+    let filtroMembro = null; 
+    let isSelectModeLixeira = false;
+    let selectedLixeiraItems = new Set();
+    let presentationSlides = [];
+    let currentSlideIndex = 0;
+
+    const insights = [
+        { text: "A inovação distingue um líder de um seguidor.", author: "Steve Jobs" },
+        { text: "O maior risco é não correr nenhum risco. A única estratégia garantida de falhar é não arriscar.", author: "Mark Zuckerberg" },
+        { text: "Sua marca pessoal é o que as pessoas dizem sobre você quando você não está na sala.", author: "Jeff Bezos" },
+        { text: "A estratégia é sobre fazer escolhas, trade-offs; é sobre escolher deliberadamente ser diferente.", author: "Michael Porter" },
+        { text: "Tecnologia é apenas uma ferramenta. Para motivar as pessoas, a liderança é o mais importante.", author: "Bill Gates" },
+        { text: "Não tenha receio de desistir do bom para perseguir o ótimo.", author: "John D. Rockefeller" },
+        { text: "Se você criar um caso de amor com seus clientes, eles próprios farão a sua publicidade.", author: "Philip Kotler" },
+        { text: "O ativo mais valioso da sua empresa é como ela é conhecida pelos seus clientes.", author: "Brian Tracy" },
+        { text: "A excelência não é um ato, mas um hábito.", author: "Aristóteles" },
+        { text: "Os clientes mais insatisfeitos são a sua maior fonte de aprendizado.", author: "Bill Gates" }
+    ];
+
+    function renderDailyQuote() {
+        const today = new Date();
+        const index = (today.getFullYear() + today.getMonth() + today.getDate()) % insights.length;
+        const quote = insights[index];
+        document.getElementById('quote-text').innerText = `"${quote.text}"`;
+        document.getElementById('quote-author').innerText = `- ${quote.author}`;
+    }
+
+    function checkMorningBriefing() {
+        const todayStr = new Date().toISOString().split('T')[0];
+        const lastBriefing = localStorage.getItem('cadarn_last_briefing_date');
+        
+        if (lastBriefing !== todayStr) {
+            let totaisAtivos = 0; let atrasosGlobais = 0;
+            const hojeCompare = new Date(new Date().setHours(0,0,0,0));
+
+            for (const proj of Object.values(bdProjetos)) {
+                if (proj.arquivado) continue;
+                const todasConcluidas = proj.etapas && proj.etapas.length > 0 && proj.etapas.every(e => e.status === 'concluido');
+                if (!todasConcluidas) {
+                    totaisAtivos++;
+                    if(proj.etapas) {
+                        proj.etapas.forEach(e => {
+                            if(e.prazo && new Date(e.prazo) < hojeCompare && e.status !== 'concluido') atrasosGlobais++;
+                        });
+                    }
+                }
+            }
+
+            document.getElementById('briefing-ativos').innerText = totaisAtivos;
+            document.getElementById('briefing-atrasos').innerText = atrasosGlobais;
+            
+            const alertBox = document.getElementById('briefing-alert-box');
+            if (atrasosGlobais > 0) { 
+                alertBox.classList.add('briefing-alert'); 
+                document.getElementById('briefing-atrasos').style.color = '#ff8793'; 
+            } else { 
+                alertBox.classList.remove('briefing-alert'); 
+                document.getElementById('briefing-atrasos').style.color = '#47e299'; 
+            }
+            
+            const [, todayMonth, todayDay] = todayStr.split('-'); 
+            let aniversariantes = [];
+            
+            if (typeof configColaboradores !== 'undefined') {
+                for (const [nomeColab, configColab] of Object.entries(configColaboradores)) {
+                    if (configColab && configColab.nascimento) {
+                        const [, bMonth, bDay] = configColab.nascimento.split('-');
+                        if (bMonth === todayMonth && bDay === todayDay) {
+                            aniversariantes.push(nomeColab.split(' ')[0]); 
+                        }
+                    }
+                }
+            }
+
+            const bdayAlert = document.getElementById('briefing-birthday-alert');
+            if (bdayAlert) {
+                if (aniversariantes.length > 0) {
+                    document.getElementById('briefing-birthday-names').innerText = aniversariantes.join(', ');
+                    bdayAlert.style.display = 'block';
+                } else {
+                    bdayAlert.style.display = 'none';
+                }
+            }
+
+            document.getElementById('briefing-modal').classList.add('active');
+        }
+    }
+
+    function fecharBriefing() {
+        const todayStr = new Date().toISOString().split('T')[0];
+        localStorage.setItem('cadarn_last_briefing_date', todayStr);
+        document.getElementById('briefing-modal').classList.remove('active');
+    }
+
+    async function carregarProjetosDaNuvem() {
+        try {
+            if(!navigator.onLine) throw new Error("Offline");
+            const response = await fetch(API_NUVEM);
+            const data = await response.json(); 
+            
+            if (data.projetos !== undefined) {
+                bdProjetos = data.projetos || {};
+                if (data.colaboradores && Object.keys(data.colaboradores).length > 0) {
+                    configColaboradores = data.colaboradores;
+                    localStorage.setItem('cadarn_colabs', JSON.stringify(configColaboradores));
+                }
+            } else {
+                bdProjetos = data || {};
+                console.warn("Aviso: Lendo projetos no formato antigo. Verifique o Apps Script.");
+            }
+
+            if(Object.keys(bdProjetos).length === 0) bdProjetos = carregarProjetosDefault();
+            
+            renderMainProjects();
+            renderTeamAvailability(); 
+            atualizarColaboradorDoMes();
+            
+            if(localStorage.getItem('cadarn_user')) checkMorningBriefing();
+        } catch (error) {
+            console.log("Erro ao carregar da nuvem, usando cache local", error);
+            bdProjetos = JSON.parse(localStorage.getItem('cadarn_projetos_db')) || carregarProjetosDefault();
+            configColaboradores = JSON.parse(localStorage.getItem('cadarn_colabs')) || {};
+// --- LIMPEZA DE CACHE ANTIGO ---
+    // Remove o "Victor" duplicado que ficou preso no cache de versões anteriores
+    if (configColaboradores["Victor"]) {
+        delete configColaboradores["Victor"];
+        localStorage.setItem('cadarn_colabs', JSON.stringify(configColaboradores));
+        
+        // Se estiver com internet, já atualiza a nuvem apagando o fantasma
+        if (typeof API_NUVEM !== 'undefined' && navigator.onLine) {
+            fetch(API_NUVEM, { 
+                method: 'POST', 
+                body: JSON.stringify({ action: 'save_colabs', data: configColaboradores }) 
+            }).catch(e => console.log(e));
+        }
+    }
+    // --------------------------------
+            
+            renderMainProjects();
+            renderTeamAvailability();
+            atualizarColaboradorDoMes();
+            
+            if(localStorage.getItem('cadarn_user')) checkMorningBriefing();
+            if(!navigator.onLine) document.getElementById('offline-banner').style.display = 'block';
+        }
+    }
+
+    function carregarProjetosDefault() {
+        const user = localStorage.getItem('cadarn_user') ? localStorage.getItem('cadarn_user').split(' ')[0] : 'Sistema';
+        return { 
+            'proj1': { 
+                cliente: 'Petrobras', nome: 'Mapeamento Geopolítico', lider: 'Victor Hugo', descricao: 'Exemplo de projeto...', 
+                equipeAtual: ['Victor'], equipeAntiga: [], 
+                etapas: [{ titulo: 'Etapa 1', status: 'ativo', prazo: '' }],
+                dataCriacao: Date.now() - (5 * 86400000), 
+                dataConclusao: null,
+                tags: ['Energia', 'Estratégico'], licoes: 'O cliente prefere alinhamentos semanais curtos.', arquivado: false
+            } 
+        };
+    }
+
+    function setVisualizacao(modo) {
+        modoVisualizacao = modo;
+        document.getElementById('btn-view-list').classList.toggle('active', modo === 'list');
+        document.getElementById('btn-view-kanban').classList.toggle('active', modo === 'kanban');
+        document.getElementById('btn-view-roadmap').classList.toggle('active', modo === 'roadmap');
+        document.getElementById('btn-view-equipe').classList.toggle('active', modo === 'equipe');
+        document.getElementById('btn-view-lixeira').classList.toggle('active', modo === 'lixeira');
+        
+        isSelectModeLixeira = false; selectedLixeiraItems.clear();
+        document.getElementById('tags-filter-container').style.display = (modo === 'equipe' || modo === 'lixeira') ? 'none' : 'flex';
+        renderMainProjects();
+    }
+
+    function setFiltro(tag) { filtroAtual = tag; filtroMembro = null; renderMainProjects(); }
+    
+    function setFiltroMembro(nome) { filtroMembro = nome; setVisualizacao('list'); }
+    function limparFiltroMembro() { filtroMembro = null; renderMainProjects(); }
+
+    function toggleSelectModeLixeira() {
+        isSelectModeLixeira = !isSelectModeLixeira;
+        selectedLixeiraItems.clear();
+        renderMainProjects();
+    }
+
+    function toggleLixeiraItem(id) {
+        if (selectedLixeiraItems.has(id)) selectedLixeiraItems.delete(id);
+        else selectedLixeiraItems.add(id);
+        
+        const btn = document.getElementById('btn-delete-selected');
+        if (btn) { btn.innerText = `🗑️ Apagar Selecionados (${selectedLixeiraItems.size})`; btn.disabled = selectedLixeiraItems.size === 0; btn.style.opacity = selectedLixeiraItems.size === 0 ? '0.5' : '1'; }
+    }
+
+    function deleteSelectedLixeira() {
+        if (selectedLixeiraItems.size === 0) return;
+        const count = selectedLixeiraItems.size; const backups = {};
+        
+        selectedLixeiraItems.forEach(id => { backups[id] = JSON.parse(JSON.stringify(bdProjetos[id])); delete bdProjetos[id]; });
+        localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos));
+
+        showToast(`${count} projeto(s) excluído(s) permanentemente.`, 'danger', () => {
+            Object.assign(bdProjetos, backups); localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos)); renderMainProjects();
+        });
+
+        if(navigator.onLine) { fetch(API_NUVEM, { method: 'POST', body: JSON.stringify(bdProjetos) }).catch(e=>console.log(e)); }
+        isSelectModeLixeira = false; selectedLixeiraItems.clear(); renderMainProjects();
+    }
+
+    function renderMainProjects() {
+        const container = document.getElementById('main-projects-container');
+        const filterContainer = document.getElementById('tags-filter-container');
+        
+        if (Object.keys(bdProjetos).length === 0) { container.innerHTML = '<p style="color: var(--cadarn-cinza); font-size: 13px; text-align: center; padding: 20px;">Nenhum projeto cadastrado.</p>'; atualizarDashboard(); return; }
+        
+        let todasTags = new Set();
+        Object.values(bdProjetos).forEach(p => { if(!p.arquivado) (p.tags || []).forEach(t => todasTags.add(t)); });
+        
+        let filterHtml = `<button class="tag-filter-btn ${filtroAtual === 'Todos' && !filtroMembro ? 'active' : ''}" onclick="setFiltro('Todos')">Todos</button>`;
+        if (filtroMembro) { filterHtml += `<button class="tag-filter-btn active" onclick="limparFiltroMembro()">👤 ${sanitize(filtroMembro)} ✕</button>`; }
+        Array.from(todasTags).sort().forEach(tag => { filterHtml += `<button class="tag-filter-btn ${filtroAtual === tag && !filtroMembro ? 'active' : ''}" onclick="setFiltro('${sanitize(tag)}')">${sanitize(tag)}</button>`; });
+        filterContainer.innerHTML = filterHtml;
+        
+        let kanbanAguardando = ''; let kanbanAtivos = ''; let kanbanConcluidos = ''; let listaNormal = '';
+        const hojeCompare = new Date(new Date().setHours(0,0,0,0));
+        
+        if (modoVisualizacao === 'lixeira') {
+            let lixeiraHtml = `
+                <div class="lixeira-controls">
+                    <button class="sp-btn-edit" style="background: transparent; border-color: var(--cadarn-roxo); color: var(--cadarn-roxo);" onclick="toggleSelectModeLixeira()">${isSelectModeLixeira ? 'Cancelar Seleção' : '☑️ Selecionar Vários'}</button>
+                    ${isSelectModeLixeira ? `<button id="btn-delete-selected" class="sp-btn-edit" style="background: rgba(220, 53, 69, 0.2); border-color: #dc3545; color: #ff8793; opacity: 0.5;" disabled onclick="deleteSelectedLixeira()">🗑️ Apagar Selecionados (0)</button>` : ''}
+                </div>
+            `;
+            let temItemLixeira = false;
+            for (const [id, proj] of Object.entries(bdProjetos)) {
+                if (!proj.arquivado) continue;
+                temItemLixeira = true;
+                let checkHtml = isSelectModeLixeira ? `<input type="checkbox" class="checkbox-lixeira" onchange="toggleLixeiraItem('${id}')">` : '';
+                let actionHtml = isSelectModeLixeira ? '' : `<button class="sp-btn-edit" style="background: rgba(71, 226, 153, 0.2); border-color: #47e299; color: #47e299;" onclick="restaurarProjetoDireto('${id}')">♻️ Restaurar</button>`;
+                lixeiraHtml += `<div class="project-row" style="cursor: default;"><div style="display: flex; align-items: center; gap: 15px;">${checkHtml}<div><div style="font-weight: 500; font-size: 15px; margin-bottom: 5px; color: var(--cadarn-cinza); text-decoration: line-through;">${sanitize(proj.nome)}</div><div style="font-size: 12px; color: var(--cadarn-cinza);">Cliente: ${sanitize(proj.cliente)}</div></div></div><div>${actionHtml}</div></div>`;
+            }
+            container.innerHTML = temItemLixeira ? lixeiraHtml : '<p style="color:var(--cadarn-cinza); font-size: 13px; padding: 15px;">A lixeira está vazia.</p>';
+            return; 
+        }
+
+        if (modoVisualizacao === 'equipe') {
+            let workload = {};
+            for (const proj of Object.values(bdProjetos)) {
+                if (proj.arquivado) continue;
+                const todasConcluidas = proj.etapas && proj.etapas.length > 0 && proj.etapas.every(e => e.status === 'concluido');
+                if (todasConcluidas) continue; 
+                (proj.equipeAtual || []).forEach(membro => {
+                    let nome = membro.split('(')[0].trim();
+                    if(!workload[nome]) workload[nome] = { p: 0, atrasados: 0 };
+                    workload[nome].p++;
+                    if(proj.etapas && proj.etapas.some(e => e.prazo && new Date(e.prazo) < hojeCompare && e.status !== 'concluido')) { workload[nome].atrasados++; }
+                });
+            }
+            let eqHtml = '<div class="team-matrix-grid">';
+            if(Object.keys(workload).length === 0) eqHtml += '<p style="color:var(--cadarn-cinza); font-size: 13px;">Ninguém alocado no momento.</p>';
+            for (const [nome, data] of Object.entries(workload)) {
+                let alertHtml = data.atrasados > 0 ? `<div style="margin-top:10px; color:#ff8793; font-size:11px; font-weight:600;">⚠️ ${data.atrasados} projeto(s) com etapas atrasadas</div>` : '';
+                
+                eqHtml += `<div class="team-member-card" onclick="abrirPerfil('${sanitize(nome)}')">
+                    <div class="tm-header">
+                        ${getAvatarHtml(nome, 46)}
+                        <div>
+                            <div class="tm-info">${sanitize(nome)}</div>
+                            <div class="tm-sub">Consultor(a)</div>
+                        </div>
+                    </div>
+                    <div class="tm-body">
+                        <div><strong>${data.p}</strong> Projetos Ativos</div>
+                        ${alertHtml}
+                    </div>
+                </div>`;
+            }
+            eqHtml += '</div>'; container.innerHTML = eqHtml; return; 
+        }
+
+        let temProjetosParaMostrar = false;
+
+        for (const [id, proj] of Object.entries(bdProjetos)) {
+            if (proj.arquivado) continue;
+            
+            if (filtroAtual !== 'Todos' && !(proj.tags || []).includes(filtroAtual)) continue;
+            if (filtroMembro && !(proj.equipeAtual || []).some(m => m.split('(')[0].trim() === filtroMembro)) continue;
+            
+            temProjetosParaMostrar = true;
+            let statusGeral = 'pendente'; let labelStatus = 'Aguardando'; let slaBadge = '';
+            if (!proj.etapas) proj.etapas = [];
+            const todasConcluidas = proj.etapas.length > 0 && proj.etapas.every(e => e.status === 'concluido');
+            const algumaAtiva = proj.etapas.some(e => e.status === 'ativo');
+            
+            if (todasConcluidas) { statusGeral = 'concluido'; labelStatus = 'Concluído'; } 
+            else {
+                if (algumaAtiva) { statusGeral = 'ativo'; labelStatus = 'Em Execução'; }
+                let temAtraso = false; let venceHoje = false;
+                proj.etapas.forEach(e => {
+                    if (e.prazo && e.status !== 'concluido') {
+                        const dPrazo = new Date(e.prazo); dPrazo.setMinutes(dPrazo.getMinutes() + dPrazo.getTimezoneOffset());
+                        if (dPrazo < hojeCompare) temAtraso = true; else if (dPrazo.getTime() === hojeCompare.getTime()) venceHoje = true;
+                    }
+                });
+                if (temAtraso) slaBadge = '<span class="badge-danger">Atrasado</span>';
+                else if (venceHoje) slaBadge = '<span class="badge-warning">Vence Hoje</span>';
+            }
+            
+            const tagsHtml = (proj.tags || []).map(t => `<span class="tag-pill">${sanitize(t)}</span>`).join('');
+            
+            if (modoVisualizacao === 'list' || modoVisualizacao === 'roadmap') {
+                listaNormal += `<div class="project-row" onclick="abrirProjeto('${sanitize(id)}')"><div><div style="font-weight: 500; font-size: 15px; margin-bottom: 5px; display:flex; align-items:center;">${sanitize(proj.nome)} ${slaBadge}</div><div style="display:flex; flex-wrap:wrap; margin-bottom:5px;">${tagsHtml}</div><div style="font-size: 12px; color: var(--cadarn-cinza);">Cliente: ${sanitize(proj.cliente)} • Líder: ${sanitize(proj.lider)}</div></div><div style="font-size: 13px; color: ${statusGeral === 'concluido' ? '#47e299' : (statusGeral === 'ativo' ? '#b68aff' : '#666')}; display: flex; align-items: center; font-weight: 500;"><span class="status-dot dot-${statusGeral}"></span> ${labelStatus}</div></div>`;
+            } else {
+                const cardHtml = `<div class="kanban-card" onclick="abrirProjeto('${sanitize(id)}')"><div style="display:flex; justify-content:space-between; align-items:flex-start;"><div class="kanban-card-title">${sanitize(proj.nome)}</div>${slaBadge}</div><div class="kanban-card-meta">${sanitize(proj.cliente)}</div><div style="margin-top: 10px;">${tagsHtml}</div><div style="margin-top: 10px; border-top: 1px solid rgba(131, 46, 255, 0.1); padding-top: 10px; font-size: 11px; color: var(--cadarn-cinza);">Líder: ${sanitize(proj.lider)}</div></div>`;
+                if(statusGeral === 'pendente') kanbanAguardando += cardHtml; else if(statusGeral === 'ativo') kanbanAtivos += cardHtml; else kanbanConcluidos += cardHtml;
+            }
+        }
+
+        if (modoVisualizacao === 'list') { 
+            container.innerHTML = listaNormal || '<p style="color:var(--cadarn-cinza); font-size: 13px; padding: 15px;">Nenhum projeto encontrado.</p>'; 
+        } else if (modoVisualizacao === 'kanban') { 
+            container.innerHTML = `<div class="kanban-board"><div class="kanban-col"><div class="kanban-col-header">Aguardando <span class="status-dot dot-pendente" style="margin:0;"></span></div>${kanbanAguardando || '<div style="color:var(--cadarn-cinza); font-size:12px;">Vazio</div>'}</div><div class="kanban-col" style="background: rgba(182, 138, 255, 0.05); border-color: rgba(182, 138, 255, 0.2);"><div class="kanban-col-header" style="color: #b68aff;">Em Execução <span class="status-dot dot-ativo" style="margin:0;"></span></div>${kanbanAtivos || '<div style="color:var(--cadarn-cinza); font-size:12px;">Vazio</div>'}</div><div class="kanban-col" style="background: rgba(71, 226, 153, 0.05); border-color: rgba(71, 226, 153, 0.2);"><div class="kanban-col-header" style="color: #47e299;">Concluídos <span class="status-dot dot-concluido" style="margin:0;"></span></div>${kanbanConcluidos || '<div style="color:var(--cadarn-cinza); font-size:12px;">Vazio</div>'}</div></div>`; 
+        } else if (modoVisualizacao === 'roadmap') {
+            if (!temProjetosParaMostrar) {
+                container.innerHTML = '<p style="color:var(--cadarn-cinza); font-size: 13px; padding: 15px;">Vazio.</p>';
+            } else {
+                let minDate = Infinity; let maxDate = Date.now() + (7 * 86400000); 
+                const projArray = Object.values(bdProjetos).filter(p => !p.arquivado && (filtroAtual === 'Todos' || (p.tags || []).includes(filtroAtual)) && (!filtroMembro || (p.equipeAtual || []).some(m => m.split('(')[0].trim() === filtroMembro)));
+                projArray.forEach(p => { if(p.dataCriacao < minDate) minDate = p.dataCriacao; if(p.dataConclusao && p.dataConclusao > maxDate) maxDate = p.dataConclusao; });
+                if(minDate === Infinity) minDate = Date.now() - (30 * 86400000);
+                const totalDuration = maxDate - minDate;
+
+                let roadmapHtml = `<div style="padding:15px; overflow-x:auto;"><div style="min-width: 500px;">`;
+                projArray.forEach((proj, idx) => {
+                    const start = proj.dataCriacao; const end = proj.dataConclusao || Date.now();
+                    const leftPct = Math.max(0, ((start - minDate) / totalDuration) * 100);
+                    let widthPct = Math.max(2, ((end - start) / totalDuration) * 100);
+                    if(leftPct + widthPct > 100) widthPct = 100 - leftPct;
+
+                    let color = '#666'; 
+                    if (!proj.etapas) proj.etapas = [];
+                    const todasConcluidas = proj.etapas.length > 0 && proj.etapas.every(e => e.status === 'concluido');
+                    const algumaAtiva = proj.etapas.some(e => e.status === 'ativo');
+                    if(todasConcluidas) color = '#47e299'; else if(algumaAtiva) color = '#b68aff';
+                    const originalId = Object.keys(bdProjetos).find(key => bdProjetos[key] === proj);
+
+                    roadmapHtml += `
+                        <div style="display:flex; align-items:center; margin-bottom: 15px; cursor: pointer;" onclick="abrirProjeto('${originalId}')">
+                            <div style="width: 30%; font-size:13px; font-weight: 500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-right:10px; color:var(--cadarn-branco);">${sanitize(proj.nome)}</div>
+                            <div style="width: 70%; background: rgba(131,46,255,0.05); height: 12px; border-radius: 6px; position: relative;">
+                                <div style="position:absolute; left: ${leftPct}%; width: ${widthPct}%; height: 100%; background: ${color}; border-radius: 6px; box-shadow: 0 0 10px ${color}80;"></div>
+                            </div>
+                        </div>
+                    `;
+                });
+                roadmapHtml += `</div></div>`;
+                container.innerHTML = roadmapHtml;
+            }
+        }
+        atualizarDashboard(); 
+    }
+
+    function novoProjeto() {
+        const user = localStorage.getItem('cadarn_user') ? localStorage.getItem('cadarn_user').split(' ')[0] : 'Usuário';
+        const novoId = 'proj_' + Date.now();
+        bdProjetos[novoId] = { 
+            cliente: 'Novo Cliente', nome: 'Novo Projeto', lider: '', descricao: 'Descreva...', 
+            equipeAtual: [], equipeAntiga: [], etapas: [{ titulo: 'Etapa Inicial', status: 'pendente', prazo: '' }], 
+            dataCriacao: Date.now(), dataConclusao: null, tags: [], licoes: '', arquivado: false
+        };
+        projetoAbertoAtual = novoId; abrirProjeto(novoId); iniciarEdicao(); 
+    }
+
+    function arquivarProjeto() {
+        const proj = bdProjetos[projetoAbertoAtual];
+        proj.arquivado = true; 
+        localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos));
+        fecharProjeto(); renderMainProjects();
+
+        showToast('Projeto movido para a lixeira.', 'warning', () => {
+            proj.arquivado = false;
+            localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos));
+            renderMainProjects();
+            if(navigator.onLine) { fetch(API_NUVEM, { method: 'POST', body: JSON.stringify(bdProjetos) }).catch(e=>console.log(e)); }
+        });
+        if(navigator.onLine) { fetch(API_NUVEM, { method: 'POST', body: JSON.stringify(bdProjetos) }).catch(e=>console.log(e)); }
+    }
+
+    function restaurarProjeto() {
+        const proj = bdProjetos[projetoAbertoAtual];
+        proj.arquivado = false; 
+        localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos));
+        fecharProjeto(); renderMainProjects();
+        showToast('Projeto restaurado com sucesso.', 'success');
+        if(navigator.onLine) { fetch(API_NUVEM, { method: 'POST', body: JSON.stringify(bdProjetos) }).catch(e=>console.log(e)); }
+    }
+    
+    function restaurarProjetoDireto(id) {
+        const proj = bdProjetos[id];
+        proj.arquivado = false; 
+        localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos));
+        renderMainProjects();
+        showToast('Projeto restaurado.', 'success');
+        if(navigator.onLine) { fetch(API_NUVEM, { method: 'POST', body: JSON.stringify(bdProjetos) }).catch(e=>console.log(e)); }
+    }
+
+    function excluirPermanente() {
+        const id = projetoAbertoAtual;
+        const backup = JSON.parse(JSON.stringify(bdProjetos[id]));
+        delete bdProjetos[id]; 
+        localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos));
+
+        fecharProjeto(); renderMainProjects();
+
+        showToast('Projeto excluído definitivamente.', 'danger', () => {
+            bdProjetos[id] = backup;
+            localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos));
+            renderMainProjects();
+            if(navigator.onLine) { fetch(API_NUVEM, { method: 'POST', body: JSON.stringify(bdProjetos) }).catch(e=>console.log(e)); }
+        });
+        if(navigator.onLine) { fetch(API_NUVEM, { method: 'POST', body: JSON.stringify(bdProjetos) }).catch(e=>console.log(e)); }
+    }
+
+    /* --- AUTO SAVE DRAFT NO SIDE PANEL --- */
+    function capturarEstadoAtualDoPainel() {
+        if(!projetoAbertoAtual) return null;
+        const draft = {
+            cliente: document.getElementById('edit-cliente').value,
+            nome: document.getElementById('edit-titulo').value,
+            lider: document.getElementById('edit-lider').value,
+            desc: document.getElementById('edit-desc').value,
+            licoes: document.getElementById('edit-licoes').value,
+            tags: document.getElementById('edit-tags').value,
+            equipe: document.getElementById('edit-equipe').value,
+            equipeAntiga: document.getElementById('edit-equipe-antiga').value,
+            etapas: []
+        };
+        const stepTitles = document.querySelectorAll('[id^="titulo-etapa-"]');
+        const stepStatuses = document.querySelectorAll('[id^="status-etapa-"]');
+        const stepPrazos = document.querySelectorAll('[id^="prazo-etapa-"]');
+        for(let i=0; i<stepTitles.length; i++) {
+            draft.etapas.push({
+                titulo: stepTitles[i].value,
+                status: stepStatuses[i].value,
+                prazo: stepPrazos[i] ? stepPrazos[i].value : ''
+            });
+        }
+        return draft;
+    }
+
+    function saveDraft() {
+        if(isEditingProjeto && projetoAbertoAtual) {
+            const draft = capturarEstadoAtualDoPainel();
+            localStorage.setItem('cadarn_draft_' + projetoAbertoAtual, JSON.stringify(draft));
+        }
+    }
+
+    function loadDraft() {
+        if(!projetoAbertoAtual) return;
+        const draftStr = localStorage.getItem('cadarn_draft_' + projetoAbertoAtual);
+        if(draftStr) {
+            const draft = JSON.parse(draftStr);
+            document.getElementById('edit-cliente').value = draft.cliente || '';
+            document.getElementById('edit-titulo').value = draft.nome || '';
+            document.getElementById('edit-lider').value = draft.lider || '';
+            document.getElementById('edit-desc').value = draft.desc || '';
+            document.getElementById('edit-licoes').value = draft.licoes || '';
+            document.getElementById('edit-tags').value = draft.tags || '';
+            document.getElementById('edit-equipe').value = draft.equipe || '';
+            document.getElementById('edit-equipe-antiga').value = draft.equipeAntiga || '';
+            if (draft.etapas) renderEtapas(draft.etapas, true);
+            showToast('Rascunho automático recuperado.', 'info');
+        }
+    }
+
+    document.getElementById('side-panel').addEventListener('input', () => { saveDraft(); });
+
+    function salvarDigitacaoTemporaria() {
+        const proj = bdProjetos[projetoAbertoAtual]; if(!proj) return;
+        const estado = capturarEstadoAtualDoPainel();
+        if(estado) proj.etapas = estado.etapas;
+    }
+
+    function adicionarEtapa() { 
+        if(!projetoAbertoAtual) return;
+        let estado = capturarEstadoAtualDoPainel();
+        estado.etapas.push({ titulo: 'Nova Etapa', status: 'pendente', prazo: '' });
+        renderEtapas(estado.etapas, true);
+        saveDraft();
+    }
+    
+    function removerEtapa(idx) { 
+        if(!projetoAbertoAtual) return;
+        let estado = capturarEstadoAtualDoPainel();
+        estado.etapas.splice(idx, 1);
+        renderEtapas(estado.etapas, true);
+        saveDraft();
+    }
+
+    function abrirProjeto(id) {
+        projetoAbertoAtual = id; const proj = bdProjetos[id];
+        isEditingProjeto = false;
+
+        document.getElementById('sp-cliente').textContent = proj.cliente; document.getElementById('sp-titulo').textContent = proj.nome; document.getElementById('sp-desc').textContent = proj.descricao;
+        document.getElementById('sp-licoes').textContent = proj.licoes ? proj.licoes : 'Nenhuma lição registrada ainda.';
+        
+        document.getElementById('sp-lider-view').textContent = proj.lider || 'A definir';
+        document.getElementById('edit-lider').value = proj.lider || '';
+
+        document.getElementById('edit-cliente').value = proj.cliente; document.getElementById('edit-titulo').value = proj.nome; document.getElementById('edit-desc').value = proj.descricao;
+        document.getElementById('edit-licoes').value = proj.licoes || '';
+        document.getElementById('edit-tags').value = (proj.tags || []).join(', ');
+        document.getElementById('edit-equipe').value = (proj.equipeAtual || []).join(', '); document.getElementById('edit-equipe-antiga').value = (proj.equipeAntiga || []).join(', ');
+
+        document.getElementById('sp-tags-container').innerHTML = (proj.tags || []).map(t => `<span class="tag-pill">${sanitize(t)}</span>`).join('');
+        document.getElementById('sp-equipe').innerHTML = (proj.equipeAtual || []).map(m => `<li class="team-item team-active">${sanitize(m)}</li>`).join('');
+        document.getElementById('sp-equipe-antiga').innerHTML = (proj.equipeAntiga || []).map(m => `<li class="team-item team-inactive">${sanitize(m)}</li>`).join('');
+        
+        const leadDisplay = document.getElementById('sp-leadtime');
+        if (proj.dataConclusao) { leadDisplay.innerHTML = `🏁 Concluído em ${diasEntre(proj.dataCriacao, proj.dataConclusao)} dias.`; leadDisplay.style.color = "#47e299"; } 
+        else { leadDisplay.innerHTML = `⏱️ Há ${diasEntre(proj.dataCriacao, null)} dias.`; leadDisplay.style.color = "#b68aff"; }
+
+        renderEtapas(proj.etapas, false);
+        
+        document.getElementById('sp-view-header').style.display = 'block'; 
+        document.getElementById('sp-edit-header').style.display = 'none'; 
+        document.getElementById('sp-desc').style.display = 'block'; 
+        document.getElementById('edit-desc').style.display = 'none'; 
+        document.getElementById('sp-tags-container').style.display = 'block'; 
+        document.getElementById('edit-tags').style.display = 'none'; 
+        document.getElementById('sp-equipe-container').style.display = 'block'; 
+        document.getElementById('edit-equipe').style.display = 'none'; 
+        document.getElementById('sp-equipe-antiga-container').style.display = 'block'; 
+        document.getElementById('edit-equipe-antiga').style.display = 'none'; 
+        document.getElementById('titulo-eq-antiga').style.display = 'block';
+        document.getElementById('sp-licoes').style.display = 'block'; 
+        document.getElementById('edit-licoes').style.display = 'none';
+        document.getElementById('sp-lider-view').style.display = 'block';
+        document.getElementById('edit-lider').style.display = 'none';
+        
+        if(proj.arquivado) {
+            document.getElementById('btn-edit').style.display = 'none'; 
+            document.getElementById('btn-delete').style.display = 'none'; 
+            document.getElementById('btn-restore').style.display = 'block'; 
+            document.getElementById('btn-perm-delete').style.display = 'block'; 
+        } else {
+            document.getElementById('btn-edit').style.display = 'block'; 
+            document.getElementById('btn-delete').style.display = 'block'; 
+            document.getElementById('btn-restore').style.display = 'none'; 
+            document.getElementById('btn-perm-delete').style.display = 'none'; 
+        }
+
+        document.getElementById('btn-save').style.display = 'none'; 
+        document.getElementById('btn-add-etapa').style.display = 'none';
+        document.getElementById('panel-overlay').classList.add('active'); document.getElementById('side-panel').classList.add('active');
+    }
+
+    function renderEtapas(etapas, editMode) {
+        let html = ''; 
+        const hojeCompare = new Date(new Date().setHours(0,0,0,0));
+
+        etapas.forEach((etapa, idx) => {
+            let icone = etapa.status === 'concluido' ? '✓' : (idx + 1);
+            let badge = '';
+            let valData = '';
+
+            if (editMode) {
+                let selectStatus = `<select class="edit-select" id="status-etapa-${idx}"><option value="pendente" ${etapa.status === 'pendente' ? 'selected' : ''}>Pendente</option><option value="ativo" ${etapa.status === 'ativo' ? 'selected' : ''}>Ativo</option><option value="concluido" ${etapa.status === 'concluido' ? 'selected' : ''}>Concluído</option></select>`;
+                let inputData = `<input type="date" id="prazo-etapa-${idx}" class="edit-input" style="width: auto; padding: 4px; margin: 0 10px 0 0;" value="${etapa.prazo || ''}" title="Prazo">`;
+                html += `<div class="step ${etapa.status}"><div class="step-icon">${icone}</div><div class="step-text" style="display:flex; align-items:center; width:100%; flex-wrap:wrap; gap:5px;">${inputData}<input type="text" class="edit-input" style="margin:0; padding:4px; flex-grow:1; min-width: 150px;" id="titulo-etapa-${idx}" value="${sanitize(etapa.titulo)}">${selectStatus}<button class="btn-danger" onclick="removerEtapa(${idx})">✕</button></div></div>`;
+            } else {
+                if (etapa.prazo && etapa.status !== 'concluido') {
+                    const dPrazo = new Date(etapa.prazo);
+                    dPrazo.setMinutes(dPrazo.getMinutes() + dPrazo.getTimezoneOffset());
+                    
+                    if (dPrazo < hojeCompare) badge = '<span class="badge-danger">Atrasado</span>';
+                    else if (dPrazo.getTime() === hojeCompare.getTime()) badge = '<span class="badge-warning">Vence Hoje</span>';
+                    valData = `<span style="font-size: 10px; color: var(--cadarn-cinza); margin-right: 8px;">[${dPrazo.toLocaleDateString('pt-BR')}]</span>`;
+                }
+                html += `<div class="step ${etapa.status}"><div class="step-icon">${icone}</div><div class="step-text" style="display:flex; align-items:center; width:100%;">${valData}${sanitize(etapa.titulo)}${badge}</div></div>`;
+            }
+        });
+        document.getElementById('sp-etapas').innerHTML = html;
+    }
+
+    function iniciarEdicao() {
+        isEditingProjeto = true;
+        const proj = bdProjetos[projetoAbertoAtual];
+        
+        document.getElementById('sp-view-header').style.display = 'none'; 
+        document.getElementById('sp-edit-header').style.display = 'block'; 
+        document.getElementById('sp-desc').style.display = 'none'; 
+        document.getElementById('edit-desc').style.display = 'block'; 
+        document.getElementById('sp-tags-container').style.display = 'none'; 
+        document.getElementById('edit-tags').style.display = 'block'; 
+        document.getElementById('sp-equipe-container').style.display = 'none'; 
+        document.getElementById('edit-equipe').style.display = 'block'; 
+        document.getElementById('sp-equipe-antiga-container').style.display = 'none'; 
+        document.getElementById('edit-equipe-antiga').style.display = 'block'; 
+        document.getElementById('titulo-eq-antiga').style.display = 'none';
+        document.getElementById('sp-licoes').style.display = 'none'; 
+        document.getElementById('edit-licoes').style.display = 'block';
+        document.getElementById('sp-lider-view').style.display = 'none';
+        document.getElementById('edit-lider').style.display = 'block';
+
+        document.getElementById('btn-edit').style.display = 'none'; 
+        document.getElementById('btn-save').style.display = 'block'; 
+        document.getElementById('btn-delete').style.display = 'block'; 
+        document.getElementById('btn-add-etapa').style.display = 'block';
+        
+        renderEtapas(proj.etapas, true);
+        loadDraft(); 
+    }
+
+    async function salvarEdicao() {
+        const estado = capturarEstadoAtualDoPainel();
+        if(!estado) return;
+
+        const proj = bdProjetos[projetoAbertoAtual]; 
+
+        proj.cliente = estado.cliente;
+        proj.nome = estado.nome; 
+        proj.lider = estado.lider.trim() || 'A definir';
+        proj.descricao = estado.desc;
+        proj.licoes = estado.licoes;
+        proj.tags = estado.tags.split(',').map(s => s.trim()).filter(s => s);
+        proj.equipeAtual = estado.equipe.split(',').map(s => s.trim()).filter(s => s); 
+        proj.equipeAntiga = estado.equipeAntiga.split(',').map(s => s.trim()).filter(s => s); 
+        proj.etapas = estado.etapas;
+
+        const todasConcluidas = proj.etapas.length > 0 && proj.etapas.every(e => e.status === 'concluido');
+        if (todasConcluidas && !proj.dataConclusao) { proj.dataConclusao = Date.now(); } else if (!todasConcluidas && proj.dataConclusao) { proj.dataConclusao = null; }
+        
+        localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos));
+        localStorage.removeItem('cadarn_draft_' + projetoAbertoAtual); 
+        
+        showToast('Alterações salvas com sucesso.', 'success');
+
+        if(navigator.onLine) { fetch(API_NUVEM, { method: 'POST', body: JSON.stringify(bdProjetos) }).catch(e=>console.log(e)); }
+        
+        isEditingProjeto = false;
+        renderMainProjects(); 
+        abrirProjeto(projetoAbertoAtual); 
+    }
+
+    function fecharProjeto() { 
+        document.getElementById('panel-overlay').classList.remove('active'); 
+        document.getElementById('side-panel').classList.remove('active'); 
+        if(isEditingProjeto && projetoAbertoAtual) {
+            saveDraft();
+        }
+        isEditingProjeto = false;
+    }
+
+    /* --- SETUP INICIAL --- */
+    carregarProjetosDaNuvem(); setInterval(carregarProjetosDaNuvem, 300000); 
+
+    function updateClock() { const now = new Date(); document.getElementById('live-time').innerText = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); document.getElementById('live-date').innerText = now.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).toUpperCase(); }
+    setInterval(updateClock, 1000); updateClock();
+    
+    function getGreeting() { const hour = new Date().getHours(); if (hour >= 5 && hour < 12) return 'BOM DIA,'; if (hour >= 12 && hour < 18) return 'BOA TARDE,'; return 'BOA NOITE,'; }
+    
+    function popularLoginSelect() {
+        const sel = document.getElementById('login-select');
+        let opts = '<option value="">Selecione quem você é...</option>';
+        
+        // Puxa todos os colaboradores conhecidos no sistema (projetos + configs)
+        let todosMembros = new Set(Object.keys(configColaboradores));
+        Object.values(bdProjetos).forEach(p => {
+            (p.equipeAtual || []).forEach(m => todosMembros.add(m.split('(')[0].trim()));
+            (p.equipeAntiga || []).forEach(m => todosMembros.add(m.split('(')[0].trim()));
+        });
+
+        Array.from(todosMembros).sort().forEach(c => {
+            if(c) opts += `<option value="${sanitize(c)}">${sanitize(c)}</option>`;
+        });
+        
+        opts += '<option value="NOVO">+ Novo Colaborador (Digitar)</option>';
+        sel.innerHTML = opts;
+    }
+    
+    function checkNewUser() {
+        const sel = document.getElementById('login-select');
+        const inp = document.getElementById('name-input');
+        if(sel.value === 'NOVO') { inp.style.display = 'block'; inp.focus(); }
+        else { inp.style.display = 'none'; }
+    }
+    
+    function abrirModal() { 
+        popularLoginSelect();
+        document.getElementById('login-modal').classList.add('active'); 
+    }
+    
+    function salvarNome() { 
+        const sel = document.getElementById('login-select');
+        const inp = document.getElementById('name-input');
+        let n = sel.value === 'NOVO' ? inp.value.trim() : sel.value;
+        if(n) { 
+            localStorage.setItem('cadarn_user', n); 
+            usuarioLogado = n;
+            aplicarNome(n); 
+            document.getElementById('login-modal').classList.remove('active'); 
+            checkMorningBriefing(); 
+        } 
+    }
+    
+    function aplicarNome(nome) { 
+        const firstName = nome.split(' ')[0]; 
+        document.getElementById('display-greeting').innerText = getGreeting(); 
+        document.getElementById('display-name').innerText = firstName; 
+        document.getElementById('briefing-name').innerText = firstName; 
+        document.getElementById('display-avatar').innerText = firstName.charAt(0).toUpperCase(); 
+        document.getElementById('modal-greeting').innerText = `${getGreeting()} ${firstName}`; 
+    }
+    
+    window.onload = () => { 
+        loadTheme();
+        if (!navigator.onLine) document.getElementById('offline-banner').style.display = 'block';
+        if(!usuarioLogado) { abrirModal(); } else { aplicarNome(usuarioLogado); } 
+        loadScratchpad(); 
+        renderDailyQuote(); 
+    }
+
+    /* --- LÓGICA DO MODO APRESENTAÇÃO --- */
+    function startPresentation() {
+        presentationSlides = Object.values(bdProjetos).filter(p => !p.arquivado && (filtroAtual === 'Todos' || (p.tags || []).includes(filtroAtual)));
+        if(presentationSlides.length === 0) { showToast('Não há projetos ativos no filtro atual para apresentar.', 'warning'); return; }
+        currentSlideIndex = 0; document.getElementById('presentation-modal').classList.add('active'); renderSlide();
+    }
+
+    function closePresentation() { document.getElementById('presentation-modal').classList.remove('active'); }
+    function nextSlide() { if (currentSlideIndex < presentationSlides.length - 1) { currentSlideIndex++; renderSlide(); } }
+    function prevSlide() { if (currentSlideIndex > 0) { currentSlideIndex--; renderSlide(); } }
+
+    function renderSlide() {
+        const proj = presentationSlides[currentSlideIndex];
+        const hojeCompare = new Date(new Date().setHours(0,0,0,0));
+        
+        let statusGeral = 'pendente'; let labelStatus = 'Aguardando'; let colorStatus = '#666';
+        if (!proj.etapas) proj.etapas = [];
+        const todasConcluidas = proj.etapas.length > 0 && proj.etapas.every(e => e.status === 'concluido');
+        const algumaAtiva = proj.etapas.some(e => e.status === 'ativo');
+        
+        if (todasConcluidas) { statusGeral = 'concluido'; labelStatus = 'Concluído'; colorStatus = '#47e299'; } 
+        else if (algumaAtiva) { statusGeral = 'ativo'; labelStatus = 'Em Execução'; colorStatus = '#b68aff'; }
+
+        let leadTimeText = '';
+        if (proj.dataConclusao) { leadTimeText = `🏁 ${diasEntre(proj.dataCriacao, proj.dataConclusao)} dias (Finalizado)`; } 
+        else { leadTimeText = `⏱️ ${diasEntre(proj.dataCriacao, null)} dias ativos`; }
+
+        document.getElementById('pres-client').innerText = proj.cliente;
+        document.getElementById('pres-title').innerText = proj.nome;
+        document.getElementById('pres-lider').innerHTML = `👤 Líder: <strong>${proj.lider}</strong>`;
+        document.getElementById('pres-status').innerHTML = `🎯 Status: <strong style="color:${colorStatus}">${labelStatus}</strong>`;
+        document.getElementById('pres-leadtime').innerText = leadTimeText;
+        
+        document.getElementById('pres-desc').innerText = proj.descricao || 'Nenhuma descrição fornecida.';
+        document.getElementById('pres-licoes').innerText = proj.licoes || 'Nenhuma lição registrada.';
+
+        let etapasHtml = '';
+        proj.etapas.forEach((etapa, idx) => {
+            let icone = etapa.status === 'concluido' ? '✓' : (idx + 1);
+            let badge = ''; let valData = '';
+            if (etapa.prazo && etapa.status !== 'concluido') {
+                const dPrazo = new Date(etapa.prazo); dPrazo.setMinutes(dPrazo.getMinutes() + dPrazo.getTimezoneOffset());
+                if (dPrazo < hojeCompare) badge = '<span class="badge-danger">Atrasado</span>';
+                else if (dPrazo.getTime() === hojeCompare.getTime()) badge = '<span class="badge-warning">Vence Hoje</span>';
+                valData = `<span style="font-size: 11px; color: var(--cadarn-cinza); margin-right: 8px;">[${dPrazo.toLocaleDateString('pt-BR')}]</span>`;
+            }
+            etapasHtml += `<div class="step ${etapa.status}"><div class="step-icon">${icone}</div><div class="step-text" style="display:flex; align-items:center; width:100%; font-size:16px;">${valData}${sanitize(etapa.titulo)}${badge}</div></div>`;
+        });
+        document.getElementById('pres-etapas').innerHTML = etapasHtml || '<p style="color:var(--cadarn-cinza);">Sem etapas cadastradas.</p>';
+
+        document.getElementById('pres-counter').innerText = `${currentSlideIndex + 1} / ${presentationSlides.length}`;
+        document.getElementById('pres-btn-prev').disabled = currentSlideIndex === 0;
+        document.getElementById('pres-btn-next').disabled = currentSlideIndex === presentationSlides.length - 1;
+    }
+
+    /* --- Lógica das Notas --- */
+    function toggleNotes() { document.getElementById('scratchpad').classList.toggle('active'); }
+
+    document.addEventListener('click', function(event) {
+        const scratchpadPanel = document.getElementById('scratchpad');
+        const isClickInNotesBtn = event.target.closest('[onclick="toggleNotes()"]');
+        if (scratchpadPanel && scratchpadPanel.classList.contains('active')) {
+            if (!scratchpadPanel.contains(event.target) && !isClickInNotesBtn) { scratchpadPanel.classList.remove('active'); }
+        }
+    });
+
+    /* --- REQUISIÇÃO DE NOTÍCIAS --- */
+    async function fetchNews() {
+        const container = document.getElementById('noticias-container'); 
+        const CACHE_KEY = 'cadarn_news_cache'; 
+        const CACHE_TIME = 10 * 60 * 1000; 
+        
+        const cached = localStorage.getItem(CACHE_KEY); 
+        if (cached) { 
+            const parsedCache = JSON.parse(cached); 
+            if (Date.now() - parsedCache.timestamp < CACHE_TIME && parsedCache.data.length > 0) { 
+                renderNews(parsedCache.data, container); 
+                renderBriefingNews(parsedCache.data);
+                return; 
+            } 
+        }
+        
+        const feeds = [
+            { name: 'Exame', url: 'https://exame.com/feed/' }, 
+            { name: 'CNN Brasil', url: 'https://www.cnnbrasil.com.br/economia/feed/' }, 
+            { name: 'BBC News', url: 'https://feeds.bbci.co.uk/portuguese/rss.xml' }, 
+            { name: 'Estadão', url: 'https://www.estadao.com.br/rss/economia.xml' }
+        ];
+
+        let allItems = [];
+        for (const f of feeds) {
+            try {
+                const dynamicUrl = f.url + (f.url.includes('?') ? '&' : '?') + 'nocache=' + Date.now();
+                const r = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(dynamicUrl)}`, { cache: 'no-store' });
+                if (!r.ok) continue; 
+                const d = await r.json();
+                if (d.items) allItems.push(...d.items.map(i => {
+                    let pd = i.pubDate;
+                    if(pd && pd.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/)) pd = pd.replace(' ', 'T') + 'Z';
+                    return {title: i.title, link: i.link, pubDate: pd, portal: f.name};
+                }));
+            } catch (e) { console.log(`Falha ao ler feed ${f.name}`); }
+        }
+
+        if (allItems.length === 0) {
+            container.innerHTML = `<p style="text-align:center; color:var(--cadarn-cinza); font-size:13px; margin-top:30px;">⏳ Carregando notícias do mercado...</p>`;
+            return;
+        }
+        
+        allItems.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+        const uniqueNews = allItems.filter((v, i, a) => a.findIndex(t => (t.title === v.title)) === i);
+        const finalNews = uniqueNews.slice(0, 12);
+        
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data: finalNews })); 
+        renderNews(finalNews, container);
+        renderBriefingNews(finalNews);
+    }
+    
+    function renderBriefingNews(newsArray) {
+        const container = document.getElementById('briefing-news-list');
+        if(!container) return;
+        const topNews = newsArray.slice(0, 3); 
+        if(topNews.length === 0) {
+            container.innerHTML = '<span style="font-size:12px; color:var(--cadarn-cinza);">Nenhuma notícia recente.</span>';
+            return;
+        }
+        container.innerHTML = topNews.map(item => `<div class="briefing-news-item"><a href="${sanitize(item.link)}" target="_blank">• ${sanitize(item.title)}</a></div>`).join('');
+    }
+
+    async function forceFetchNews() {
+        const btn = document.getElementById('btn-refresh-news');
+        const container = document.getElementById('noticias-container');
+        
+        if(btn) btn.classList.add('loading');
+        localStorage.removeItem('cadarn_news_cache');
+        
+        if(container) {
+            container.innerHTML = `
+                <div class="skeleton-line" style="height: 15px; margin-bottom: 8px; width: 80%;"></div>
+                <div class="skeleton-line" style="height: 10px; margin-bottom: 20px; width: 30%;"></div>
+                <div class="skeleton-line" style="height: 15px; margin-bottom: 8px; width: 90%;"></div>
+                <div class="skeleton-line" style="height: 10px; margin-bottom: 20px; width: 40%;"></div>
+            `;
+        }
+        
+        await fetchNews();
+        if(btn) btn.classList.remove('loading');
+    }
+
+    function renderNews(newsArray, containerNode) { 
+        containerNode.innerHTML = newsArray.map(item => {
+            const dateObj = new Date(item.pubDate);
+            const time = !isNaN(dateObj) ? dateObj.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : 'Hoje';
+            return `<a href="${sanitize(item.link)}" target="_blank" class="news-card"><h4>${sanitize(item.title)}</h4><div class="news-meta"><span class="portal-flag">${sanitize(item.portal)}</span><span class="time-flag">às ${time}</span></div></a>`;
+        }).join(''); 
+    }
+    
+    fetchNews(); setInterval(fetchNews, 600000); 
+
+    function toggleFullScreen() { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
+    const scratchTextArea = document.getElementById('scratch-text');
+    function loadScratchpad() { const saved = localStorage.getItem('cadarn_notes'); if(saved) scratchTextArea.value = saved; }
+    scratchTextArea.addEventListener('input', () => { localStorage.setItem('cadarn_notes', scratchTextArea.value); }); 
+
+    const cmdModal = document.getElementById('cmd-modal');
+    const cmdInput = document.getElementById('cmd-input');
+    const cmdResults = document.getElementById('cmd-results');
+    function abrirCmd() { cmdModal.classList.add('active'); cmdInput.focus(); cmdInput.value = ''; renderCmdResults(''); }
+    function fecharCmd(e) { if(e.target === cmdModal) cmdModal.classList.remove('active'); }
+    
+    document.addEventListener('keydown', (e) => { 
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); abrirCmd(); } 
+        if (e.key === 'Escape') {
+            cmdModal.classList.remove('active'); 
+            const pModal = document.getElementById('presentation-modal');
+            if(pModal && pModal.classList.contains('active')) closePresentation();
+        }
+        const presModal = document.getElementById('presentation-modal');
+        if (presModal && presModal.classList.contains('active')) {
+            if (e.key === 'ArrowRight') nextSlide();
+            if (e.key === 'ArrowLeft') prevSlide();
+        }
+    });
+
+    cmdInput.addEventListener('input', (e) => { renderCmdResults(e.target.value.toLowerCase()); });
+    
+    function renderCmdResults(query) {
+        let results = [];
+        if (typeof window.LINKS_DIRETORIO !== 'undefined') {
+            LINKS_DIRETORIO.forEach(link => { 
+                if (link.nome.toLowerCase().includes(query)) results.push({ tipo: 'Link', nome: link.nome, action: `window.open('${link.link}', '_blank')` }); 
+            });
+        }
+        
+        Object.entries(bdProjetos).forEach(([id, proj]) => { 
+            if (!proj.arquivado) {
+                const searchStr = `${proj.nome} ${proj.cliente} ${proj.descricao || ''} ${proj.licoes || ''}`.toLowerCase();
+                if (searchStr.includes(query)) {
+                    results.push({ tipo: 'Projeto', nome: `${proj.nome} (${proj.cliente})`, action: `fecharAposBusca(); abrirProjeto('${id}')` }); 
+                }
+            }
+        });
+        
+        if (results.length === 0) { cmdResults.innerHTML = `<p style="padding: 15px; color: var(--cadarn-cinza); font-size: 13px;">Sem resultados.</p>`; return; }
+        cmdResults.innerHTML = results.map(r => `<div class="cmd-item" onclick="${r.action}"><span>${r.nome}</span><span class="cmd-item-type">${r.tipo}</span></div>`).join('');
+    }
+    
+    function fecharAposBusca() { cmdModal.classList.remove('active'); }
+
+    /* ========================================== */
+    /* ATUALIZAÇÕES DOS RADARES (SLA & TEAM)      */
+    /* ========================================== */
+
+    function renderSLARadar() {
+        let upcoming = [];
+        const now = new Date();
+        const limite48h = new Date(now.getTime() + 48 * 60 * 60 * 1000);
+        
+        Object.entries(bdProjetos).forEach(([id, proj]) => {
+            if(proj.arquivado) return;
+            (proj.etapas || []).forEach(e => {
+                if(e.status !== 'concluido' && e.prazo) {
+                    const dPrazo = new Date(e.prazo);
+                    dPrazo.setMinutes(dPrazo.getMinutes() + dPrazo.getTimezoneOffset());
+                    
+                    if (dPrazo <= limite48h && dPrazo >= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)) { 
+                        upcoming.push({ projName: proj.nome, etapa: e.titulo, prazo: dPrazo, id: id });
+                    }
+                }
+            });
+        });
+        
+        upcoming.sort((a,b) => a.prazo - b.prazo);
+        const top3 = upcoming.slice(0, 3);
+        
+        const container = document.getElementById('sla-radar-list');
+        if(top3.length === 0) {
+            container.innerHTML = '<div style="color:var(--cadarn-cinza); font-size:12px;">Nenhuma etapa crítica ou vencendo nas próximas 48 horas.</div>';
+            return;
+        }
+        
+        container.innerHTML = top3.map(item => {
+            const isOverdue = item.prazo < new Date(now.setHours(0,0,0,0));
+            const color = isOverdue ? '#ff8793' : '#ffc107';
+            return `<div class="sla-item" onclick="abrirProjeto('${item.id}')">
+                <span class="sla-time" style="color:${color}; width:65px;">${item.prazo.toLocaleDateString('pt-BR')}</span>
+                <span class="sla-text"><strong>${sanitize(item.projName)}:</strong> ${sanitize(item.etapa)}</span>
+            </div>`;
+        }).join('');
+    }
+
+   function renderTeamAvailability() {
+    let workload = {};
+    for (const proj of Object.values(bdProjetos)) {
+        if (proj.arquivado) continue;
+        const todasConcluidas = proj.etapas && proj.etapas.length > 0 && proj.etapas.every(e => e.status === 'concluido');
+        if (todasConcluidas) continue; 
+        (proj.equipeAtual || []).forEach(m => {
+            let nome = m.split('(')[0].trim();
+            if(nome) workload[nome] = (workload[nome] || 0) + 1;
+        });
+    }
+    
+    const MAX_PROJECTS = 5; 
+    const members = Object.keys(workload).map(nome => {
+        return { nome, p: workload[nome], pct: Math.min(Math.round((workload[nome] / MAX_PROJECTS) * 100), 100) };
+    });
+    
+    members.sort((a, b) => b.pct - a.pct);
+    // Alterado para 6 top colaboradores como solicitado!
+    const topMembers = members.slice(0, 6);
+
+    const container = document.getElementById('teamAvailabilityContainer');
+    if (topMembers.length === 0) {
+        container.innerHTML = '<div style="color:var(--cadarn-cinza); font-size:12px;">Equipe sem alocações ativas no momento.</div>';
+        return;
+    }
+
+    container.style.gap = '18px'; 
+    
+    container.innerHTML = topMembers.map(m => {
+        let ringColor = '#47e299';
+        if (m.pct >= 80) ringColor = '#ff8793';
+        else if (m.pct >= 50) ringColor = '#ffc107';
+
+        return `
+            <div style="display:flex; flex-direction:column; align-items:center; cursor:pointer; gap:8px; min-width: 65px; flex-shrink: 0; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" onclick="abrirPerfil('${sanitize(m.nome)}')">
+                <div style="width: 50px; height: 50px; border-radius: 50%; background: conic-gradient(${ringColor} ${m.pct}%, rgba(255,255,255,0.05) 0); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 15px ${ringColor}40;">
+                    <div style="width: 44px; height: 44px; border-radius: 50%; background: var(--bg-card); display: flex; align-items: center; justify-content: center;">
+                        ${getAvatarHtml(m.nome, 40)}
+                    </div>
+                </div>
+                <div style="text-align:center;">
+                    <div style="font-size:11px; font-weight:600; color:var(--cadarn-branco); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width: 65px;">${sanitize(m.nome).split(' ')[0]}</div>
+                    <div style="font-size:10px; color:${ringColor}; font-weight:700;">${m.pct}%</div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+    let kpiChartInstance = null;
+    function atualizarDashboard() {
+        let totais = 0, ativos = 0, concluidos = 0, pendentes = 0;
+        for (const proj of Object.values(bdProjetos)) {
+            if (proj.arquivado) continue;
+            totais++; if (!proj.etapas) proj.etapas = [];
+            const todasConcluidas = proj.etapas.length > 0 && proj.etapas.every(e => e.status === 'concluido');
+            const algumaAtiva = proj.etapas.some(e => e.status === 'ativo');
+            if (todasConcluidas) concluidos++; else if (algumaAtiva) ativos++; else pendentes++;
+        }
+        document.getElementById('kpi-total').innerText = totais; document.getElementById('kpi-ativos').innerText = ativos; document.getElementById('kpi-concluidos').innerText = concluidos;
+        
+        const ctx = document.getElementById('kpiChart').getContext('2d');
+        const fontColor = document.body.classList.contains('light-mode') ? '#64748b' : '#a1a1aa';
+
+        if (kpiChartInstance) { 
+            kpiChartInstance.data.datasets[0].data = [ativos, concluidos, pendentes]; 
+            kpiChartInstance.options.plugins.legend.labels.color = fontColor;
+            kpiChartInstance.update(); 
+        } else { 
+            kpiChartInstance = new Chart(ctx, { 
+                type: 'doughnut', 
+                data: { labels: ['Em Execução', 'Concluídos', 'Aguardando'], datasets: [{ data: [ativos, concluidos, pendentes], backgroundColor: ['#b68aff', '#47e299', '#666666'], borderWidth: 0 }] }, 
+                options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 15, color: fontColor } } } } 
+            }); 
+        }
+
+        renderSLARadar();
+        renderTeamAvailability();
+    }
+
+    /* ========================================== */
+    /* AUTOCOMPLETE NA EDIÇÃO DE MEMBROS DA EQUIPE*/
+    /* ========================================== */
+    function setupAutocomplete(inputElement) {
+        inputElement.addEventListener("input", function(e) {
+            let a, b, val = this.value;
+            closeAllLists();
+            if (!val) { return false;}
+            
+            let segments = val.split(',');
+            let currentSegment = segments[segments.length - 1].trim().toLowerCase();
+            if(!currentSegment) return false;
+
+            let uniqueMembers = new Set();
+            Object.values(bdProjetos).forEach(p => {
+                (p.equipeAtual || []).forEach(m => uniqueMembers.add(m.trim()));
+                (p.equipeAntiga || []).forEach(m => uniqueMembers.add(m.trim()));
+            });
+
+            a = document.createElement("DIV");
+            a.setAttribute("id", this.id + "autocomplete-list");
+            a.setAttribute("class", "autocomplete-items");
+            this.parentNode.appendChild(a);
+
+            Array.from(uniqueMembers).forEach(member => {
+                if (member.toLowerCase().includes(currentSegment)) {
+                    b = document.createElement("DIV");
+                    b.innerHTML = member; 
+                    b.innerHTML += "<input type='hidden' value='" + member + "'>";
+                    b.addEventListener("click", function(e) {
+                        segments[segments.length - 1] = " " + this.getElementsByTagName("input")[0].value;
+                        inputElement.value = segments.join(',').trim();
+                        closeAllLists();
+                    });
+                    a.appendChild(b);
+                }
+            });
+        });
+
+        function closeAllLists(elmnt) {
+            var x = document.getElementsByClassName("autocomplete-items");
+            for (var i = 0; i < x.length; i++) {
+                if (elmnt != x[i] && elmnt != inputElement) {
+                    x[i].parentNode.removeChild(x[i]);
+                }
+            }
+        }
+        document.addEventListener("click", function (e) { closeAllLists(e.target); });
+    }
+
+// --- FUNÇÃO DO BOTÃO SALVAR DADOS DO PERFIL ---
+// --- LÓGICA DE EDIÇÃO E SALVAMENTO DO PERFIL ---
+function toggleEditProfile(forceReadonly = false) {
+    const fields = document.querySelectorAll('.profile-field');
+    const saveBtn = document.getElementById('btn-save-profile');
+    const editBtn = document.getElementById('btn-edit-profile');
+    
+    if (!fields || fields.length === 0) return; 
+    
+    let isEditing = !fields[0].hasAttribute('readonly');
+    
+    if (isEditing || forceReadonly) {
+        // Mudar para o modo LEITURA (Bloqueado)
+        fields.forEach(f => f.setAttribute('readonly', 'true'));
+        saveBtn.style.display = 'none';
+        editBtn.innerText = '✏️ Editar';
+        editBtn.style.color = 'var(--cadarn-roxo)';
+        editBtn.style.borderColor = 'var(--cadarn-roxo)';
+    } else {
+        // Mudar para o modo EDIÇÃO (Desbloqueado)
+        fields.forEach(f => f.removeAttribute('readonly'));
+        saveBtn.style.display = 'block';
+        editBtn.innerText = '✕ Cancelar';
+        editBtn.style.color = '#dc3545';
+        editBtn.style.borderColor = '#dc3545';
+    }
+}
+
+function salvarDadosPerfilManual() {
+    if(!perfilAtualNome) return;
+    
+    const celular = document.getElementById('profile-phone').value;
+    const email = document.getElementById('profile-email').value;
+    const nascimento = document.getElementById('profile-birthday').value;
+
+    if(!configColaboradores[perfilAtualNome]) configColaboradores[perfilAtualNome] = { genero: autoDetectGender(perfilAtualNome) };
+    configColaboradores[perfilAtualNome].celular = celular;
+    configColaboradores[perfilAtualNome].email = email;
+    configColaboradores[perfilAtualNome].nascimento = nascimento;
+
+    localStorage.setItem('cadarn_colabs', JSON.stringify(configColaboradores));
+    
+    if(navigator.onLine) {
+        fetch(API_NUVEM, { 
+            method: 'POST', 
+            body: JSON.stringify({ action: 'save_colabs', data: configColaboradores }) 
+        }).catch(e => console.log(e));
+    }
+    
+    showToast('Dados de contato e aniversário salvos!', 'success');
+    toggleEditProfile(true); 
+}
+    setupAutocomplete(document.getElementById("edit-equipe"));
+</script>
+
+</body>
+</html>
