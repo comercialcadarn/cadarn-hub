@@ -1256,7 +1256,7 @@
         return Math.ceil(diffTempo / (1000 * 60 * 60 * 24)); 
     }
 
-    const API_NUVEM = "https://script.google.com/macros/s/AKfycbwamR1iuNWesetuAulDr2Bmd66CDijx8_l5Gl866IVgnCZ3CL7yJ45rj64nsDSdMy7Yvw/exec"; 
+    const API_NUVEM = "https://script.google.com/macros/s/AKfycbwAOT-WtbPToddgKJBPUiiTxeSQhZknCHpnoiDqGy2UYEzRIldBzpcU5M9BAgOd13Onnw/exec"; 
 
     let bdProjetos = {};
     let projetoAbertoAtual = null;
@@ -1360,9 +1360,26 @@
     async function carregarProjetosDaNuvem() {
         try {
             if(!navigator.onLine) throw new Error("Offline");
-            const response = await fetch(API_NUVEM);
-            const data = await response.json(); 
+            const response = await fetch(API_NUVEM); 
+            const data = await response.json();
             
+            // --- MÁGICA DO AUTO-LOGIN DO GOOGLE WORKSPACE ---
+            if (data.userLoggedIn && data.userLoggedIn.nome) {
+                const nomeGoogle = data.userLoggedIn.nome.split(' ')[0];
+                localStorage.setItem('cadarn_user', nomeGoogle);
+                aplicarNome(nomeGoogle);
+                
+                // Se o Google trouxe foto, já salva no perfil local
+                if(data.userLoggedIn.foto) {
+                    inicializarColaborador(nomeGoogle);
+                    configColaboradores[nomeGoogle].foto = data.userLoggedIn.foto;
+                    localStorage.setItem('cadarn_colabs', JSON.stringify(configColaboradores));
+                }
+                document.getElementById('login-modal').classList.remove('active');
+            }
+            // --------------------------------------------------
+
+            // Lê o formato de Projetos e Colaboradores
             if (data.projetos !== undefined) {
                 bdProjetos = data.projetos || {};
                 if (data.colaboradores && Object.keys(data.colaboradores).length > 0) {
@@ -1371,32 +1388,29 @@
                 }
             } else {
                 bdProjetos = data || {};
-                console.warn("Aviso: Lendo projetos no formato antigo. Verifique o Apps Script.");
             }
 
             if(Object.keys(bdProjetos).length === 0) bdProjetos = carregarProjetosDefault();
             
-            renderMainProjects();
+            renderMainProjects(); 
             renderTeamAvailability(); 
-            atualizarColaboradorDoMes();
             
+            // Se achou um usuário (Local ou Google), roda o Briefing. Se não, abre o Modal Manual.
             if(localStorage.getItem('cadarn_user')) checkMorningBriefing();
+            else abrirModalLogin();
+
         } catch (error) {
             console.log("Erro ao carregar da nuvem, usando cache local", error);
             bdProjetos = JSON.parse(localStorage.getItem('cadarn_projetos_db')) || carregarProjetosDefault();
             configColaboradores = JSON.parse(localStorage.getItem('cadarn_colabs')) || {};
-// --- LIMPEZA DE CACHE ANTIGO ---
-    // Remove o "Victor" duplicado que ficou preso no cache de versões anteriores
-    if (configColaboradores["Victor"]) {
-        delete configColaboradores["Victor"];
-        localStorage.setItem('cadarn_colabs', JSON.stringify(configColaboradores));
-        
-        // Se estiver com internet, já atualiza a nuvem apagando o fantasma
-        if (typeof API_NUVEM !== 'undefined' && navigator.onLine) {
-            fetch(API_NUVEM, { 
-                method: 'POST', 
-                body: JSON.stringify({ action: 'save_colabs', data: configColaboradores }) 
-            }).catch(e => console.log(e));
+            
+            renderMainProjects();
+            renderTeamAvailability();
+            
+            if(localStorage.getItem('cadarn_user')) checkMorningBriefing();
+            else abrirModalLogin();
+
+            if(!navigator.onLine) document.getElementById('offline-banner').style.display = 'block';
         }
     }
     // --------------------------------
@@ -1978,9 +1992,10 @@
     }
     
     window.onload = () => { 
-        loadTheme();
+        loadTheme(); 
         if (!navigator.onLine) document.getElementById('offline-banner').style.display = 'block';
-        if(!usuarioLogado) { abrirModal(); } else { aplicarNome(usuarioLogado); } 
+        const user = localStorage.getItem('cadarn_user'); 
+        if(user) aplicarNome(user);
         loadScratchpad(); 
         renderDailyQuote(); 
     }
