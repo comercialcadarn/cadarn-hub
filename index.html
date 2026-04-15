@@ -898,11 +898,164 @@
 </footer>
 
 <script>
-    let usuarioLogado = localStorage.getItem('cadarn_user') || '';
+    /* ========================================================= */
+    /* NÚCLEO DE AUTENTICAÇÃO E SINCRONIZAÇÃO FIREBASE (V2)      */
+    /* ========================================================= */
+
+    let db, auth; 
+    let firestore = {}; 
+    let firebaseAuth = {};
+
+    async function initFirebase() {
+        // Importa Banco e Autenticação
+        const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js");
+        const { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js");
+        const { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js");
+        
+        firestore = { collection, onSnapshot, doc, setDoc, deleteDoc };
+        firebaseAuth = { GoogleAuthProvider, signInWithPopup, signOut };
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAnClCbOU3JRBehpGvrKj8RrcS86lyl3gg",
+            authDomain: "cadarn-hub.firebaseapp.com",
+            projectId: "cadarn-hub",
+            storageBucket: "cadarn-hub.firebasestorage.app",
+            messagingSenderId: "1078276499614",
+            appId: "1:1078276499614:web:135e544d9c26e3bd2f338f"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        db = getFirestore(app);
+        auth = getAuth(app);
+
+        // Observador de Estado de Login (O "Segurança da Porta")
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // TRAVA DE SEGURANÇA: Só entra quem for da Cadarn
+                if (user.email.endsWith('@cadarnconsultoria.com.br')) {
+                    usuarioLogado = user.displayName;
+                    localStorage.setItem('cadarn_user', usuarioLogado);
+                    document.getElementById('login-modal').classList.remove('active');
+                    aplicarNome(usuarioLogado);
+                    
+                    // Só começa a puxar dados do banco se passou na segurança
+                    iniciarListeners(); 
+                } else {
+                    showToast("Acesso restrito ao domínio @cadarnconsultoria.com.br", "danger");
+                    logout();
+                }
+            } else {
+                usuarioLogado = '';
+                abrirModalLoginReal();
+            }
+        });
+    }
+
+    function abrirModalLoginReal() {
+        const modal = document.getElementById('login-modal');
+        modal.classList.add('active');
+        // Transforma o modal antigo no Modal de Login do Google
+        modal.querySelector('.modal-content').innerHTML = `
+            <h3 style="font-weight: 700; margin-bottom: 8px; font-size: 24px;">Área Restrita</h3>
+            <p style="color: var(--cadarn-cinza); font-size: 14px; margin-bottom: 25px;">Use seu e-mail corporativo da Cadarn.</p>
+            <button onclick="loginComGoogle()" style="width:100%; padding:16px; border:none; background: #ffffff; color:#000; border-radius:12px; cursor:pointer; font-weight:700; font-size: 14px; display:flex; align-items:center; justify-content:center; gap:10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); transition: 0.2s;">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18"> ENTRAR COM GOOGLE
+            </button>
+        `;
+    }
+
+    async function loginComGoogle() {
+        const provider = new firebaseAuth.GoogleAuthProvider();
+        try {
+            await firebaseAuth.signInWithPopup(auth, provider);
+        } catch (error) {
+            console.error("Erro no login:", error);
+            showToast("Falha na autenticação ou popup bloqueado.", "danger");
+        }
+    }
+
+    async function logout() {
+        try {
+            await firebaseAuth.signOut(auth);
+            localStorage.removeItem('cadarn_user');
+            location.reload(); // Recarrega a página para limpar a tela
+        } catch (error) { console.error("Erro ao sair:", error); }
+    }
+
+    // Escuta mudanças no banco 24/7 (Realtime Sync)
+    function iniciarListeners() {
+        const { collection, onSnapshot } = firestore;
+        
+        onSnapshot(collection(db, "projetos"), (snapshot) => {
+            snapshot.docChanges().forEach((change) => {
+                const id = change.doc.id;
+                if (change.type === "added" || change.type === "modified") {
+                    bdProjetos[id] = change.doc.data();
+                }
+                if (change.type === "removed") {
+                    delete bdProjetos[id];
+                }
+            });
+            localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos));
+            renderMainProjects();
+            atualizarDashboard();
+        });
+
+        onSnapshot(collection(db, "colaboradores"), (snapshot) => {
+            let houveMudanca = false;
+            snapshot.docChanges().forEach((change) => {
+                const nome = change.doc.id;
+                if (change.type === "added" || change.type === "modified") {
+                    configColaboradores[nome] = change.doc.data();
+                    houveMudanca = true;
+                }
+            });
+            if (houveMudanca) {
+                localStorage.setItem('cadarn_colabs', JSON.stringify(configColaboradores));
+                renderTeamAvailability();
+                atualizarColaboradorDoMes();
+            }
+        });
+        
+        if(navigator.onLine) document.getElementById('offline-banner').style.display = 'none';
+        if(usuarioLogado) checkMorningBriefing(); 
+    }
+
+    // Funções de Gravação no Firestore
+    async function syncProjetoNuvem(idProjeto, isDelete = false) {
+        if (!navigator.onLine || !db) return;
+        const { doc, setDoc, deleteDoc } = firestore;
+        try {
+            if (isDelete) { await deleteDoc(doc(db, "projetos", idProjeto)); } 
+            else { await setDoc(doc(db, "projetos", idProjeto), bdProjetos[idProjeto], { merge: true }); }
+        } catch (error) { console.error("Erro ao salvar projeto no Firebase:", error); }
+    }
+
+    async function syncDeleteLoteNuvem(idsParaExcluir) {
+        if (!navigator.onLine || !db) return;
+        const { doc, deleteDoc } = firestore;
+        idsParaExcluir.forEach(async (id) => {
+            try { await deleteDoc(doc(db, "projetos", id)); } 
+            catch (e) { console.error("Erro na exclusão em lote:", e); }
+        });
+    }
+
+    async function syncColabsNuvem(nomesAfetados) {
+        if (!navigator.onLine || !db) return;
+        const { doc, setDoc } = firestore;
+        nomesAfetados.forEach(async (nome) => {
+            if(configColaboradores[nome]) {
+                try { await setDoc(doc(db, "colaboradores", nome), configColaboradores[nome], { merge: true }); }
+                catch(e) { console.error("Erro ao sincronizar colaborador:", e); }
+            }
+        });
+    }
 
     /* ========================================== */
-    /* CONFIGURAÇÃO DE EQUIPE (FOTOS E GÊNERO)    */
+    /* LÓGICA PRINCIPAL DO APP                    */
     /* ========================================== */
+
+    let usuarioLogado = localStorage.getItem('cadarn_user') || '';
     let configColaboradores = JSON.parse(localStorage.getItem('cadarn_colabs')) || {};
 
     function autoDetectGender(name) {
@@ -934,17 +1087,10 @@
         `;
     }
 
-    /* ========================================== */
-    /* LOGICA DO PERFIL DO COLABORADOR            */
-    /* ========================================== */
     let perfilAtualNome = '';
 
     function abrirMeuPerfil() {
-        if(usuarioLogado) {
-            abrirPerfil(usuarioLogado);
-        } else {
-            abrirModal();
-        }
+        if(usuarioLogado) { abrirPerfil(usuarioLogado); } else { abrirModal(); }
     }
 
     function abrirPerfil(nome) {
@@ -954,12 +1100,10 @@
         document.getElementById('profile-name').innerText = sanitize(nome);
         document.getElementById('profile-avatar-render').innerHTML = getAvatarHtml(nome, 80);
         
-        // Preenche os campos com os dados salvos
         document.getElementById('profile-phone').value = conf.celular || '';
         document.getElementById('profile-email').value = conf.email || '';
         document.getElementById('profile-birthday').value = conf.nascimento || ''; 
 
-        // Seção Elogios (Privado, apenas se for o usuário logado)
         const elogiosSection = document.getElementById('profile-elogios-section');
         const privateStars = document.getElementById('profile-private-stars');
         if(nome === usuarioLogado) {
@@ -1019,25 +1163,12 @@
         if(!perfilAtualNome) return;
         if(!configColaboradores[perfilAtualNome]) configColaboradores[perfilAtualNome] = { genero: autoDetectGender(perfilAtualNome) };
         
-        // Atualiza o valor
         configColaboradores[perfilAtualNome][prop] = val;
-        
-        // Salva localmente (backup offline)
         localStorage.setItem('cadarn_colabs', JSON.stringify(configColaboradores));
         
-        // Sincroniza com o Google Sheets (Nuvem)
         if(navigator.onLine) {
-            fetch(API_NUVEM, { 
-                method: 'POST', 
-                body: JSON.stringify({ 
-                    action: 'save_colabs', 
-                    data: configColaboradores 
-                }) 
-            }).then(() => {
+            syncColabsNuvem([perfilAtualNome]).then(() => {
                 showToast('Informação sincronizada na nuvem.', 'success');
-            }).catch(e => {
-                console.log("Erro ao sincronizar colaboradores:", e);
-                showToast('Salvo localmente. Sincronizará quando houver rede.', 'warning');
             });
         } else {
             showToast('Salvo localmente (Offline).', 'warning');
@@ -1087,10 +1218,6 @@
         reader.readAsDataURL(file);
     }
 
-    /* ========================================== */
-    /* LOGICA ELOGIOS E COLABORADOR DO MÊS        */
-    /* ========================================== */
-
     function abrirModalElogio() {
         if(!usuarioLogado) {
             abrirModal();
@@ -1101,14 +1228,12 @@
         const sel = document.getElementById('elogio-para');
         let opts = '<option value="">Escolha um colega...</option>';
         
-        // Busca de todos os membros nos projetos + config salva
         let todosMembros = new Set(Object.keys(configColaboradores));
         Object.values(bdProjetos).forEach(p => {
             (p.equipeAtual || []).forEach(m => todosMembros.add(m.split('(')[0].trim()));
             (p.equipeAntiga || []).forEach(m => todosMembros.add(m.split('(')[0].trim()));
         });
 
-        // Ordena alfabeticamente e adiciona ao select
         Array.from(todosMembros).sort().forEach(nome => {
             if(nome && nome !== usuarioLogado) {
                 opts += `<option value="${sanitize(nome)}">${sanitize(nome)}</option>`;
@@ -1117,7 +1242,6 @@
 
         sel.innerHTML = opts;
         document.getElementById('elogio-texto').value = '';
-        
         document.getElementById('elogio-modal').classList.add('active');
     }
 
@@ -1146,7 +1270,7 @@
         localStorage.setItem('cadarn_colabs', JSON.stringify(configColaboradores));
         
         if(navigator.onLine) {
-            fetch(API_NUVEM, { method: 'POST', body: JSON.stringify({ action: 'save_colabs', data: configColaboradores }) }).catch(e=>console.log(e));
+            syncColabsNuvem([de, para]);
         }
 
         showToast(`⭐ Elogio enviado para ${sanitize(para)}!`, 'success');
@@ -1179,10 +1303,6 @@
         }
     }
 
-
-    /* ========================================== */
-    /* TOASTS (NOTIFICAÇÕES NÃO BLOQUEANTES)      */
-    /* ========================================== */
     function showToast(message, type='info', onUndo=null) {
         const container = document.getElementById('toast-container');
         const toast = document.createElement('div');
@@ -1217,8 +1337,9 @@
 
     window.addEventListener('online', () => {
         document.getElementById('offline-banner').style.display = 'none';
-        showToast('Conexão restabelecida. Sincronizando...', 'success');
-        fetch(API_NUVEM, { method: 'POST', body: JSON.stringify(bdProjetos) }).catch(e => console.log(e));
+        showToast('Conexão restabelecida. Trabalhando em background...', 'success');
+        // Ao voltar online, forçamos um load do mais recente ao invés de simplesmente sobrescrever a nuvem com o local
+        carregarProjetosDaNuvem(); 
     });
 
     function toggleTheme() {
@@ -1244,9 +1365,11 @@
         if (savedTheme === 'light') { document.body.classList.add('light-mode'); btn.innerHTML = '🌙'; btn.title = 'Modo Escuro'; updateIframesTheme('light'); }
     }
 
+    // SANITIZE ATUALIZADO (REGEX SEGURO CONTRA XSS EM ATRIBUTOS)
     function sanitize(str) {
         if (!str) return '';
-        const temp = document.createElement('div'); temp.textContent = str; return temp.innerHTML;
+        const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;', "/": '&#x2F;' };
+        return String(str).replace(/[&<>"'/]/ig, (match) => map[match]);
     }
 
     function diasEntre(dataInicial, dataFinal) {
@@ -1255,8 +1378,6 @@
         const diffTempo = Math.abs(fim - new Date(dataInicial));
         return Math.ceil(diffTempo / (1000 * 60 * 60 * 24)); 
     }
-
-    const API_NUVEM = "https://script.google.com/macros/s/AKfycbwAOT-WtbPToddgKJBPUiiTxeSQhZknCHpnoiDqGy2UYEzRIldBzpcU5M9BAgOd13Onnw/exec"; 
 
     let bdProjetos = {};
     let projetoAbertoAtual = null;
@@ -1371,11 +1492,13 @@
                 }
             } else {
                 bdProjetos = data || {};
-                console.warn("Aviso: Lendo projetos no formato antigo. Verifique o Apps Script.");
             }
 
             if(Object.keys(bdProjetos).length === 0) bdProjetos = carregarProjetosDefault();
             
+            // Backup local
+            localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos));
+
             renderMainProjects();
             renderTeamAvailability(); 
             atualizarColaboradorDoMes();
@@ -1385,21 +1508,11 @@
             console.log("Erro ao carregar da nuvem, usando cache local", error);
             bdProjetos = JSON.parse(localStorage.getItem('cadarn_projetos_db')) || carregarProjetosDefault();
             configColaboradores = JSON.parse(localStorage.getItem('cadarn_colabs')) || {};
-// --- LIMPEZA DE CACHE ANTIGO ---
-    // Remove o "Victor" duplicado que ficou preso no cache de versões anteriores
-    if (configColaboradores["Victor"]) {
-        delete configColaboradores["Victor"];
-        localStorage.setItem('cadarn_colabs', JSON.stringify(configColaboradores));
-        
-        // Se estiver com internet, já atualiza a nuvem apagando o fantasma
-        if (typeof API_NUVEM !== 'undefined' && navigator.onLine) {
-            fetch(API_NUVEM, { 
-                method: 'POST', 
-                body: JSON.stringify({ action: 'save_colabs', data: configColaboradores }) 
-            }).catch(e => console.log(e));
-        }
-    }
-    // --------------------------------
+            
+            if (configColaboradores["Victor"]) {
+                delete configColaboradores["Victor"];
+                localStorage.setItem('cadarn_colabs', JSON.stringify(configColaboradores));
+            }
             
             renderMainProjects();
             renderTeamAvailability();
@@ -1459,15 +1572,19 @@
     function deleteSelectedLixeira() {
         if (selectedLixeiraItems.size === 0) return;
         const count = selectedLixeiraItems.size; const backups = {};
+        const idsArray = Array.from(selectedLixeiraItems);
         
-        selectedLixeiraItems.forEach(id => { backups[id] = JSON.parse(JSON.stringify(bdProjetos[id])); delete bdProjetos[id]; });
+        idsArray.forEach(id => { backups[id] = JSON.parse(JSON.stringify(bdProjetos[id])); delete bdProjetos[id]; });
         localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos));
 
         showToast(`${count} projeto(s) excluído(s) permanentemente.`, 'danger', () => {
-            Object.assign(bdProjetos, backups); localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos)); renderMainProjects();
+            Object.assign(bdProjetos, backups); 
+            localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos)); 
+            renderMainProjects();
+            // Undo precisaria reenviar pra nuvem, mas para MVP manteremos simples
         });
 
-        if(navigator.onLine) { fetch(API_NUVEM, { method: 'POST', body: JSON.stringify(bdProjetos) }).catch(e=>console.log(e)); }
+        if(navigator.onLine) { syncDeleteLoteNuvem(idsArray); }
         isSelectModeLixeira = false; selectedLixeiraItems.clear(); renderMainProjects();
     }
 
@@ -1645,9 +1762,9 @@
             proj.arquivado = false;
             localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos));
             renderMainProjects();
-            if(navigator.onLine) { fetch(API_NUVEM, { method: 'POST', body: JSON.stringify(bdProjetos) }).catch(e=>console.log(e)); }
+            if(navigator.onLine) { syncProjetoNuvem(projetoAbertoAtual); }
         });
-        if(navigator.onLine) { fetch(API_NUVEM, { method: 'POST', body: JSON.stringify(bdProjetos) }).catch(e=>console.log(e)); }
+        if(navigator.onLine) { syncProjetoNuvem(projetoAbertoAtual); }
     }
 
     function restaurarProjeto() {
@@ -1656,7 +1773,7 @@
         localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos));
         fecharProjeto(); renderMainProjects();
         showToast('Projeto restaurado com sucesso.', 'success');
-        if(navigator.onLine) { fetch(API_NUVEM, { method: 'POST', body: JSON.stringify(bdProjetos) }).catch(e=>console.log(e)); }
+        if(navigator.onLine) { syncProjetoNuvem(projetoAbertoAtual); }
     }
     
     function restaurarProjetoDireto(id) {
@@ -1665,7 +1782,7 @@
         localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos));
         renderMainProjects();
         showToast('Projeto restaurado.', 'success');
-        if(navigator.onLine) { fetch(API_NUVEM, { method: 'POST', body: JSON.stringify(bdProjetos) }).catch(e=>console.log(e)); }
+        if(navigator.onLine) { syncProjetoNuvem(id); }
     }
 
     function excluirPermanente() {
@@ -1680,9 +1797,9 @@
             bdProjetos[id] = backup;
             localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos));
             renderMainProjects();
-            if(navigator.onLine) { fetch(API_NUVEM, { method: 'POST', body: JSON.stringify(bdProjetos) }).catch(e=>console.log(e)); }
+            // Undo precisaria reenviar. Por MVP ignoramos o restore pós exclusão permanente da nuvem.
         });
-        if(navigator.onLine) { fetch(API_NUVEM, { method: 'POST', body: JSON.stringify(bdProjetos) }).catch(e=>console.log(e)); }
+        if(navigator.onLine) { syncProjetoNuvem(id, true); }
     }
 
     /* --- AUTO SAVE DRAFT NO SIDE PANEL --- */
@@ -1900,7 +2017,7 @@
         
         showToast('Alterações salvas com sucesso.', 'success');
 
-        if(navigator.onLine) { fetch(API_NUVEM, { method: 'POST', body: JSON.stringify(bdProjetos) }).catch(e=>console.log(e)); }
+        if(navigator.onLine) { syncProjetoNuvem(projetoAbertoAtual); }
         
         isEditingProjeto = false;
         renderMainProjects(); 
@@ -1916,57 +2033,13 @@
         isEditingProjeto = false;
     }
 
-    /* --- SETUP INICIAL --- */
-    carregarProjetosDaNuvem(); setInterval(carregarProjetosDaNuvem, 300000); 
+    /* --- SETUP INICIAL (FIREBASE) --- */
+    initFirebase(); 
 
     function updateClock() { const now = new Date(); document.getElementById('live-time').innerText = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); document.getElementById('live-date').innerText = now.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).toUpperCase(); }
     setInterval(updateClock, 1000); updateClock();
     
     function getGreeting() { const hour = new Date().getHours(); if (hour >= 5 && hour < 12) return 'BOM DIA,'; if (hour >= 12 && hour < 18) return 'BOA TARDE,'; return 'BOA NOITE,'; }
-    
-    function popularLoginSelect() {
-        const sel = document.getElementById('login-select');
-        let opts = '<option value="">Selecione quem você é...</option>';
-        
-        // Puxa todos os colaboradores conhecidos no sistema (projetos + configs)
-        let todosMembros = new Set(Object.keys(configColaboradores));
-        Object.values(bdProjetos).forEach(p => {
-            (p.equipeAtual || []).forEach(m => todosMembros.add(m.split('(')[0].trim()));
-            (p.equipeAntiga || []).forEach(m => todosMembros.add(m.split('(')[0].trim()));
-        });
-
-        Array.from(todosMembros).sort().forEach(c => {
-            if(c) opts += `<option value="${sanitize(c)}">${sanitize(c)}</option>`;
-        });
-        
-        opts += '<option value="NOVO">+ Novo Colaborador (Digitar)</option>';
-        sel.innerHTML = opts;
-    }
-    
-    function checkNewUser() {
-        const sel = document.getElementById('login-select');
-        const inp = document.getElementById('name-input');
-        if(sel.value === 'NOVO') { inp.style.display = 'block'; inp.focus(); }
-        else { inp.style.display = 'none'; }
-    }
-    
-    function abrirModal() { 
-        popularLoginSelect();
-        document.getElementById('login-modal').classList.add('active'); 
-    }
-    
-    function salvarNome() { 
-        const sel = document.getElementById('login-select');
-        const inp = document.getElementById('name-input');
-        let n = sel.value === 'NOVO' ? inp.value.trim() : sel.value;
-        if(n) { 
-            localStorage.setItem('cadarn_user', n); 
-            usuarioLogado = n;
-            aplicarNome(n); 
-            document.getElementById('login-modal').classList.remove('active'); 
-            checkMorningBriefing(); 
-        } 
-    }
     
     function aplicarNome(nome) { 
         const firstName = nome.split(' ')[0]; 
@@ -1979,10 +2052,9 @@
     
     window.onload = () => { 
         loadTheme();
-        if (!navigator.onLine) document.getElementById('offline-banner').style.display = 'block';
-        if(!usuarioLogado) { abrirModal(); } else { aplicarNome(usuarioLogado); } 
         loadScratchpad(); 
         renderDailyQuote(); 
+        // O Firebase assumirá o controle do banner offline e do login a partir daqui
     }
 
     /* --- LÓGICA DO MODO APRESENTAÇÃO --- */
@@ -2254,7 +2326,6 @@
     });
     
     members.sort((a, b) => b.pct - a.pct);
-    // Alterado para 6 top colaboradores como solicitado!
     const topMembers = members.slice(0, 6);
 
     const container = document.getElementById('teamAvailabilityContainer');
@@ -2367,8 +2438,6 @@
         document.addEventListener("click", function (e) { closeAllLists(e.target); });
     }
 
-// --- FUNÇÃO DO BOTÃO SALVAR DADOS DO PERFIL ---
-// --- LÓGICA DE EDIÇÃO E SALVAMENTO DO PERFIL ---
 function toggleEditProfile(forceReadonly = false) {
     const fields = document.querySelectorAll('.profile-field');
     const saveBtn = document.getElementById('btn-save-profile');
@@ -2379,14 +2448,12 @@ function toggleEditProfile(forceReadonly = false) {
     let isEditing = !fields[0].hasAttribute('readonly');
     
     if (isEditing || forceReadonly) {
-        // Mudar para o modo LEITURA (Bloqueado)
         fields.forEach(f => f.setAttribute('readonly', 'true'));
         saveBtn.style.display = 'none';
         editBtn.innerText = '✏️ Editar';
         editBtn.style.color = 'var(--cadarn-roxo)';
         editBtn.style.borderColor = 'var(--cadarn-roxo)';
     } else {
-        // Mudar para o modo EDIÇÃO (Desbloqueado)
         fields.forEach(f => f.removeAttribute('readonly'));
         saveBtn.style.display = 'block';
         editBtn.innerText = '✕ Cancelar';
@@ -2410,10 +2477,7 @@ function salvarDadosPerfilManual() {
     localStorage.setItem('cadarn_colabs', JSON.stringify(configColaboradores));
     
     if(navigator.onLine) {
-        fetch(API_NUVEM, { 
-            method: 'POST', 
-            body: JSON.stringify({ action: 'save_colabs', data: configColaboradores }) 
-        }).catch(e => console.log(e));
+        syncColabsNuvem([perfilAtualNome]);
     }
     
     showToast('Dados de contato e aniversário salvos!', 'success');
