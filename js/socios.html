@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CADARN | Hub Estratégico - Área do Sócio</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="css/style.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+
+    <style>
+        /* Estilos específicos para a área de sócios, mesclando com o CSS Base */
+        .socio-header-badge { background: #FFC107; color: #000; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+        .kanban-socio-board { display: flex; gap: 20px; overflow-x: auto; padding-bottom: 20px; min-height: 70vh; align-items: flex-start; }
+        .kanban-socio-col { flex: 1; min-width: 320px; background: rgba(0,0,0,0.4); border-radius: 12px; padding: 15px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 15px;}
+        .col-negociacao { border-top: 3px solid #6c757d; }
+        .col-ativos { border-top: 3px solid #b68aff; }
+        .col-risco { border-top: 3px solid #dc3545; }
+        .col-concluidos { border-top: 3px solid #47e299; }
+        .kanban-dropzone { min-height: 150px; display: flex; flex-direction: column; gap: 10px; }
+        .sortable-ghost { opacity: 0.4; background-color: rgba(131, 46, 255, 0.2); border: 2px dashed var(--cadarn-roxo); }
+    </style>
+</head>
+<body>
+    <div class="ambient-light-1"></div>
+    <div class="ambient-light-2"></div>
+
+    <header>
+        <div class="brand-container">
+            <a href="index.html" style="text-decoration:none; display:flex; align-items:center; gap:15px; color:inherit;">
+                <div class="logo-text">CADARN <span>HUB</span></div>
+                <div class="socio-header-badge">Área do Sócio</div>
+            </a>
+        </div>
+        <div class="header-controls">
+            <a href="index.html" class="sp-btn-edit" style="text-decoration: none; border-color: var(--cadarn-cinza); color: var(--cadarn-cinza);">← Voltar ao Hub</a>
+        </div>
+    </header>
+
+    <div class="container" style="display: none;" id="conteudo-restrito">
+        <h2 class="section-header">
+            <div class="section-header-title">Gestão de Projetos (Pipeline)</div>
+        </h2>
+
+        <div class="kanban-socio-board">
+            
+            <div class="kanban-socio-col col-negociacao">
+                <div class="kanban-col-header">🤝 Em Negociação</div>
+                <div class="kanban-dropzone" id="col-negociacao" data-status="negociacao">
+                    <div class="kanban-card" data-id="p1">
+                        <div class="kanban-card-title">Projeto Alfa</div>
+                        <div class="kanban-card-meta">Cliente: Exemplo S/A</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="kanban-socio-col col-ativos">
+                <div class="kanban-col-header" style="color:#b68aff;">🚀 Em Andamento</div>
+                <div class="kanban-dropzone" id="col-ativos" data-status="andamento">
+                    <div class="kanban-card" data-id="p2">
+                        <div class="kanban-card-title">Projeto Beta</div>
+                        <div class="kanban-card-meta">Cliente: Indústria Y</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="kanban-socio-col col-concluidos">
+                <div class="kanban-col-header" style="color:#47e299;">🏁 Concluídos</div>
+                <div class="kanban-dropzone" id="col-concluidos" data-status="concluido">
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script type="module" src="js/app-socios.js"></script>
+</body>
+</html>
