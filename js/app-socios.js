@@ -1,4 +1,5 @@
-// Lista de acessos VIP (A mesma lista, replicada aqui para a trava forte da página)
+// js/app-socios.js
+
 const emailsSocios = [
     'debora.yuan@cadarnconsultoria.com.br',
     'felipe.penido@cadarnconsultoria.com.br',
@@ -8,32 +9,51 @@ const emailsSocios = [
 ];
 
 async function initSegurancaSocios() {
-    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js");
-    const { getAuth, onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js");
+    try {
+        console.log("1. Inicializando segurança da página de Sócios...");
+        
+        const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js");
+        const { getAuth, onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js");
 
-    const firebaseConfig = {
-        apiKey: "AIzaSyAnClCbOU3JRBehpGvrKj8RrcS86lyl3gg",
-        authDomain: "cadarn-hub.firebaseapp.com",
-        projectId: "cadarn-hub",
-        storageBucket: "cadarn-hub.firebasestorage.app",
-        messagingSenderId: "1078276499614",
-        appId: "1:1078276499614:web:135e544d9c26e3bd2f338f"
-    };
+        const firebaseConfig = {
+            apiKey: "AIzaSyAnClCbOU3JRBehpGvrKj8RrcS86lyl3gg",
+            authDomain: "cadarn-hub.firebaseapp.com",
+            projectId: "cadarn-hub",
+            storageBucket: "cadarn-hub.firebasestorage.app",
+            messagingSenderId: "1078276499614",
+            appId: "1:1078276499614:web:135e544d9c26e3bd2f338f"
+        };
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
 
-    // GATEKEEPER: Bloqueia a porta se entrar com URL direta
-    onAuthStateChanged(auth, (user) => {
-        if (!user || !emailsSocios.includes(user.email)) {
-            // Intruso! Redireciona imediatamente
-            window.location.href = 'index.html';
-        } else {
-            // Acesso liberado: Mostra o conteúdo
-            document.getElementById('conteudo-restrito').style.display = 'block';
-            inicializarKanbanUI();
-        }
-    });
+        console.log("2. Verificando identidade do usuário...");
+
+        // GATEKEEPER: Verifica a porta
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // Força o e-mail para minúsculo para evitar bugs do Google
+                const emailFormatado = user.email.toLowerCase().trim();
+                console.log("3. Usuário detectado:", emailFormatado);
+
+                if (emailsSocios.includes(emailFormatado)) {
+                    console.log("4. ACESSO PERMITIDO! Carregando Kanban...");
+                    document.getElementById('conteudo-restrito').style.display = 'block';
+                    inicializarKanbanUI();
+                } else {
+                    console.error("4. INTRUSO! E-mail não autorizado.");
+                    alert("Acesso restrito aos Sócios. Você será redirecionado.");
+                    window.location.href = 'index.html';
+                }
+            } else {
+                console.error("3. Ninguém logado. Redirecionando para o Início...");
+                window.location.href = 'index.html';
+            }
+        });
+
+    } catch (error) {
+        console.error("ERRO GRAVE na inicialização:", error);
+    }
 }
 
 function inicializarKanbanUI() {
@@ -44,23 +64,27 @@ function inicializarKanbanUI() {
     ];
 
     colunas.forEach(coluna => {
-        new Sortable(coluna, {
-            group: 'kanban_socios', // Todos fazem parte do mesmo grupo (permite arrastar entre eles)
-            animation: 150,
-            ghostClass: 'sortable-ghost',
-            onEnd: function (evt) {
-                const itemEl = evt.item; 
-                const toList = evt.to;
-                
-                const projetoId = itemEl.getAttribute('data-id');
-                const novoStatus = toList.getAttribute('data-status');
+        // Trava contra Crash: Só aplica o Drag-and-Drop se a coluna existir no HTML
+        if (coluna) {
+            new Sortable(coluna, {
+                group: 'kanban_socios', 
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                onEnd: function (evt) {
+                    const itemEl = evt.item; 
+                    const toList = evt.to;
+                    
+                    const projetoId = itemEl.getAttribute('data-id');
+                    const novoStatus = toList.getAttribute('data-status');
 
-                console.log(`Projeto ID: ${projetoId} arrastado para: ${novoStatus}`);
-                // TODO: Na próxima fase, aqui enviaremos o update para o Firestore
-            },
-        });
+                    console.log(`✅ Movimento de Sócio - Projeto: ${projetoId} -> Status: ${novoStatus}`);
+                },
+            });
+        } else {
+            console.warn("Aviso: Uma das colunas do Kanban não foi encontrada no HTML da página.");
+        }
     });
 }
 
-// Inicia a checagem assim que a tela abre
+// Roda tudo
 initSegurancaSocios();
