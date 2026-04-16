@@ -1,6 +1,7 @@
 /* ========================================================= */
-    /* NÚCLEO DE AUTENTICAÇÃO E SINCRONIZAÇÃO FIREBASE (V2)      */
-    /* ========================================================= */
+/* NÚCLEO DE AUTENTICAÇÃO E SINCRONIZAÇÃO FIREBASE (V2)      */
+/* ========================================================= */
+
 // Lista de acessos VIP (Sócios + Dev)
 const emailsSocios = [
     'debora.yuan@cadarnconsultoria.com.br',
@@ -9,1429 +10,1299 @@ const emailsSocios = [
     'juliana.deoracki@cadarnconsultoria.com.br',
     'victor.mendes@cadarnconsultoria.com.br'
 ];
-    let db, auth; 
-    let firestore = {}; 
-    let firebaseAuth = {};
 
-    async function initFirebase() {
-        // Importa Banco e Autenticação
-        const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js");
-        const { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js");
-        const { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js");
-        
-        firestore = { collection, onSnapshot, doc, setDoc, deleteDoc };
-        firebaseAuth = { GoogleAuthProvider, signInWithPopup, signOut };
+let db, auth; 
+let firestore = {}; 
+let firebaseAuth = {};
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyAnClCbOU3JRBehpGvrKj8RrcS86lyl3gg",
-            authDomain: "cadarn-hub.firebaseapp.com",
-            projectId: "cadarn-hub",
-            storageBucket: "cadarn-hub.firebasestorage.app",
-            messagingSenderId: "1078276499614",
-            appId: "1:1078276499614:web:135e544d9c26e3bd2f338f"
-        };
+async function initFirebase() {
+    // Importa Banco e Autenticação
+    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js");
+    const { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js");
+    const { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js");
+    
+    firestore = { collection, onSnapshot, doc, setDoc, deleteDoc };
+    firebaseAuth = { GoogleAuthProvider, signInWithPopup, signOut };
 
-        const app = initializeApp(firebaseConfig);
-        db = getFirestore(app);
-        auth = getAuth(app);
+    const firebaseConfig = {
+        apiKey: "AIzaSyAnClCbOU3JRBehpGvrKj8RrcS86lyl3gg",
+        authDomain: "cadarn-hub.firebaseapp.com",
+        projectId: "cadarn-hub",
+        storageBucket: "cadarn-hub.firebasestorage.app",
+        messagingSenderId: "1078276499614",
+        appId: "1:1078276499614:web:135e544d9c26e3bd2f338f"
+    };
 
-        // Observador de Estado de Login
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                if (user.email.endsWith('@cadarnconsultoria.com.br')) {
-                    usuarioLogado = user.displayName;
-                    localStorage.setItem('cadarn_user', usuarioLogado);
-                    localStorage.setItem('cadarn_user_email', user.email); // ADICIONE ESTA LINHA <--
-                    
-                    document.getElementById('login-modal').classList.remove('active');
-                    aplicarNome(usuarioLogado);
-                    iniciarListeners(); 
-                } else {
-                    showToast("Acesso restrito ao domínio @cadarnconsultoria.com.br", "danger");
-                    logout();
-                }
+    const app = initializeApp(firebaseConfig);
+    db = getFirestore(app);
+    auth = getAuth(app);
+
+    // Observador de Estado de Login
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            if (user.email.endsWith('@cadarnconsultoria.com.br')) {
+                usuarioLogado = user.displayName;
+                localStorage.setItem('cadarn_user', usuarioLogado);
+                localStorage.setItem('cadarn_user_email', user.email); 
+                
+                document.getElementById('login-modal').classList.remove('active');
+                aplicarNome(usuarioLogado);
+                iniciarListeners(); 
             } else {
-                usuarioLogado = '';
-                localStorage.removeItem('cadarn_user_email'); // ADICIONE ESTA LINHA <--
-                abrirModalLoginReal();
+                showToast("Acesso restrito ao domínio @cadarnconsultoria.com.br", "danger");
+                logout();
             }
-        });
-
-    function abrirModalLoginReal() {
-        const modal = document.getElementById('login-modal');
-        modal.classList.add('active');
-        // Transforma o modal antigo no Modal de Login do Google
-        modal.querySelector('.modal-content').innerHTML = `
-            <h3 style="font-weight: 700; margin-bottom: 8px; font-size: 24px;">Área Restrita</h3>
-            <p style="color: var(--cadarn-cinza); font-size: 14px; margin-bottom: 25px;">Use seu e-mail corporativo da Cadarn.</p>
-            <button onclick="loginComGoogle()" style="width:100%; padding:16px; border:none; background: #ffffff; color:#000; border-radius:12px; cursor:pointer; font-weight:700; font-size: 14px; display:flex; align-items:center; justify-content:center; gap:10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); transition: 0.2s;">
-                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18"> ENTRAR COM GOOGLE
-            </button>
-        `;
-    }
-
-    async function loginComGoogle() {
-        const provider = new firebaseAuth.GoogleAuthProvider();
-        try {
-            await firebaseAuth.signInWithPopup(auth, provider);
-        } catch (error) {
-            console.error("Erro no login:", error);
-            showToast("Falha na autenticação ou popup bloqueado.", "danger");
-        }
-    }
-
-    async function logout() {
-        try {
-            await firebaseAuth.signOut(auth);
-            localStorage.removeItem('cadarn_user');
-            location.reload(); // Recarrega a página para limpar a tela
-        } catch (error) { console.error("Erro ao sair:", error); }
-    }
-// NOVA FUNÇÃO: Verifica se quem clicou no botão "Área do Sócio" está na lista VIP
-    function acessarAreaSocio() {
-        const emailAtual = localStorage.getItem('cadarn_user_email');
-        
-        if (!emailAtual) {
-            showToast("Sessão expirada. Por favor, faça login novamente.", "warning");
-            logout(); // Força o usuário a relogar para o sistema gravar o e-mail
-            return;
-        }
-
-        const emailFormatado = emailAtual.toLowerCase().trim();
-        
-        if (emailsSocios.includes(emailFormatado)) {
-            window.location.href = 'socios.html';
         } else {
-            showToast("Acesso negado. Área restrita a sócios diretivos.", "danger");
+            usuarioLogado = '';
+            localStorage.removeItem('cadarn_user_email'); 
+            abrirModalLoginReal();
         }
-    }
-    // Escuta mudanças no banco 24/7 (Realtime Sync)
-    function iniciarListeners() {
-        const { collection, onSnapshot } = firestore;
-        
-        onSnapshot(collection(db, "projetos"), (snapshot) => {
-            snapshot.docChanges().forEach((change) => {
-                const id = change.doc.id;
-                if (change.type === "added" || change.type === "modified") {
-                    bdProjetos[id] = change.doc.data();
-                }
-                if (change.type === "removed") {
-                    delete bdProjetos[id];
-                }
-            });
-            localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos));
-            renderMainProjects();
-            atualizarDashboard();
-        });
+    });
+} // <--- ESTA ERA A CHAVE QUE ESTAVA FALTANDO!
 
-        onSnapshot(collection(db, "colaboradores"), (snapshot) => {
-            let houveMudanca = false;
-            snapshot.docChanges().forEach((change) => {
-                const nome = change.doc.id;
-                if (change.type === "added" || change.type === "modified") {
-                    configColaboradores[nome] = change.doc.data();
-                    houveMudanca = true;
-                }
-            });
-            if (houveMudanca) {
-                localStorage.setItem('cadarn_colabs', JSON.stringify(configColaboradores));
-                renderTeamAvailability();
-                atualizarColaboradorDoMes();
+function abrirModalLoginReal() {
+    const modal = document.getElementById('login-modal');
+    modal.classList.add('active');
+    modal.querySelector('.modal-content').innerHTML = `
+        <h3 style="font-weight: 700; margin-bottom: 8px; font-size: 24px;">Área Restrita</h3>
+        <p style="color: var(--cadarn-cinza); font-size: 14px; margin-bottom: 25px;">Use seu e-mail corporativo da Cadarn.</p>
+        <button onclick="loginComGoogle()" style="width:100%; padding:16px; border:none; background: #ffffff; color:#000; border-radius:12px; cursor:pointer; font-weight:700; font-size: 14px; display:flex; align-items:center; justify-content:center; gap:10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); transition: 0.2s;">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18"> ENTRAR COM GOOGLE
+        </button>
+    `;
+}
+
+async function loginComGoogle() {
+    const provider = new firebaseAuth.GoogleAuthProvider();
+    try {
+        await firebaseAuth.signInWithPopup(auth, provider);
+    } catch (error) {
+        console.error("Erro no login:", error);
+        showToast("Falha na autenticação ou popup bloqueado.", "danger");
+    }
+}
+
+async function logout() {
+    try {
+        await firebaseAuth.signOut(auth);
+        localStorage.removeItem('cadarn_user');
+        location.reload(); 
+    } catch (error) { console.error("Erro ao sair:", error); }
+}
+
+function acessarAreaSocio() {
+    const emailAtual = localStorage.getItem('cadarn_user_email');
+    
+    if (!emailAtual) {
+        showToast("Sessão expirada. Por favor, faça login novamente.", "warning");
+        logout(); 
+        return;
+    }
+
+    const emailFormatado = emailAtual.toLowerCase().trim();
+    
+    if (emailsSocios.includes(emailFormatado)) {
+        window.location.href = 'socios.html';
+    } else {
+        showToast("Acesso negado. Área restrita a sócios diretivos.", "danger");
+    }
+}
+
+// Escuta mudanças no banco 24/7 (Realtime Sync)
+function iniciarListeners() {
+    const { collection, onSnapshot } = firestore;
+    
+    onSnapshot(collection(db, "projetos"), (snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+            const id = change.doc.id;
+            if (change.type === "added" || change.type === "modified") {
+                bdProjetos[id] = change.doc.data();
+            }
+            if (change.type === "removed") {
+                delete bdProjetos[id];
             }
         });
-        
-        if(navigator.onLine) document.getElementById('offline-banner').style.display = 'none';
-        if(usuarioLogado) checkMorningBriefing(); 
-    }
-
-    // Funções de Gravação no Firestore
-    async function syncProjetoNuvem(idProjeto, isDelete = false) {
-        if (!navigator.onLine || !db) return;
-        const { doc, setDoc, deleteDoc } = firestore;
-        try {
-            if (isDelete) { await deleteDoc(doc(db, "projetos", idProjeto)); } 
-            else { await setDoc(doc(db, "projetos", idProjeto), bdProjetos[idProjeto], { merge: true }); }
-        } catch (error) { console.error("Erro ao salvar projeto no Firebase:", error); }
-    }
-
-    async function syncDeleteLoteNuvem(idsParaExcluir) {
-        if (!navigator.onLine || !db) return;
-        const { doc, deleteDoc } = firestore;
-        idsParaExcluir.forEach(async (id) => {
-            try { await deleteDoc(doc(db, "projetos", id)); } 
-            catch (e) { console.error("Erro na exclusão em lote:", e); }
-        });
-    }
-
-    async function syncColabsNuvem(nomesAfetados) {
-        if (!navigator.onLine || !db) return;
-        const { doc, setDoc } = firestore;
-        nomesAfetados.forEach(async (nome) => {
-            if(configColaboradores[nome]) {
-                try { await setDoc(doc(db, "colaboradores", nome), configColaboradores[nome], { merge: true }); }
-                catch(e) { console.error("Erro ao sincronizar colaborador:", e); }
-            }
-        });
-    }
-
-    /* ========================================== */
-    /* LÓGICA PRINCIPAL DO APP                    */
-    /* ========================================== */
-
-    let usuarioLogado = localStorage.getItem('cadarn_user') || '';
-    let configColaboradores = JSON.parse(localStorage.getItem('cadarn_colabs')) || {};
-
-    function autoDetectGender(name) {
-        const first = name.toLowerCase().split(' ')[0];
-        if (first.endsWith('a') && !['luca', 'andrea', 'micha'].includes(first)) return 'F';
-        if (['ellen', 'caroline', 'aline', 'viviane', 'raquel', 'iris'].includes(first)) return 'F';
-        return 'M';
-    }
-
-    function getAvatarHtml(nome, size = 40) {
-        const conf = configColaboradores[nome] || { foto: '', genero: autoDetectGender(nome), celular: '', email: '' };
-        
-        if (conf.foto) {
-            return `<div style="width:${size}px; height:${size}px; background-image:url('${conf.foto}'); background-size:cover; background-position:center; border-radius:50%; border: 2px solid rgba(255,255,255,0.1); box-shadow: 0 4px 10px rgba(0,0,0,0.3);"></div>`;
-        }
-        
-        const isF = conf.genero === 'F';
-        const grad = isF ? 'linear-gradient(135deg, #ff6b9e, #ff8a65)' : 'linear-gradient(135deg, #2e8bc0, #832EFF)';
-        const iconPath = isF 
-            ? `<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle><path d="M8 10c0 3.5 2 5 4 5s4-1.5 4-5" stroke-dasharray="2 2" stroke-opacity="0.6"></path>` 
-            : `<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle>`; 
-            
-        return `
-            <div style="width:${size}px; height:${size}px; background:${grad}; border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; border: 2px solid rgba(255,255,255,0.15); box-shadow: inset 0 -2px 5px rgba(0,0,0,0.2), 0 4px 10px rgba(0,0,0,0.3);">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: ${size*0.5}px; height: ${size*0.5}px;">
-                    ${iconPath}
-                </svg>
-            </div>
-        `;
-    }
-
-    let perfilAtualNome = '';
-
-    function abrirMeuPerfil() {
-        if(usuarioLogado) { abrirPerfil(usuarioLogado); } else { abrirModal(); }
-    }
-
-    function abrirPerfil(nome) {
-        perfilAtualNome = nome;
-        const conf = configColaboradores[nome] || { foto: '', genero: autoDetectGender(nome), celular: '', email: '', nascimento: '', elogiosRecebidos: [], elogiosEnviados: [] };
-        
-        document.getElementById('profile-name').innerText = sanitize(nome);
-        document.getElementById('profile-avatar-render').innerHTML = getAvatarHtml(nome, 80);
-        
-        document.getElementById('profile-phone').value = conf.celular || '';
-        document.getElementById('profile-email').value = conf.email || '';
-        document.getElementById('profile-birthday').value = conf.nascimento || ''; 
-
-        const elogiosSection = document.getElementById('profile-elogios-section');
-        const privateStars = document.getElementById('profile-private-stars');
-        if(nome === usuarioLogado) {
-            elogiosSection.style.display = 'block';
-            let rec = (conf.elogiosRecebidos || []).map(e => `<div style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05); font-size:12px; color:var(--cadarn-branco); line-height:1.4;"><strong>De ${sanitize(e.de)}:</strong><br>${sanitize(e.texto)}</div>`).join('');
-            let env = (conf.elogiosEnviados || []).map(e => `<div style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05); font-size:12px; color:var(--cadarn-branco); line-height:1.4;"><strong>Para ${sanitize(e.para)}:</strong><br>${sanitize(e.texto)}</div>`).join('');
-            
-            document.getElementById('elogios-recebidos-list').innerHTML = rec || '<div style="font-size:11px; color:var(--cadarn-cinza);">Nenhum recebido.</div>';
-            document.getElementById('elogios-enviados-list').innerHTML = env || '<div style="font-size:11px; color:var(--cadarn-cinza);">Nenhum enviado.</div>';
-            privateStars.innerText = `${conf.elogiosRecebidos ? conf.elogiosRecebidos.length : 0} ⭐ (Apenas você vê)`;
-        } else {
-            elogiosSection.style.display = 'none';
-            privateStars.innerText = '';
-        }
-
-        let ativos = []; let concluidos = [];
-        let pCount = 0; const MAX_PROJECTS = 5;
-
-        for (const [id, proj] of Object.entries(bdProjetos)) {
-            if (proj.arquivado) continue;
-            
-            const emEquipe = (proj.equipeAtual || []).some(m => m.split('(')[0].trim() === nome);
-            const exEquipe = (proj.equipeAntiga || []).some(m => m.split('(')[0].trim() === nome);
-            
-            if (emEquipe || exEquipe) {
-                const todasConcluidas = proj.etapas && proj.etapas.length > 0 && proj.etapas.every(e => e.status === 'concluido');
-                const htmlItem = `<div class="prof-list-item" onclick="abrirProjeto('${id}'); document.getElementById('profile-modal').classList.remove('active');">
-                                    <div><strong>${sanitize(proj.nome)}</strong><br><span style="font-size:11px; color:var(--cadarn-cinza);">${sanitize(proj.cliente)}</span></div>
-                                    <div style="font-size:10px; opacity:0.7; padding-top:2px;">${exEquipe && !todasConcluidas ? '(Ex-Membro)' : ''}</div>
-                                  </div>`;
-                if (todasConcluidas) {
-                    concluidos.push(htmlItem);
-                } else if (emEquipe) {
-                    ativos.push(htmlItem);
-                    pCount++;
-                }
-            }
-        }
-
-        const pct = Math.min(Math.round((pCount / MAX_PROJECTS) * 100), 100);
-        let colorAlloc = '#47e299'; if(pct>=80) colorAlloc='#ff8793'; else if(pct>=50) colorAlloc='#ffc107';
-        document.getElementById('profile-alloc').innerHTML = `<span style="color:${colorAlloc}">${pct}% Alocado</span> (${pCount} projetos ativos)`;
-        
-        document.getElementById('profile-active-list').innerHTML = ativos.length ? ativos.join('') : '<div style="font-size:12px; color:var(--cadarn-cinza);">Nenhum projeto em execução.</div>';
-        document.getElementById('profile-past-list').innerHTML = concluidos.length ? concluidos.join('') : '<div style="font-size:12px; color:var(--cadarn-cinza);">Nenhum projeto concluído.</div>';
-
-        document.getElementById('profile-modal').classList.add('active');
-    }
-
-    function fecharPerfil(e) {
-        if(e.target === document.getElementById('profile-modal')) {
-            document.getElementById('profile-modal').classList.remove('active');
-        }
-    }
-
-    function salvarPerfilDado(prop, val) {
-        if(!perfilAtualNome) return;
-        if(!configColaboradores[perfilAtualNome]) configColaboradores[perfilAtualNome] = { genero: autoDetectGender(perfilAtualNome) };
-        
-        configColaboradores[perfilAtualNome][prop] = val;
-        localStorage.setItem('cadarn_colabs', JSON.stringify(configColaboradores));
-        
-        if(navigator.onLine) {
-            syncColabsNuvem([perfilAtualNome]).then(() => {
-                showToast('Informação sincronizada na nuvem.', 'success');
-            });
-        } else {
-            showToast('Salvo localmente (Offline).', 'warning');
-        }
-    }
-
-    function handleDropFoto(e) {
-        e.preventDefault();
-        e.currentTarget.classList.remove('dragover');
-        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-            processarFotoPerfil(e.dataTransfer.files[0]);
-        }
-    }
-
-    function handleFileFoto(e) {
-        if (e.target.files && e.target.files[0]) {
-            processarFotoPerfil(e.target.files[0]);
-        }
-    }
-
-    function processarFotoPerfil(file) {
-        if(!file.type.startsWith('image/')) { showToast('Por favor, selecione uma imagem.', 'warning'); return; }
-        
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const img = new Image();
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                const size = 150;
-                canvas.width = size; canvas.height = size;
-                const ctx = canvas.getContext('2d');
-                
-                const min = Math.min(img.width, img.height);
-                const sx = (img.width - min) / 2; const sy = (img.height - min) / 2;
-                
-                ctx.drawImage(img, sx, sy, min, min, 0, 0, size, size);
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.7); 
-                
-                salvarPerfilDado('foto', dataUrl);
-                
-                document.getElementById('profile-avatar-render').innerHTML = getAvatarHtml(perfilAtualNome, 80);
-                renderTeamAvailability();
-                if(modoVisualizacao === 'equipe') renderMainProjects();
-            };
-            img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-    }
-
-    function abrirModalElogio() {
-        if(!usuarioLogado) {
-            abrirModal();
-            showToast('Identifique-se primeiro para mandar um elogio.', 'warning');
-            return;
-        }
-
-        const sel = document.getElementById('elogio-para');
-        let opts = '<option value="">Escolha um colega...</option>';
-        
-        let todosMembros = new Set(Object.keys(configColaboradores));
-        Object.values(bdProjetos).forEach(p => {
-            (p.equipeAtual || []).forEach(m => todosMembros.add(m.split('(')[0].trim()));
-            (p.equipeAntiga || []).forEach(m => todosMembros.add(m.split('(')[0].trim()));
-        });
-
-        Array.from(todosMembros).sort().forEach(nome => {
-            if(nome && nome !== usuarioLogado) {
-                opts += `<option value="${sanitize(nome)}">${sanitize(nome)}</option>`;
-            }
-        });
-
-        sel.innerHTML = opts;
-        document.getElementById('elogio-texto').value = '';
-        document.getElementById('elogio-modal').classList.add('active');
-    }
-
-    function fecharModalElogio(e) {
-        if(!e || e.target === document.getElementById('elogio-modal') || e.target.classList.contains('sp-close')) {
-            document.getElementById('elogio-modal').classList.remove('active');
-        }
-    }
-
-    function enviarElogio() {
-        const de = usuarioLogado;
-        const para = document.getElementById('elogio-para').value;
-        const texto = document.getElementById('elogio-texto').value.trim();
-        
-        if(!para) { showToast("Selecione para quem vai o elogio.", "warning"); return; }
-        if(!texto) { showToast("Escreva a mensagem do elogio.", "warning"); return; }
-
-        if(!configColaboradores[para]) configColaboradores[para] = {};
-        if(!configColaboradores[para].elogiosRecebidos) configColaboradores[para].elogiosRecebidos = [];
-        configColaboradores[para].elogiosRecebidos.push({ de, texto, data: new Date().toISOString() });
-
-        if(!configColaboradores[de]) configColaboradores[de] = {};
-        if(!configColaboradores[de].elogiosEnviados) configColaboradores[de].elogiosEnviados = [];
-        configColaboradores[de].elogiosEnviados.push({ para, texto, data: new Date().toISOString() });
-
-        localStorage.setItem('cadarn_colabs', JSON.stringify(configColaboradores));
-        
-        if(navigator.onLine) {
-            syncColabsNuvem([de, para]);
-        }
-
-        showToast(`⭐ Elogio enviado para ${sanitize(para)}!`, 'success');
-        fecharModalElogio();
-        atualizarColaboradorDoMes();
-    }
-
-    function atualizarColaboradorDoMes() {
-        let topColab = null;
-        let maxEstrelas = 0;
-        
-        for(let [nome, data] of Object.entries(configColaboradores)) {
-            let estrelas = data.elogiosRecebidos ? data.elogiosRecebidos.length : 0;
-            if(estrelas > maxEstrelas) {
-                maxEstrelas = estrelas;
-                topColab = nome;
-            }
-        }
-        
-        const container = document.getElementById('colaborador-mes-container');
-        if(topColab && maxEstrelas > 0) {
-            container.innerHTML = `
-                <div style="font-size:10px; color:var(--cadarn-roxo-claro); text-transform:uppercase; font-weight:800; margin-bottom:10px; text-align:center; letter-spacing:1px;">⭐ Colaborador do Mês</div>
-                <div style="cursor:pointer;" onclick="abrirPerfil('${sanitize(topColab)}')">${getAvatarHtml(topColab, 54)}</div>
-                <div style="font-size:13px; font-weight:700; margin-top:8px; color:var(--cadarn-branco); text-align:center;">${sanitize(topColab).split(' ')[0]}</div>
-                <div style="font-size:11px; color:#ffc107; font-weight:600; text-align:center;">${maxEstrelas} Estrela(s)</div>
-            `;
-        } else {
-            container.innerHTML = `<div style="font-size:10px; color:var(--cadarn-cinza); text-transform:uppercase; text-align:center;">Nenhum destaque ainda</div>`;
-        }
-    }
-
-    function showToast(message, type='info', onUndo=null) {
-        const container = document.getElementById('toast-container');
-        const toast = document.createElement('div');
-        toast.className = `toast toast-${type}`;
-        
-        let undoHtml = onUndo ? `<button class="toast-undo">Desfazer</button>` : '';
-        toast.innerHTML = `<span>${message}</span> ${undoHtml}`;
-        container.appendChild(toast);
-
-        let timeout;
-        if(onUndo) {
-            toast.querySelector('.toast-undo').onclick = () => {
-                onUndo();
-                toast.style.opacity = '0';
-                setTimeout(() => toast.remove(), 300);
-                clearTimeout(timeout);
-            };
-        }
-        
-        timeout = setTimeout(() => {
-            if (document.body.contains(toast)) {
-                toast.style.opacity = '0';
-                setTimeout(() => { if (document.body.contains(toast)) toast.remove(); }, 300);
-            }
-        }, 6000);
-    }
-
-    window.addEventListener('offline', () => {
-        document.getElementById('offline-banner').style.display = 'block';
-        showToast('Conexão perdida. Alterações serão salvas localmente.', 'warning');
+        localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos));
+        renderMainProjects();
+        atualizarDashboard();
     });
 
-    window.addEventListener('online', () => {
-        document.getElementById('offline-banner').style.display = 'none';
-        showToast('Conexão restabelecida. Trabalhando em background...', 'success');
-        // Ao voltar online, forçamos um load do mais recente ao invés de simplesmente sobrescrever a nuvem com o local
-        carregarProjetosDaNuvem(); 
-    });
-
-    function toggleTheme() {
-        const body = document.body;
-        const isLight = body.classList.toggle('light-mode');
-        const btn = document.getElementById('theme-toggle');
-        if (isLight) { btn.innerHTML = '🌙'; btn.title = 'Modo Escuro'; localStorage.setItem('cadarn_theme', 'light'); updateIframesTheme('light'); } 
-        else { btn.innerHTML = '☀️'; btn.title = 'Modo Claro'; localStorage.setItem('cadarn_theme', 'dark'); updateIframesTheme('dark'); }
-        atualizarDashboard(); 
-    }
-
-    function updateIframesTheme(theme) {
-        const iframesToUpdate = ['tv-widget-1', 'tv-widget-2', 'tv-widget-3', 'tv-widget-4', 'tv-widget-5'];
-        iframesToUpdate.forEach(id => {
-            const ifr = document.getElementById(id);
-            if (ifr) { ifr.src = ifr.src.replace(theme === 'light' ? 'colorTheme=dark' : 'colorTheme=light', theme === 'light' ? 'colorTheme=light' : 'colorTheme=dark'); }
+    onSnapshot(collection(db, "colaboradores"), (snapshot) => {
+        let houveMudanca = false;
+        snapshot.docChanges().forEach((change) => {
+            const nome = change.doc.id;
+            if (change.type === "added" || change.type === "modified") {
+                configColaboradores[nome] = change.doc.data();
+                houveMudanca = true;
+            }
         });
-    }
-
-    function loadTheme() {
-        const savedTheme = localStorage.getItem('cadarn_theme');
-        const btn = document.getElementById('theme-toggle');
-        if (savedTheme === 'light') { document.body.classList.add('light-mode'); btn.innerHTML = '🌙'; btn.title = 'Modo Escuro'; updateIframesTheme('light'); }
-    }
-
-    // SANITIZE ATUALIZADO (REGEX SEGURO CONTRA XSS EM ATRIBUTOS)
-    function sanitize(str) {
-        if (!str) return '';
-        const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;', "/": '&#x2F;' };
-        return String(str).replace(/[&<>"'/]/ig, (match) => map[match]);
-    }
-
-    function diasEntre(dataInicial, dataFinal) {
-        if(!dataInicial) return 0;
-        const fim = dataFinal ? new Date(dataFinal) : new Date();
-        const diffTempo = Math.abs(fim - new Date(dataInicial));
-        return Math.ceil(diffTempo / (1000 * 60 * 60 * 24)); 
-    }
-
-    let bdProjetos = {};
-    let projetoAbertoAtual = null;
-    let isEditingProjeto = false;
-    let modoVisualizacao = 'list'; 
-    let filtroAtual = 'Todos';
-    let filtroMembro = null; 
-    let isSelectModeLixeira = false;
-    let selectedLixeiraItems = new Set();
-    let presentationSlides = [];
-    let currentSlideIndex = 0;
-
-    const insights = [
-        { text: "A inovação distingue um líder de um seguidor.", author: "Steve Jobs" },
-        { text: "O maior risco é não correr nenhum risco. A única estratégia garantida de falhar é não arriscar.", author: "Mark Zuckerberg" },
-        { text: "Sua marca pessoal é o que as pessoas dizem sobre você quando você não está na sala.", author: "Jeff Bezos" },
-        { text: "A estratégia é sobre fazer escolhas, trade-offs; é sobre escolher deliberadamente ser diferente.", author: "Michael Porter" },
-        { text: "Tecnologia é apenas uma ferramenta. Para motivar as pessoas, a liderança é o mais importante.", author: "Bill Gates" },
-        { text: "Não tenha receio de desistir do bom para perseguir o ótimo.", author: "John D. Rockefeller" },
-        { text: "Se você criar um caso de amor com seus clientes, eles próprios farão a sua publicidade.", author: "Philip Kotler" },
-        { text: "O ativo mais valioso da sua empresa é como ela é conhecida pelos seus clientes.", author: "Brian Tracy" },
-        { text: "A excelência não é um ato, mas um hábito.", author: "Aristóteles" },
-        { text: "Os clientes mais insatisfeitos são a sua maior fonte de aprendizado.", author: "Bill Gates" }
-    ];
-
-    function renderDailyQuote() {
-        const today = new Date();
-        const index = (today.getFullYear() + today.getMonth() + today.getDate()) % insights.length;
-        const quote = insights[index];
-        document.getElementById('quote-text').innerText = `"${quote.text}"`;
-        document.getElementById('quote-author').innerText = `- ${quote.author}`;
-    }
-
-    function checkMorningBriefing() {
-        const todayStr = new Date().toISOString().split('T')[0];
-        const lastBriefing = localStorage.getItem('cadarn_last_briefing_date');
-        
-        if (lastBriefing !== todayStr) {
-            let totaisAtivos = 0; let atrasosGlobais = 0;
-            const hojeCompare = new Date(new Date().setHours(0,0,0,0));
-
-            for (const proj of Object.values(bdProjetos)) {
-                if (proj.arquivado) continue;
-                const todasConcluidas = proj.etapas && proj.etapas.length > 0 && proj.etapas.every(e => e.status === 'concluido');
-                if (!todasConcluidas) {
-                    totaisAtivos++;
-                    if(proj.etapas) {
-                        proj.etapas.forEach(e => {
-                            if(e.prazo && new Date(e.prazo) < hojeCompare && e.status !== 'concluido') atrasosGlobais++;
-                        });
-                    }
-                }
-            }
-
-            document.getElementById('briefing-ativos').innerText = totaisAtivos;
-            document.getElementById('briefing-atrasos').innerText = atrasosGlobais;
-            
-            const alertBox = document.getElementById('briefing-alert-box');
-            if (atrasosGlobais > 0) { 
-                alertBox.classList.add('briefing-alert'); 
-                document.getElementById('briefing-atrasos').style.color = '#ff8793'; 
-            } else { 
-                alertBox.classList.remove('briefing-alert'); 
-                document.getElementById('briefing-atrasos').style.color = '#47e299'; 
-            }
-            
-            const [, todayMonth, todayDay] = todayStr.split('-'); 
-            let aniversariantes = [];
-            
-            if (typeof configColaboradores !== 'undefined') {
-                for (const [nomeColab, configColab] of Object.entries(configColaboradores)) {
-                    if (configColab && configColab.nascimento) {
-                        const [, bMonth, bDay] = configColab.nascimento.split('-');
-                        if (bMonth === todayMonth && bDay === todayDay) {
-                            aniversariantes.push(nomeColab.split(' ')[0]); 
-                        }
-                    }
-                }
-            }
-
-            const bdayAlert = document.getElementById('briefing-birthday-alert');
-            if (bdayAlert) {
-                if (aniversariantes.length > 0) {
-                    document.getElementById('briefing-birthday-names').innerText = aniversariantes.join(', ');
-                    bdayAlert.style.display = 'block';
-                } else {
-                    bdayAlert.style.display = 'none';
-                }
-            }
-
-            document.getElementById('briefing-modal').classList.add('active');
-        }
-    }
-
-    function fecharBriefing() {
-        const todayStr = new Date().toISOString().split('T')[0];
-        localStorage.setItem('cadarn_last_briefing_date', todayStr);
-        document.getElementById('briefing-modal').classList.remove('active');
-    }
-
-    async function carregarProjetosDaNuvem() {
-        try {
-            if(!navigator.onLine) throw new Error("Offline");
-            const response = await fetch(API_NUVEM);
-            const data = await response.json(); 
-            
-            if (data.projetos !== undefined) {
-                bdProjetos = data.projetos || {};
-                if (data.colaboradores && Object.keys(data.colaboradores).length > 0) {
-                    configColaboradores = data.colaboradores;
-                    localStorage.setItem('cadarn_colabs', JSON.stringify(configColaboradores));
-                }
-            } else {
-                bdProjetos = data || {};
-            }
-
-            if(Object.keys(bdProjetos).length === 0) bdProjetos = carregarProjetosDefault();
-            
-            // Backup local
-            localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos));
-
-            renderMainProjects();
-            renderTeamAvailability(); 
-            atualizarColaboradorDoMes();
-            
-            if(localStorage.getItem('cadarn_user')) checkMorningBriefing();
-        } catch (error) {
-            console.log("Erro ao carregar da nuvem, usando cache local", error);
-            bdProjetos = JSON.parse(localStorage.getItem('cadarn_projetos_db')) || carregarProjetosDefault();
-            configColaboradores = JSON.parse(localStorage.getItem('cadarn_colabs')) || {};
-            
-            if (configColaboradores["Victor"]) {
-                delete configColaboradores["Victor"];
-                localStorage.setItem('cadarn_colabs', JSON.stringify(configColaboradores));
-            }
-            
-            renderMainProjects();
+        if (houveMudanca) {
+            localStorage.setItem('cadarn_colabs', JSON.stringify(configColaboradores));
             renderTeamAvailability();
             atualizarColaboradorDoMes();
-            
-            if(localStorage.getItem('cadarn_user')) checkMorningBriefing();
-            if(!navigator.onLine) document.getElementById('offline-banner').style.display = 'block';
+        }
+    });
+    
+    if(navigator.onLine) document.getElementById('offline-banner').style.display = 'none';
+    if(usuarioLogado) checkMorningBriefing(); 
+}
+
+// Funções de Gravação no Firestore
+async function syncProjetoNuvem(idProjeto, isDelete = false) {
+    if (!navigator.onLine || !db) return;
+    const { doc, setDoc, deleteDoc } = firestore;
+    try {
+        if (isDelete) { await deleteDoc(doc(db, "projetos", idProjeto)); } 
+        else { await setDoc(doc(db, "projetos", idProjeto), bdProjetos[idProjeto], { merge: true }); }
+    } catch (error) { console.error("Erro ao salvar projeto no Firebase:", error); }
+}
+
+async function syncDeleteLoteNuvem(idsParaExcluir) {
+    if (!navigator.onLine || !db) return;
+    const { doc, deleteDoc } = firestore;
+    idsParaExcluir.forEach(async (id) => {
+        try { await deleteDoc(doc(db, "projetos", id)); } 
+        catch (e) { console.error("Erro na exclusão em lote:", e); }
+    });
+}
+
+async function syncColabsNuvem(nomesAfetados) {
+    if (!navigator.onLine || !db) return;
+    const { doc, setDoc } = firestore;
+    nomesAfetados.forEach(async (nome) => {
+        if(configColaboradores[nome]) {
+            try { await setDoc(doc(db, "colaboradores", nome), configColaboradores[nome], { merge: true }); }
+            catch(e) { console.error("Erro ao sincronizar colaborador:", e); }
+        }
+    });
+}
+
+/* ========================================== */
+/* LÓGICA PRINCIPAL DO APP                    */
+/* ========================================== */
+
+let usuarioLogado = localStorage.getItem('cadarn_user') || '';
+let configColaboradores = JSON.parse(localStorage.getItem('cadarn_colabs')) || {};
+
+function autoDetectGender(name) {
+    const first = name.toLowerCase().split(' ')[0];
+    if (first.endsWith('a') && !['luca', 'andrea', 'micha'].includes(first)) return 'F';
+    if (['ellen', 'caroline', 'aline', 'viviane', 'raquel', 'iris'].includes(first)) return 'F';
+    return 'M';
+}
+
+function getAvatarHtml(nome, size = 40) {
+    const conf = configColaboradores[nome] || { foto: '', genero: autoDetectGender(nome), celular: '', email: '' };
+    
+    if (conf.foto) {
+        return `<div style="width:${size}px; height:${size}px; background-image:url('${conf.foto}'); background-size:cover; background-position:center; border-radius:50%; border: 2px solid rgba(255,255,255,0.1); box-shadow: 0 4px 10px rgba(0,0,0,0.3);"></div>`;
+    }
+    
+    const isF = conf.genero === 'F';
+    const grad = isF ? 'linear-gradient(135deg, #ff6b9e, #ff8a65)' : 'linear-gradient(135deg, #2e8bc0, #832EFF)';
+    const iconPath = isF 
+        ? `<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle><path d="M8 10c0 3.5 2 5 4 5s4-1.5 4-5" stroke-dasharray="2 2" stroke-opacity="0.6"></path>` 
+        : `<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle>`; 
+        
+    return `
+        <div style="width:${size}px; height:${size}px; background:${grad}; border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; border: 2px solid rgba(255,255,255,0.15); box-shadow: inset 0 -2px 5px rgba(0,0,0,0.2), 0 4px 10px rgba(0,0,0,0.3);">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: ${size*0.5}px; height: ${size*0.5}px;">
+                ${iconPath}
+            </svg>
+        </div>
+    `;
+}
+
+let perfilAtualNome = '';
+
+function abrirMeuPerfil() {
+    if(usuarioLogado) { abrirPerfil(usuarioLogado); } else { abrirModalLoginReal(); }
+}
+
+function abrirPerfil(nome) {
+    perfilAtualNome = nome;
+    const conf = configColaboradores[nome] || { foto: '', genero: autoDetectGender(nome), celular: '', email: '', nascimento: '', elogiosRecebidos: [], elogiosEnviados: [] };
+    
+    document.getElementById('profile-name').innerText = sanitize(nome);
+    document.getElementById('profile-avatar-render').innerHTML = getAvatarHtml(nome, 80);
+    
+    document.getElementById('profile-phone').value = conf.celular || '';
+    document.getElementById('profile-email').value = conf.email || '';
+    document.getElementById('profile-birthday').value = conf.nascimento || ''; 
+
+    const elogiosSection = document.getElementById('profile-elogios-section');
+    const privateStars = document.getElementById('profile-private-stars');
+    if(nome === usuarioLogado) {
+        elogiosSection.style.display = 'block';
+        let rec = (conf.elogiosRecebidos || []).map(e => `<div style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05); font-size:12px; color:var(--cadarn-branco); line-height:1.4;"><strong>De ${sanitize(e.de)}:</strong><br>${sanitize(e.texto)}</div>`).join('');
+        let env = (conf.elogiosEnviados || []).map(e => `<div style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05); font-size:12px; color:var(--cadarn-branco); line-height:1.4;"><strong>Para ${sanitize(e.para)}:</strong><br>${sanitize(e.texto)}</div>`).join('');
+        
+        document.getElementById('elogios-recebidos-list').innerHTML = rec || '<div style="font-size:11px; color:var(--cadarn-cinza);">Nenhum recebido.</div>';
+        document.getElementById('elogios-enviados-list').innerHTML = env || '<div style="font-size:11px; color:var(--cadarn-cinza);">Nenhum enviado.</div>';
+        privateStars.innerText = `${conf.elogiosRecebidos ? conf.elogiosRecebidos.length : 0} ⭐ (Apenas você vê)`;
+    } else {
+        elogiosSection.style.display = 'none';
+        privateStars.innerText = '';
+    }
+
+    let ativos = []; let concluidos = [];
+    let pCount = 0; const MAX_PROJECTS = 5;
+
+    for (const [id, proj] of Object.entries(bdProjetos)) {
+        if (proj.arquivado) continue;
+        
+        const emEquipe = (proj.equipeAtual || []).some(m => m.split('(')[0].trim() === nome);
+        const exEquipe = (proj.equipeAntiga || []).some(m => m.split('(')[0].trim() === nome);
+        
+        if (emEquipe || exEquipe) {
+            const todasConcluidas = proj.etapas && proj.etapas.length > 0 && proj.etapas.every(e => e.status === 'concluido');
+            const htmlItem = `<div class="prof-list-item" onclick="abrirProjeto('${id}'); document.getElementById('profile-modal').classList.remove('active');">
+                                <div><strong>${sanitize(proj.nome)}</strong><br><span style="font-size:11px; color:var(--cadarn-cinza);">${sanitize(proj.cliente)}</span></div>
+                                <div style="font-size:10px; opacity:0.7; padding-top:2px;">${exEquipe && !todasConcluidas ? '(Ex-Membro)' : ''}</div>
+                              </div>`;
+            if (todasConcluidas) {
+                concluidos.push(htmlItem);
+            } else if (emEquipe) {
+                ativos.push(htmlItem);
+                pCount++;
+            }
         }
     }
 
-    function carregarProjetosDefault() {
-        const user = localStorage.getItem('cadarn_user') ? localStorage.getItem('cadarn_user').split(' ')[0] : 'Sistema';
-        return { 
-            'proj1': { 
-                cliente: 'Petrobras', nome: 'Mapeamento Geopolítico', lider: 'Victor Hugo', descricao: 'Exemplo de projeto...', 
-                equipeAtual: ['Victor'], equipeAntiga: [], 
-                etapas: [{ titulo: 'Etapa 1', status: 'ativo', prazo: '' }],
-                dataCriacao: Date.now() - (5 * 86400000), 
-                dataConclusao: null,
-                tags: ['Energia', 'Estratégico'], licoes: 'O cliente prefere alinhamentos semanais curtos.', arquivado: false
-            } 
+    const pct = Math.min(Math.round((pCount / MAX_PROJECTS) * 100), 100);
+    let colorAlloc = '#47e299'; if(pct>=80) colorAlloc='#ff8793'; else if(pct>=50) colorAlloc='#ffc107';
+    document.getElementById('profile-alloc').innerHTML = `<span style="color:${colorAlloc}">${pct}% Alocado</span> (${pCount} projetos ativos)`;
+    
+    document.getElementById('profile-active-list').innerHTML = ativos.length ? ativos.join('') : '<div style="font-size:12px; color:var(--cadarn-cinza);">Nenhum projeto em execução.</div>';
+    document.getElementById('profile-past-list').innerHTML = concluidos.length ? concluidos.join('') : '<div style="font-size:12px; color:var(--cadarn-cinza);">Nenhum projeto concluído.</div>';
+
+    document.getElementById('profile-modal').classList.add('active');
+}
+
+function fecharPerfil(e) {
+    if(e.target === document.getElementById('profile-modal')) {
+        document.getElementById('profile-modal').classList.remove('active');
+    }
+}
+
+function salvarPerfilDado(prop, val) {
+    if(!perfilAtualNome) return;
+    if(!configColaboradores[perfilAtualNome]) configColaboradores[perfilAtualNome] = { genero: autoDetectGender(perfilAtualNome) };
+    
+    configColaboradores[perfilAtualNome][prop] = val;
+    localStorage.setItem('cadarn_colabs', JSON.stringify(configColaboradores));
+    
+    if(navigator.onLine) {
+        syncColabsNuvem([perfilAtualNome]).then(() => {
+            showToast('Informação sincronizada na nuvem.', 'success');
+        });
+    } else {
+        showToast('Salvo localmente (Offline).', 'warning');
+    }
+}
+
+function handleDropFoto(e) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('dragover');
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+        processarFotoPerfil(e.dataTransfer.files[0]);
+    }
+}
+
+function handleFileFoto(e) {
+    if (e.target.files && e.target.files[0]) {
+        processarFotoPerfil(e.target.files[0]);
+    }
+}
+
+function processarFotoPerfil(file) {
+    if(!file.type.startsWith('image/')) { showToast('Por favor, selecione uma imagem.', 'warning'); return; }
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const size = 150;
+            canvas.width = size; canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            
+            const min = Math.min(img.width, img.height);
+            const sx = (img.width - min) / 2; const sy = (img.height - min) / 2;
+            
+            ctx.drawImage(img, sx, sy, min, min, 0, 0, size, size);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.7); 
+            
+            salvarPerfilDado('foto', dataUrl);
+            
+            document.getElementById('profile-avatar-render').innerHTML = getAvatarHtml(perfilAtualNome, 80);
+            renderTeamAvailability();
+            if(modoVisualizacao === 'equipe') renderMainProjects();
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+function abrirModalElogio() {
+    if(!usuarioLogado) {
+        abrirModalLoginReal();
+        showToast('Identifique-se primeiro para mandar um elogio.', 'warning');
+        return;
+    }
+
+    const sel = document.getElementById('elogio-para');
+    let opts = '<option value="">Escolha um colega...</option>';
+    
+    let todosMembros = new Set(Object.keys(configColaboradores));
+    Object.values(bdProjetos).forEach(p => {
+        (p.equipeAtual || []).forEach(m => todosMembros.add(m.split('(')[0].trim()));
+        (p.equipeAntiga || []).forEach(m => todosMembros.add(m.split('(')[0].trim()));
+    });
+
+    Array.from(todosMembros).sort().forEach(nome => {
+        if(nome && nome !== usuarioLogado) {
+            opts += `<option value="${sanitize(nome)}">${sanitize(nome)}</option>`;
+        }
+    });
+
+    sel.innerHTML = opts;
+    document.getElementById('elogio-texto').value = '';
+    document.getElementById('elogio-modal').classList.add('active');
+}
+
+function fecharModalElogio(e) {
+    if(!e || e.target === document.getElementById('elogio-modal') || e.target.classList.contains('sp-close')) {
+        document.getElementById('elogio-modal').classList.remove('active');
+    }
+}
+
+function enviarElogio() {
+    const de = usuarioLogado;
+    const para = document.getElementById('elogio-para').value;
+    const texto = document.getElementById('elogio-texto').value.trim();
+    
+    if(!para) { showToast("Selecione para quem vai o elogio.", "warning"); return; }
+    if(!texto) { showToast("Escreva a mensagem do elogio.", "warning"); return; }
+
+    if(!configColaboradores[para]) configColaboradores[para] = {};
+    if(!configColaboradores[para].elogiosRecebidos) configColaboradores[para].elogiosRecebidos = [];
+    configColaboradores[para].elogiosRecebidos.push({ de, texto, data: new Date().toISOString() });
+
+    if(!configColaboradores[de]) configColaboradores[de] = {};
+    if(!configColaboradores[de].elogiosEnviados) configColaboradores[de].elogiosEnviados = [];
+    configColaboradores[de].elogiosEnviados.push({ para, texto, data: new Date().toISOString() });
+
+    localStorage.setItem('cadarn_colabs', JSON.stringify(configColaboradores));
+    
+    if(navigator.onLine) {
+        syncColabsNuvem([de, para]);
+    }
+
+    showToast(`⭐ Elogio enviado para ${sanitize(para)}!`, 'success');
+    fecharModalElogio();
+    atualizarColaboradorDoMes();
+}
+
+function atualizarColaboradorDoMes() {
+    let topColab = null;
+    let maxEstrelas = 0;
+    
+    for(let [nome, data] of Object.entries(configColaboradores)) {
+        let estrelas = data.elogiosRecebidos ? data.elogiosRecebidos.length : 0;
+        if(estrelas > maxEstrelas) {
+            maxEstrelas = estrelas;
+            topColab = nome;
+        }
+    }
+    
+    const container = document.getElementById('colaborador-mes-container');
+    if(topColab && maxEstrelas > 0) {
+        container.innerHTML = `
+            <div style="font-size:10px; color:var(--cadarn-roxo-claro); text-transform:uppercase; font-weight:800; margin-bottom:10px; text-align:center; letter-spacing:1px;">⭐ Colaborador do Mês</div>
+            <div style="cursor:pointer;" onclick="abrirPerfil('${sanitize(topColab)}')">${getAvatarHtml(topColab, 54)}</div>
+            <div style="font-size:13px; font-weight:700; margin-top:8px; color:var(--cadarn-branco); text-align:center;">${sanitize(topColab).split(' ')[0]}</div>
+            <div style="font-size:11px; color:#ffc107; font-weight:600; text-align:center;">${maxEstrelas} Estrela(s)</div>
+        `;
+    } else {
+        container.innerHTML = `<div style="font-size:10px; color:var(--cadarn-cinza); text-transform:uppercase; text-align:center;">Nenhum destaque ainda</div>`;
+    }
+}
+
+function showToast(message, type='info', onUndo=null) {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    
+    let undoHtml = onUndo ? `<button class="toast-undo">Desfazer</button>` : '';
+    toast.innerHTML = `<span>${message}</span> ${undoHtml}`;
+    container.appendChild(toast);
+
+    let timeout;
+    if(onUndo) {
+        toast.querySelector('.toast-undo').onclick = () => {
+            onUndo();
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 300);
+            clearTimeout(timeout);
         };
     }
-
-    function setVisualizacao(modo) {
-        modoVisualizacao = modo;
-        document.getElementById('btn-view-list').classList.toggle('active', modo === 'list');
-        document.getElementById('btn-view-kanban').classList.toggle('active', modo === 'kanban');
-        document.getElementById('btn-view-roadmap').classList.toggle('active', modo === 'roadmap');
-        document.getElementById('btn-view-equipe').classList.toggle('active', modo === 'equipe');
-        document.getElementById('btn-view-lixeira').classList.toggle('active', modo === 'lixeira');
-        
-        isSelectModeLixeira = false; selectedLixeiraItems.clear();
-        document.getElementById('tags-filter-container').style.display = (modo === 'equipe' || modo === 'lixeira') ? 'none' : 'flex';
-        renderMainProjects();
-    }
-
-    function setFiltro(tag) { filtroAtual = tag; filtroMembro = null; renderMainProjects(); }
     
-    function setFiltroMembro(nome) { filtroMembro = nome; setVisualizacao('list'); }
-    function limparFiltroMembro() { filtroMembro = null; renderMainProjects(); }
+    timeout = setTimeout(() => {
+        if (document.body.contains(toast)) {
+            toast.style.opacity = '0';
+            setTimeout(() => { if (document.body.contains(toast)) toast.remove(); }, 300);
+        }
+    }, 6000);
+}
 
-    function toggleSelectModeLixeira() {
-        isSelectModeLixeira = !isSelectModeLixeira;
-        selectedLixeiraItems.clear();
-        renderMainProjects();
-    }
+window.addEventListener('offline', () => {
+    document.getElementById('offline-banner').style.display = 'block';
+    showToast('Conexão perdida. Alterações serão salvas localmente.', 'warning');
+});
 
-    function toggleLixeiraItem(id) {
-        if (selectedLixeiraItems.has(id)) selectedLixeiraItems.delete(id);
-        else selectedLixeiraItems.add(id);
-        
-        const btn = document.getElementById('btn-delete-selected');
-        if (btn) { btn.innerText = `🗑️ Apagar Selecionados (${selectedLixeiraItems.size})`; btn.disabled = selectedLixeiraItems.size === 0; btn.style.opacity = selectedLixeiraItems.size === 0 ? '0.5' : '1'; }
-    }
+window.addEventListener('online', () => {
+    document.getElementById('offline-banner').style.display = 'none';
+    showToast('Conexão restabelecida. Trabalhando em background...', 'success');
+});
 
-    function deleteSelectedLixeira() {
-        if (selectedLixeiraItems.size === 0) return;
-        const count = selectedLixeiraItems.size; const backups = {};
-        const idsArray = Array.from(selectedLixeiraItems);
-        
-        idsArray.forEach(id => { backups[id] = JSON.parse(JSON.stringify(bdProjetos[id])); delete bdProjetos[id]; });
-        localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos));
+function toggleTheme() {
+    const body = document.body;
+    const isLight = body.classList.toggle('light-mode');
+    const btn = document.getElementById('theme-toggle');
+    if (isLight) { btn.innerHTML = '🌙'; btn.title = 'Modo Escuro'; localStorage.setItem('cadarn_theme', 'light'); updateIframesTheme('light'); } 
+    else { btn.innerHTML = '☀️'; btn.title = 'Modo Claro'; localStorage.setItem('cadarn_theme', 'dark'); updateIframesTheme('dark'); }
+    atualizarDashboard(); 
+}
 
-        showToast(`${count} projeto(s) excluído(s) permanentemente.`, 'danger', () => {
-            Object.assign(bdProjetos, backups); 
-            localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos)); 
-            renderMainProjects();
-            // Undo precisaria reenviar pra nuvem, mas para MVP manteremos simples
-        });
+function updateIframesTheme(theme) {
+    const iframesToUpdate = ['tv-widget-1', 'tv-widget-2', 'tv-widget-3', 'tv-widget-4', 'tv-widget-5'];
+    iframesToUpdate.forEach(id => {
+        const ifr = document.getElementById(id);
+        if (ifr) { ifr.src = ifr.src.replace(theme === 'light' ? 'colorTheme=dark' : 'colorTheme=light', theme === 'light' ? 'colorTheme=light' : 'colorTheme=dark'); }
+    });
+}
 
-        if(navigator.onLine) { syncDeleteLoteNuvem(idsArray); }
-        isSelectModeLixeira = false; selectedLixeiraItems.clear(); renderMainProjects();
-    }
+function loadTheme() {
+    const savedTheme = localStorage.getItem('cadarn_theme');
+    const btn = document.getElementById('theme-toggle');
+    if (savedTheme === 'light') { document.body.classList.add('light-mode'); btn.innerHTML = '🌙'; btn.title = 'Modo Escuro'; updateIframesTheme('light'); }
+}
 
-    function renderMainProjects() {
-        const container = document.getElementById('main-projects-container');
-        const filterContainer = document.getElementById('tags-filter-container');
-        
-        if (Object.keys(bdProjetos).length === 0) { container.innerHTML = '<p style="color: var(--cadarn-cinza); font-size: 13px; text-align: center; padding: 20px;">Nenhum projeto cadastrado.</p>'; atualizarDashboard(); return; }
-        
-        let todasTags = new Set();
-        Object.values(bdProjetos).forEach(p => { if(!p.arquivado) (p.tags || []).forEach(t => todasTags.add(t)); });
-        
-        let filterHtml = `<button class="tag-filter-btn ${filtroAtual === 'Todos' && !filtroMembro ? 'active' : ''}" onclick="setFiltro('Todos')">Todos</button>`;
-        if (filtroMembro) { filterHtml += `<button class="tag-filter-btn active" onclick="limparFiltroMembro()">👤 ${sanitize(filtroMembro)} ✕</button>`; }
-        Array.from(todasTags).sort().forEach(tag => { filterHtml += `<button class="tag-filter-btn ${filtroAtual === tag && !filtroMembro ? 'active' : ''}" onclick="setFiltro('${sanitize(tag)}')">${sanitize(tag)}</button>`; });
-        filterContainer.innerHTML = filterHtml;
-        
-        let kanbanAguardando = ''; let kanbanAtivos = ''; let kanbanConcluidos = ''; let listaNormal = '';
+function sanitize(str) {
+    if (!str) return '';
+    const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;', "/": '&#x2F;' };
+    return String(str).replace(/[&<>"'/]/ig, (match) => map[match]);
+}
+
+function diasEntre(dataInicial, dataFinal) {
+    if(!dataInicial) return 0;
+    const fim = dataFinal ? new Date(dataFinal) : new Date();
+    const diffTempo = Math.abs(fim - new Date(dataInicial));
+    return Math.ceil(diffTempo / (1000 * 60 * 60 * 24)); 
+}
+
+let bdProjetos = {};
+let projetoAbertoAtual = null;
+let isEditingProjeto = false;
+let modoVisualizacao = 'list'; 
+let filtroAtual = 'Todos';
+let filtroMembro = null; 
+let isSelectModeLixeira = false;
+let selectedLixeiraItems = new Set();
+let presentationSlides = [];
+let currentSlideIndex = 0;
+
+const insights = [
+    { text: "A inovação distingue um líder de um seguidor.", author: "Steve Jobs" },
+    { text: "O maior risco é não correr nenhum risco.", author: "Mark Zuckerberg" },
+    { text: "Sua marca pessoal é o que dizem sobre você quando você não está na sala.", author: "Jeff Bezos" },
+    { text: "A excelência não é um ato, mas um hábito.", author: "Aristóteles" }
+];
+
+function renderDailyQuote() {
+    const today = new Date();
+    const index = (today.getFullYear() + today.getMonth() + today.getDate()) % insights.length;
+    const quote = insights[index];
+    document.getElementById('quote-text').innerText = `"${quote.text}"`;
+    document.getElementById('quote-author').innerText = `- ${quote.author}`;
+}
+
+function checkMorningBriefing() {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const lastBriefing = localStorage.getItem('cadarn_last_briefing_date');
+    
+    if (lastBriefing !== todayStr) {
+        let totaisAtivos = 0; let atrasosGlobais = 0;
         const hojeCompare = new Date(new Date().setHours(0,0,0,0));
-        
-        if (modoVisualizacao === 'lixeira') {
-            let lixeiraHtml = `
-                <div class="lixeira-controls">
-                    <button class="sp-btn-edit" style="background: transparent; border-color: var(--cadarn-roxo); color: var(--cadarn-roxo);" onclick="toggleSelectModeLixeira()">${isSelectModeLixeira ? 'Cancelar Seleção' : '☑️ Selecionar Vários'}</button>
-                    ${isSelectModeLixeira ? `<button id="btn-delete-selected" class="sp-btn-edit" style="background: rgba(220, 53, 69, 0.2); border-color: #dc3545; color: #ff8793; opacity: 0.5;" disabled onclick="deleteSelectedLixeira()">🗑️ Apagar Selecionados (0)</button>` : ''}
-                </div>
-            `;
-            let temItemLixeira = false;
-            for (const [id, proj] of Object.entries(bdProjetos)) {
-                if (!proj.arquivado) continue;
-                temItemLixeira = true;
-                let checkHtml = isSelectModeLixeira ? `<input type="checkbox" class="checkbox-lixeira" onchange="toggleLixeiraItem('${id}')">` : '';
-                let actionHtml = isSelectModeLixeira ? '' : `<button class="sp-btn-edit" style="background: rgba(71, 226, 153, 0.2); border-color: #47e299; color: #47e299;" onclick="restaurarProjetoDireto('${id}')">♻️ Restaurar</button>`;
-                lixeiraHtml += `<div class="project-row" style="cursor: default;"><div style="display: flex; align-items: center; gap: 15px;">${checkHtml}<div><div style="font-weight: 500; font-size: 15px; margin-bottom: 5px; color: var(--cadarn-cinza); text-decoration: line-through;">${sanitize(proj.nome)}</div><div style="font-size: 12px; color: var(--cadarn-cinza);">Cliente: ${sanitize(proj.cliente)}</div></div></div><div>${actionHtml}</div></div>`;
-            }
-            container.innerHTML = temItemLixeira ? lixeiraHtml : '<p style="color:var(--cadarn-cinza); font-size: 13px; padding: 15px;">A lixeira está vazia.</p>';
-            return; 
-        }
 
-        if (modoVisualizacao === 'equipe') {
-            let workload = {};
-            for (const proj of Object.values(bdProjetos)) {
-                if (proj.arquivado) continue;
-                const todasConcluidas = proj.etapas && proj.etapas.length > 0 && proj.etapas.every(e => e.status === 'concluido');
-                if (todasConcluidas) continue; 
-                (proj.equipeAtual || []).forEach(membro => {
-                    let nome = membro.split('(')[0].trim();
-                    if(!workload[nome]) workload[nome] = { p: 0, atrasados: 0 };
-                    workload[nome].p++;
-                    if(proj.etapas && proj.etapas.some(e => e.prazo && new Date(e.prazo) < hojeCompare && e.status !== 'concluido')) { workload[nome].atrasados++; }
-                });
-            }
-            let eqHtml = '<div class="team-matrix-grid">';
-            if(Object.keys(workload).length === 0) eqHtml += '<p style="color:var(--cadarn-cinza); font-size: 13px;">Ninguém alocado no momento.</p>';
-            for (const [nome, data] of Object.entries(workload)) {
-                let alertHtml = data.atrasados > 0 ? `<div style="margin-top:10px; color:#ff8793; font-size:11px; font-weight:600;">⚠️ ${data.atrasados} projeto(s) com etapas atrasadas</div>` : '';
-                
-                eqHtml += `<div class="team-member-card" onclick="abrirPerfil('${sanitize(nome)}')">
-                    <div class="tm-header">
-                        ${getAvatarHtml(nome, 46)}
-                        <div>
-                            <div class="tm-info">${sanitize(nome)}</div>
-                            <div class="tm-sub">Consultor(a)</div>
-                        </div>
-                    </div>
-                    <div class="tm-body">
-                        <div><strong>${data.p}</strong> Projetos Ativos</div>
-                        ${alertHtml}
-                    </div>
-                </div>`;
-            }
-            eqHtml += '</div>'; container.innerHTML = eqHtml; return; 
-        }
-
-        let temProjetosParaMostrar = false;
-
-        for (const [id, proj] of Object.entries(bdProjetos)) {
+        for (const proj of Object.values(bdProjetos)) {
             if (proj.arquivado) continue;
-            
-            if (filtroAtual !== 'Todos' && !(proj.tags || []).includes(filtroAtual)) continue;
-            if (filtroMembro && !(proj.equipeAtual || []).some(m => m.split('(')[0].trim() === filtroMembro)) continue;
-            
-            temProjetosParaMostrar = true;
-            let statusGeral = 'pendente'; let labelStatus = 'Aguardando'; let slaBadge = '';
-            if (!proj.etapas) proj.etapas = [];
-            const todasConcluidas = proj.etapas.length > 0 && proj.etapas.every(e => e.status === 'concluido');
-            const algumaAtiva = proj.etapas.some(e => e.status === 'ativo');
-            
-            if (todasConcluidas) { statusGeral = 'concluido'; labelStatus = 'Concluído'; } 
-            else {
-                if (algumaAtiva) { statusGeral = 'ativo'; labelStatus = 'Em Execução'; }
-                let temAtraso = false; let venceHoje = false;
-                proj.etapas.forEach(e => {
-                    if (e.prazo && e.status !== 'concluido') {
-                        const dPrazo = new Date(e.prazo); dPrazo.setMinutes(dPrazo.getMinutes() + dPrazo.getTimezoneOffset());
-                        if (dPrazo < hojeCompare) temAtraso = true; else if (dPrazo.getTime() === hojeCompare.getTime()) venceHoje = true;
-                    }
-                });
-                if (temAtraso) slaBadge = '<span class="badge-danger">Atrasado</span>';
-                else if (venceHoje) slaBadge = '<span class="badge-warning">Vence Hoje</span>';
-            }
-            
-            const tagsHtml = (proj.tags || []).map(t => `<span class="tag-pill">${sanitize(t)}</span>`).join('');
-            
-            if (modoVisualizacao === 'list' || modoVisualizacao === 'roadmap') {
-                listaNormal += `<div class="project-row" onclick="abrirProjeto('${sanitize(id)}')"><div><div style="font-weight: 500; font-size: 15px; margin-bottom: 5px; display:flex; align-items:center;">${sanitize(proj.nome)} ${slaBadge}</div><div style="display:flex; flex-wrap:wrap; margin-bottom:5px;">${tagsHtml}</div><div style="font-size: 12px; color: var(--cadarn-cinza);">Cliente: ${sanitize(proj.cliente)} • Líder: ${sanitize(proj.lider)}</div></div><div style="font-size: 13px; color: ${statusGeral === 'concluido' ? '#47e299' : (statusGeral === 'ativo' ? '#b68aff' : '#666')}; display: flex; align-items: center; font-weight: 500;"><span class="status-dot dot-${statusGeral}"></span> ${labelStatus}</div></div>`;
-            } else {
-                const cardHtml = `<div class="kanban-card" onclick="abrirProjeto('${sanitize(id)}')"><div style="display:flex; justify-content:space-between; align-items:flex-start;"><div class="kanban-card-title">${sanitize(proj.nome)}</div>${slaBadge}</div><div class="kanban-card-meta">${sanitize(proj.cliente)}</div><div style="margin-top: 10px;">${tagsHtml}</div><div style="margin-top: 10px; border-top: 1px solid rgba(131, 46, 255, 0.1); padding-top: 10px; font-size: 11px; color: var(--cadarn-cinza);">Líder: ${sanitize(proj.lider)}</div></div>`;
-                if(statusGeral === 'pendente') kanbanAguardando += cardHtml; else if(statusGeral === 'ativo') kanbanAtivos += cardHtml; else kanbanConcluidos += cardHtml;
+            const todasConcluidas = proj.etapas && proj.etapas.length > 0 && proj.etapas.every(e => e.status === 'concluido');
+            if (!todasConcluidas) {
+                totaisAtivos++;
+                if(proj.etapas) {
+                    proj.etapas.forEach(e => {
+                        if(e.prazo && new Date(e.prazo) < hojeCompare && e.status !== 'concluido') atrasosGlobais++;
+                    });
+                }
             }
         }
 
-        if (modoVisualizacao === 'list') { 
-            container.innerHTML = listaNormal || '<p style="color:var(--cadarn-cinza); font-size: 13px; padding: 15px;">Nenhum projeto encontrado.</p>'; 
-        } else if (modoVisualizacao === 'kanban') { 
-            container.innerHTML = `<div class="kanban-board"><div class="kanban-col"><div class="kanban-col-header">Aguardando <span class="status-dot dot-pendente" style="margin:0;"></span></div>${kanbanAguardando || '<div style="color:var(--cadarn-cinza); font-size:12px;">Vazio</div>'}</div><div class="kanban-col" style="background: rgba(182, 138, 255, 0.05); border-color: rgba(182, 138, 255, 0.2);"><div class="kanban-col-header" style="color: #b68aff;">Em Execução <span class="status-dot dot-ativo" style="margin:0;"></span></div>${kanbanAtivos || '<div style="color:var(--cadarn-cinza); font-size:12px;">Vazio</div>'}</div><div class="kanban-col" style="background: rgba(71, 226, 153, 0.05); border-color: rgba(71, 226, 153, 0.2);"><div class="kanban-col-header" style="color: #47e299;">Concluídos <span class="status-dot dot-concluido" style="margin:0;"></span></div>${kanbanConcluidos || '<div style="color:var(--cadarn-cinza); font-size:12px;">Vazio</div>'}</div></div>`; 
-        } else if (modoVisualizacao === 'roadmap') {
-            if (!temProjetosParaMostrar) {
-                container.innerHTML = '<p style="color:var(--cadarn-cinza); font-size: 13px; padding: 15px;">Vazio.</p>';
-            } else {
-                let minDate = Infinity; let maxDate = Date.now() + (7 * 86400000); 
-                const projArray = Object.values(bdProjetos).filter(p => !p.arquivado && (filtroAtual === 'Todos' || (p.tags || []).includes(filtroAtual)) && (!filtroMembro || (p.equipeAtual || []).some(m => m.split('(')[0].trim() === filtroMembro)));
-                projArray.forEach(p => { if(p.dataCriacao < minDate) minDate = p.dataCriacao; if(p.dataConclusao && p.dataConclusao > maxDate) maxDate = p.dataConclusao; });
-                if(minDate === Infinity) minDate = Date.now() - (30 * 86400000);
-                const totalDuration = maxDate - minDate;
-
-                let roadmapHtml = `<div style="padding:15px; overflow-x:auto;"><div style="min-width: 500px;">`;
-                projArray.forEach((proj, idx) => {
-                    const start = proj.dataCriacao; const end = proj.dataConclusao || Date.now();
-                    const leftPct = Math.max(0, ((start - minDate) / totalDuration) * 100);
-                    let widthPct = Math.max(2, ((end - start) / totalDuration) * 100);
-                    if(leftPct + widthPct > 100) widthPct = 100 - leftPct;
-
-                    let color = '#666'; 
-                    if (!proj.etapas) proj.etapas = [];
-                    const todasConcluidas = proj.etapas.length > 0 && proj.etapas.every(e => e.status === 'concluido');
-                    const algumaAtiva = proj.etapas.some(e => e.status === 'ativo');
-                    if(todasConcluidas) color = '#47e299'; else if(algumaAtiva) color = '#b68aff';
-                    const originalId = Object.keys(bdProjetos).find(key => bdProjetos[key] === proj);
-
-                    roadmapHtml += `
-                        <div style="display:flex; align-items:center; margin-bottom: 15px; cursor: pointer;" onclick="abrirProjeto('${originalId}')">
-                            <div style="width: 30%; font-size:13px; font-weight: 500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-right:10px; color:var(--cadarn-branco);">${sanitize(proj.nome)}</div>
-                            <div style="width: 70%; background: rgba(131,46,255,0.05); height: 12px; border-radius: 6px; position: relative;">
-                                <div style="position:absolute; left: ${leftPct}%; width: ${widthPct}%; height: 100%; background: ${color}; border-radius: 6px; box-shadow: 0 0 10px ${color}80;"></div>
-                            </div>
-                        </div>
-                    `;
-                });
-                roadmapHtml += `</div></div>`;
-                container.innerHTML = roadmapHtml;
-            }
+        document.getElementById('briefing-ativos').innerText = totaisAtivos;
+        document.getElementById('briefing-atrasos').innerText = atrasosGlobais;
+        
+        const alertBox = document.getElementById('briefing-alert-box');
+        if (atrasosGlobais > 0) { 
+            alertBox.classList.add('briefing-alert'); 
+            document.getElementById('briefing-atrasos').style.color = '#ff8793'; 
+        } else { 
+            alertBox.classList.remove('briefing-alert'); 
+            document.getElementById('briefing-atrasos').style.color = '#47e299'; 
         }
-        atualizarDashboard(); 
+        
+        document.getElementById('briefing-modal').classList.add('active');
     }
+}
 
-    function novoProjeto() {
-        const user = localStorage.getItem('cadarn_user') ? localStorage.getItem('cadarn_user').split(' ')[0] : 'Usuário';
-        const novoId = 'proj_' + Date.now();
-        bdProjetos[novoId] = { 
-            cliente: 'Novo Cliente', nome: 'Novo Projeto', lider: '', descricao: 'Descreva...', 
-            equipeAtual: [], equipeAntiga: [], etapas: [{ titulo: 'Etapa Inicial', status: 'pendente', prazo: '' }], 
-            dataCriacao: Date.now(), dataConclusao: null, tags: [], licoes: '', arquivado: false
-        };
-        projetoAbertoAtual = novoId; abrirProjeto(novoId); iniciarEdicao(); 
-    }
+function fecharBriefing() {
+    const todayStr = new Date().toISOString().split('T')[0];
+    localStorage.setItem('cadarn_last_briefing_date', todayStr);
+    document.getElementById('briefing-modal').classList.remove('active');
+}
 
-    function arquivarProjeto() {
-        const proj = bdProjetos[projetoAbertoAtual];
-        proj.arquivado = true; 
-        localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos));
-        fecharProjeto(); renderMainProjects();
-
-        showToast('Projeto movido para a lixeira.', 'warning', () => {
-            proj.arquivado = false;
-            localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos));
-            renderMainProjects();
-            if(navigator.onLine) { syncProjetoNuvem(projetoAbertoAtual); }
-        });
-        if(navigator.onLine) { syncProjetoNuvem(projetoAbertoAtual); }
-    }
-
-    function restaurarProjeto() {
-        const proj = bdProjetos[projetoAbertoAtual];
-        proj.arquivado = false; 
-        localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos));
-        fecharProjeto(); renderMainProjects();
-        showToast('Projeto restaurado com sucesso.', 'success');
-        if(navigator.onLine) { syncProjetoNuvem(projetoAbertoAtual); }
-    }
+function setVisualizacao(modo) {
+    modoVisualizacao = modo;
+    document.getElementById('btn-view-list').classList.toggle('active', modo === 'list');
+    document.getElementById('btn-view-kanban').classList.toggle('active', modo === 'kanban');
+    document.getElementById('btn-view-roadmap').classList.toggle('active', modo === 'roadmap');
+    document.getElementById('btn-view-equipe').classList.toggle('active', modo === 'equipe');
+    document.getElementById('btn-view-lixeira').classList.toggle('active', modo === 'lixeira');
     
-    function restaurarProjetoDireto(id) {
-        const proj = bdProjetos[id];
-        proj.arquivado = false; 
-        localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos));
+    isSelectModeLixeira = false; selectedLixeiraItems.clear();
+    document.getElementById('tags-filter-container').style.display = (modo === 'equipe' || modo === 'lixeira') ? 'none' : 'flex';
+    renderMainProjects();
+}
+
+function setFiltro(tag) { filtroAtual = tag; filtroMembro = null; renderMainProjects(); }
+function limparFiltroMembro() { filtroMembro = null; renderMainProjects(); }
+
+function toggleSelectModeLixeira() {
+    isSelectModeLixeira = !isSelectModeLixeira;
+    selectedLixeiraItems.clear();
+    renderMainProjects();
+}
+
+function toggleLixeiraItem(id) {
+    if (selectedLixeiraItems.has(id)) selectedLixeiraItems.delete(id);
+    else selectedLixeiraItems.add(id);
+    
+    const btn = document.getElementById('btn-delete-selected');
+    if (btn) { btn.innerText = `🗑️ Apagar Selecionados (${selectedLixeiraItems.size})`; btn.disabled = selectedLixeiraItems.size === 0; btn.style.opacity = selectedLixeiraItems.size === 0 ? '0.5' : '1'; }
+}
+
+function deleteSelectedLixeira() {
+    if (selectedLixeiraItems.size === 0) return;
+    const count = selectedLixeiraItems.size; const backups = {};
+    const idsArray = Array.from(selectedLixeiraItems);
+    
+    idsArray.forEach(id => { backups[id] = JSON.parse(JSON.stringify(bdProjetos[id])); delete bdProjetos[id]; });
+    localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos));
+
+    showToast(`${count} projeto(s) excluído(s) permanentemente.`, 'danger', () => {
+        Object.assign(bdProjetos, backups); 
+        localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos)); 
         renderMainProjects();
-        showToast('Projeto restaurado.', 'success');
-        if(navigator.onLine) { syncProjetoNuvem(id); }
+    });
+
+    if(navigator.onLine) { syncDeleteLoteNuvem(idsArray); }
+    isSelectModeLixeira = false; selectedLixeiraItems.clear(); renderMainProjects();
+}
+
+function renderMainProjects() {
+    const container = document.getElementById('main-projects-container');
+    const filterContainer = document.getElementById('tags-filter-container');
+    
+    if (Object.keys(bdProjetos).length === 0) { container.innerHTML = '<p style="color: var(--cadarn-cinza); font-size: 13px; text-align: center; padding: 20px;">Nenhum projeto cadastrado.</p>'; atualizarDashboard(); return; }
+    
+    let todasTags = new Set();
+    Object.values(bdProjetos).forEach(p => { if(!p.arquivado) (p.tags || []).forEach(t => todasTags.add(t)); });
+    
+    let filterHtml = `<button class="tag-filter-btn ${filtroAtual === 'Todos' && !filtroMembro ? 'active' : ''}" onclick="setFiltro('Todos')">Todos</button>`;
+    if (filtroMembro) { filterHtml += `<button class="tag-filter-btn active" onclick="limparFiltroMembro()">👤 ${sanitize(filtroMembro)} ✕</button>`; }
+    Array.from(todasTags).sort().forEach(tag => { filterHtml += `<button class="tag-filter-btn ${filtroAtual === tag && !filtroMembro ? 'active' : ''}" onclick="setFiltro('${sanitize(tag)}')">${sanitize(tag)}</button>`; });
+    filterContainer.innerHTML = filterHtml;
+    
+    let kanbanAguardando = ''; let kanbanAtivos = ''; let kanbanConcluidos = ''; let listaNormal = '';
+    const hojeCompare = new Date(new Date().setHours(0,0,0,0));
+    
+    if (modoVisualizacao === 'lixeira') {
+        let lixeiraHtml = `
+            <div class="lixeira-controls">
+                <button class="sp-btn-edit" style="background: transparent; border-color: var(--cadarn-roxo); color: var(--cadarn-roxo);" onclick="toggleSelectModeLixeira()">${isSelectModeLixeira ? 'Cancelar Seleção' : '☑️ Selecionar Vários'}</button>
+                ${isSelectModeLixeira ? `<button id="btn-delete-selected" class="sp-btn-edit" style="background: rgba(220, 53, 69, 0.2); border-color: #dc3545; color: #ff8793; opacity: 0.5;" disabled onclick="deleteSelectedLixeira()">🗑️ Apagar Selecionados (0)</button>` : ''}
+            </div>
+        `;
+        let temItemLixeira = false;
+        for (const [id, proj] of Object.entries(bdProjetos)) {
+            if (!proj.arquivado) continue;
+            temItemLixeira = true;
+            let checkHtml = isSelectModeLixeira ? `<input type="checkbox" class="checkbox-lixeira" onchange="toggleLixeiraItem('${id}')">` : '';
+            let actionHtml = isSelectModeLixeira ? '' : `<button class="sp-btn-edit" style="background: rgba(71, 226, 153, 0.2); border-color: #47e299; color: #47e299;" onclick="restaurarProjetoDireto('${id}')">♻️ Restaurar</button>`;
+            lixeiraHtml += `<div class="project-row" style="cursor: default;"><div style="display: flex; align-items: center; gap: 15px;">${checkHtml}<div><div style="font-weight: 500; font-size: 15px; margin-bottom: 5px; color: var(--cadarn-cinza); text-decoration: line-through;">${sanitize(proj.nome)}</div><div style="font-size: 12px; color: var(--cadarn-cinza);">Cliente: ${sanitize(proj.cliente)}</div></div></div><div>${actionHtml}</div></div>`;
+        }
+        container.innerHTML = temItemLixeira ? lixeiraHtml : '<p style="color:var(--cadarn-cinza); font-size: 13px; padding: 15px;">A lixeira está vazia.</p>';
+        return; 
     }
 
-    function excluirPermanente() {
-        const id = projetoAbertoAtual;
-        const backup = JSON.parse(JSON.stringify(bdProjetos[id]));
-        delete bdProjetos[id]; 
-        localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos));
-
-        fecharProjeto(); renderMainProjects();
-
-        showToast('Projeto excluído definitivamente.', 'danger', () => {
-            bdProjetos[id] = backup;
-            localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos));
-            renderMainProjects();
-            // Undo precisaria reenviar. Por MVP ignoramos o restore pós exclusão permanente da nuvem.
-        });
-        if(navigator.onLine) { syncProjetoNuvem(id, true); }
-    }
-
-    /* --- AUTO SAVE DRAFT NO SIDE PANEL --- */
-    function capturarEstadoAtualDoPainel() {
-        if(!projetoAbertoAtual) return null;
-        const draft = {
-            cliente: document.getElementById('edit-cliente').value,
-            nome: document.getElementById('edit-titulo').value,
-            lider: document.getElementById('edit-lider').value,
-            desc: document.getElementById('edit-desc').value,
-            licoes: document.getElementById('edit-licoes').value,
-            tags: document.getElementById('edit-tags').value,
-            equipe: document.getElementById('edit-equipe').value,
-            equipeAntiga: document.getElementById('edit-equipe-antiga').value,
-            etapas: []
-        };
-        const stepTitles = document.querySelectorAll('[id^="titulo-etapa-"]');
-        const stepStatuses = document.querySelectorAll('[id^="status-etapa-"]');
-        const stepPrazos = document.querySelectorAll('[id^="prazo-etapa-"]');
-        for(let i=0; i<stepTitles.length; i++) {
-            draft.etapas.push({
-                titulo: stepTitles[i].value,
-                status: stepStatuses[i].value,
-                prazo: stepPrazos[i] ? stepPrazos[i].value : ''
+    if (modoVisualizacao === 'equipe') {
+        let workload = {};
+        for (const proj of Object.values(bdProjetos)) {
+            if (proj.arquivado) continue;
+            const todasConcluidas = proj.etapas && proj.etapas.length > 0 && proj.etapas.every(e => e.status === 'concluido');
+            if (todasConcluidas) continue; 
+            (proj.equipeAtual || []).forEach(membro => {
+                let nome = membro.split('(')[0].trim();
+                if(!workload[nome]) workload[nome] = { p: 0, atrasados: 0 };
+                workload[nome].p++;
+                if(proj.etapas && proj.etapas.some(e => e.prazo && new Date(e.prazo) < hojeCompare && e.status !== 'concluido')) { workload[nome].atrasados++; }
             });
         }
-        return draft;
-    }
-
-    function saveDraft() {
-        if(isEditingProjeto && projetoAbertoAtual) {
-            const draft = capturarEstadoAtualDoPainel();
-            localStorage.setItem('cadarn_draft_' + projetoAbertoAtual, JSON.stringify(draft));
+        let eqHtml = '<div class="team-matrix-grid">';
+        if(Object.keys(workload).length === 0) eqHtml += '<p style="color:var(--cadarn-cinza); font-size: 13px;">Ninguém alocado no momento.</p>';
+        for (const [nome, data] of Object.entries(workload)) {
+            let alertHtml = data.atrasados > 0 ? `<div style="margin-top:10px; color:#ff8793; font-size:11px; font-weight:600;">⚠️ ${data.atrasados} projeto(s) com etapas atrasadas</div>` : '';
+            
+            eqHtml += `<div class="team-member-card" onclick="abrirPerfil('${sanitize(nome)}')">
+                <div class="tm-header">
+                    ${getAvatarHtml(nome, 46)}
+                    <div>
+                        <div class="tm-info">${sanitize(nome)}</div>
+                        <div class="tm-sub">Consultor(a)</div>
+                    </div>
+                </div>
+                <div class="tm-body">
+                    <div><strong>${data.p}</strong> Projetos Ativos</div>
+                    ${alertHtml}
+                </div>
+            </div>`;
         }
+        eqHtml += '</div>'; container.innerHTML = eqHtml; return; 
     }
 
-    function loadDraft() {
-        if(!projetoAbertoAtual) return;
-        const draftStr = localStorage.getItem('cadarn_draft_' + projetoAbertoAtual);
-        if(draftStr) {
-            const draft = JSON.parse(draftStr);
-            document.getElementById('edit-cliente').value = draft.cliente || '';
-            document.getElementById('edit-titulo').value = draft.nome || '';
-            document.getElementById('edit-lider').value = draft.lider || '';
-            document.getElementById('edit-desc').value = draft.desc || '';
-            document.getElementById('edit-licoes').value = draft.licoes || '';
-            document.getElementById('edit-tags').value = draft.tags || '';
-            document.getElementById('edit-equipe').value = draft.equipe || '';
-            document.getElementById('edit-equipe-antiga').value = draft.equipeAntiga || '';
-            if (draft.etapas) renderEtapas(draft.etapas, true);
-            showToast('Rascunho automático recuperado.', 'info');
-        }
-    }
+    let temProjetosParaMostrar = false;
 
-    document.getElementById('side-panel').addEventListener('input', () => { saveDraft(); });
-
-    function salvarDigitacaoTemporaria() {
-        const proj = bdProjetos[projetoAbertoAtual]; if(!proj) return;
-        const estado = capturarEstadoAtualDoPainel();
-        if(estado) proj.etapas = estado.etapas;
-    }
-
-    function adicionarEtapa() { 
-        if(!projetoAbertoAtual) return;
-        let estado = capturarEstadoAtualDoPainel();
-        estado.etapas.push({ titulo: 'Nova Etapa', status: 'pendente', prazo: '' });
-        renderEtapas(estado.etapas, true);
-        saveDraft();
-    }
-    
-    function removerEtapa(idx) { 
-        if(!projetoAbertoAtual) return;
-        let estado = capturarEstadoAtualDoPainel();
-        estado.etapas.splice(idx, 1);
-        renderEtapas(estado.etapas, true);
-        saveDraft();
-    }
-
-    function abrirProjeto(id) {
-        projetoAbertoAtual = id; const proj = bdProjetos[id];
-        isEditingProjeto = false;
-
-        document.getElementById('sp-cliente').textContent = proj.cliente; document.getElementById('sp-titulo').textContent = proj.nome; document.getElementById('sp-desc').textContent = proj.descricao;
-        document.getElementById('sp-licoes').textContent = proj.licoes ? proj.licoes : 'Nenhuma lição registrada ainda.';
+    for (const [id, proj] of Object.entries(bdProjetos)) {
+        if (proj.arquivado) continue;
         
-        document.getElementById('sp-lider-view').textContent = proj.lider || 'A definir';
-        document.getElementById('edit-lider').value = proj.lider || '';
-
-        document.getElementById('edit-cliente').value = proj.cliente; document.getElementById('edit-titulo').value = proj.nome; document.getElementById('edit-desc').value = proj.descricao;
-        document.getElementById('edit-licoes').value = proj.licoes || '';
-        document.getElementById('edit-tags').value = (proj.tags || []).join(', ');
-        document.getElementById('edit-equipe').value = (proj.equipeAtual || []).join(', '); document.getElementById('edit-equipe-antiga').value = (proj.equipeAntiga || []).join(', ');
-
-        document.getElementById('sp-tags-container').innerHTML = (proj.tags || []).map(t => `<span class="tag-pill">${sanitize(t)}</span>`).join('');
-        document.getElementById('sp-equipe').innerHTML = (proj.equipeAtual || []).map(m => `<li class="team-item team-active">${sanitize(m)}</li>`).join('');
-        document.getElementById('sp-equipe-antiga').innerHTML = (proj.equipeAntiga || []).map(m => `<li class="team-item team-inactive">${sanitize(m)}</li>`).join('');
+        if (filtroAtual !== 'Todos' && !(proj.tags || []).includes(filtroAtual)) continue;
+        if (filtroMembro && !(proj.equipeAtual || []).some(m => m.split('(')[0].trim() === filtroMembro)) continue;
         
-        const leadDisplay = document.getElementById('sp-leadtime');
-        if (proj.dataConclusao) { leadDisplay.innerHTML = `🏁 Concluído em ${diasEntre(proj.dataCriacao, proj.dataConclusao)} dias.`; leadDisplay.style.color = "#47e299"; } 
-        else { leadDisplay.innerHTML = `⏱️ Há ${diasEntre(proj.dataCriacao, null)} dias.`; leadDisplay.style.color = "#b68aff"; }
-
-        renderEtapas(proj.etapas, false);
-        
-        document.getElementById('sp-view-header').style.display = 'block'; 
-        document.getElementById('sp-edit-header').style.display = 'none'; 
-        document.getElementById('sp-desc').style.display = 'block'; 
-        document.getElementById('edit-desc').style.display = 'none'; 
-        document.getElementById('sp-tags-container').style.display = 'block'; 
-        document.getElementById('edit-tags').style.display = 'none'; 
-        document.getElementById('sp-equipe-container').style.display = 'block'; 
-        document.getElementById('edit-equipe').style.display = 'none'; 
-        document.getElementById('sp-equipe-antiga-container').style.display = 'block'; 
-        document.getElementById('edit-equipe-antiga').style.display = 'none'; 
-        document.getElementById('titulo-eq-antiga').style.display = 'block';
-        document.getElementById('sp-licoes').style.display = 'block'; 
-        document.getElementById('edit-licoes').style.display = 'none';
-        document.getElementById('sp-lider-view').style.display = 'block';
-        document.getElementById('edit-lider').style.display = 'none';
-        
-        if(proj.arquivado) {
-            document.getElementById('btn-edit').style.display = 'none'; 
-            document.getElementById('btn-delete').style.display = 'none'; 
-            document.getElementById('btn-restore').style.display = 'block'; 
-            document.getElementById('btn-perm-delete').style.display = 'block'; 
-        } else {
-            document.getElementById('btn-edit').style.display = 'block'; 
-            document.getElementById('btn-delete').style.display = 'block'; 
-            document.getElementById('btn-restore').style.display = 'none'; 
-            document.getElementById('btn-perm-delete').style.display = 'none'; 
-        }
-
-        document.getElementById('btn-save').style.display = 'none'; 
-        document.getElementById('btn-add-etapa').style.display = 'none';
-        document.getElementById('panel-overlay').classList.add('active'); document.getElementById('side-panel').classList.add('active');
-    }
-
-    function renderEtapas(etapas, editMode) {
-        let html = ''; 
-        const hojeCompare = new Date(new Date().setHours(0,0,0,0));
-
-        etapas.forEach((etapa, idx) => {
-            let icone = etapa.status === 'concluido' ? '✓' : (idx + 1);
-            let badge = '';
-            let valData = '';
-
-            if (editMode) {
-                let selectStatus = `<select class="edit-select" id="status-etapa-${idx}"><option value="pendente" ${etapa.status === 'pendente' ? 'selected' : ''}>Pendente</option><option value="ativo" ${etapa.status === 'ativo' ? 'selected' : ''}>Ativo</option><option value="concluido" ${etapa.status === 'concluido' ? 'selected' : ''}>Concluído</option></select>`;
-                let inputData = `<input type="date" id="prazo-etapa-${idx}" class="edit-input" style="width: auto; padding: 4px; margin: 0 10px 0 0;" value="${etapa.prazo || ''}" title="Prazo">`;
-                html += `<div class="step ${etapa.status}"><div class="step-icon">${icone}</div><div class="step-text" style="display:flex; align-items:center; width:100%; flex-wrap:wrap; gap:5px;">${inputData}<input type="text" class="edit-input" style="margin:0; padding:4px; flex-grow:1; min-width: 150px;" id="titulo-etapa-${idx}" value="${sanitize(etapa.titulo)}">${selectStatus}<button class="btn-danger" onclick="removerEtapa(${idx})">✕</button></div></div>`;
-            } else {
-                if (etapa.prazo && etapa.status !== 'concluido') {
-                    const dPrazo = new Date(etapa.prazo);
-                    dPrazo.setMinutes(dPrazo.getMinutes() + dPrazo.getTimezoneOffset());
-                    
-                    if (dPrazo < hojeCompare) badge = '<span class="badge-danger">Atrasado</span>';
-                    else if (dPrazo.getTime() === hojeCompare.getTime()) badge = '<span class="badge-warning">Vence Hoje</span>';
-                    valData = `<span style="font-size: 10px; color: var(--cadarn-cinza); margin-right: 8px;">[${dPrazo.toLocaleDateString('pt-BR')}]</span>`;
-                }
-                html += `<div class="step ${etapa.status}"><div class="step-icon">${icone}</div><div class="step-text" style="display:flex; align-items:center; width:100%;">${valData}${sanitize(etapa.titulo)}${badge}</div></div>`;
-            }
-        });
-        document.getElementById('sp-etapas').innerHTML = html;
-    }
-
-    function iniciarEdicao() {
-        isEditingProjeto = true;
-        const proj = bdProjetos[projetoAbertoAtual];
-        
-        document.getElementById('sp-view-header').style.display = 'none'; 
-        document.getElementById('sp-edit-header').style.display = 'block'; 
-        document.getElementById('sp-desc').style.display = 'none'; 
-        document.getElementById('edit-desc').style.display = 'block'; 
-        document.getElementById('sp-tags-container').style.display = 'none'; 
-        document.getElementById('edit-tags').style.display = 'block'; 
-        document.getElementById('sp-equipe-container').style.display = 'none'; 
-        document.getElementById('edit-equipe').style.display = 'block'; 
-        document.getElementById('sp-equipe-antiga-container').style.display = 'none'; 
-        document.getElementById('edit-equipe-antiga').style.display = 'block'; 
-        document.getElementById('titulo-eq-antiga').style.display = 'none';
-        document.getElementById('sp-licoes').style.display = 'none'; 
-        document.getElementById('edit-licoes').style.display = 'block';
-        document.getElementById('sp-lider-view').style.display = 'none';
-        document.getElementById('edit-lider').style.display = 'block';
-
-        document.getElementById('btn-edit').style.display = 'none'; 
-        document.getElementById('btn-save').style.display = 'block'; 
-        document.getElementById('btn-delete').style.display = 'block'; 
-        document.getElementById('btn-add-etapa').style.display = 'block';
-        
-        renderEtapas(proj.etapas, true);
-        loadDraft(); 
-    }
-
-    async function salvarEdicao() {
-        const estado = capturarEstadoAtualDoPainel();
-        if(!estado) return;
-
-        const proj = bdProjetos[projetoAbertoAtual]; 
-
-        proj.cliente = estado.cliente;
-        proj.nome = estado.nome; 
-        proj.lider = estado.lider.trim() || 'A definir';
-        proj.descricao = estado.desc;
-        proj.licoes = estado.licoes;
-        proj.tags = estado.tags.split(',').map(s => s.trim()).filter(s => s);
-        proj.equipeAtual = estado.equipe.split(',').map(s => s.trim()).filter(s => s); 
-        proj.equipeAntiga = estado.equipeAntiga.split(',').map(s => s.trim()).filter(s => s); 
-        proj.etapas = estado.etapas;
-
-        const todasConcluidas = proj.etapas.length > 0 && proj.etapas.every(e => e.status === 'concluido');
-        if (todasConcluidas && !proj.dataConclusao) { proj.dataConclusao = Date.now(); } else if (!todasConcluidas && proj.dataConclusao) { proj.dataConclusao = null; }
-        
-        localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos));
-        localStorage.removeItem('cadarn_draft_' + projetoAbertoAtual); 
-        
-        showToast('Alterações salvas com sucesso.', 'success');
-
-        if(navigator.onLine) { syncProjetoNuvem(projetoAbertoAtual); }
-        
-        isEditingProjeto = false;
-        renderMainProjects(); 
-        abrirProjeto(projetoAbertoAtual); 
-    }
-
-    function fecharProjeto() { 
-        document.getElementById('panel-overlay').classList.remove('active'); 
-        document.getElementById('side-panel').classList.remove('active'); 
-        if(isEditingProjeto && projetoAbertoAtual) {
-            saveDraft();
-        }
-        isEditingProjeto = false;
-    }
-
-    /* --- SETUP INICIAL (FIREBASE) --- */
-    initFirebase(); 
-
-    function updateClock() { const now = new Date(); document.getElementById('live-time').innerText = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); document.getElementById('live-date').innerText = now.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).toUpperCase(); }
-    setInterval(updateClock, 1000); updateClock();
-    
-    function getGreeting() { const hour = new Date().getHours(); if (hour >= 5 && hour < 12) return 'BOM DIA,'; if (hour >= 12 && hour < 18) return 'BOA TARDE,'; return 'BOA NOITE,'; }
-    
-    function aplicarNome(nome) { 
-        const firstName = nome.split(' ')[0]; 
-        document.getElementById('display-greeting').innerText = getGreeting(); 
-        document.getElementById('display-name').innerText = firstName; 
-        document.getElementById('briefing-name').innerText = firstName; 
-        document.getElementById('display-avatar').innerText = firstName.charAt(0).toUpperCase(); 
-        document.getElementById('modal-greeting').innerText = `${getGreeting()} ${firstName}`; 
-    }
-    
-    window.onload = () => { 
-        loadTheme();
-        loadScratchpad(); 
-        renderDailyQuote(); 
-        // O Firebase assumirá o controle do banner offline e do login a partir daqui
-    }
-
-    /* --- LÓGICA DO MODO APRESENTAÇÃO --- */
-    function startPresentation() {
-        presentationSlides = Object.values(bdProjetos).filter(p => !p.arquivado && (filtroAtual === 'Todos' || (p.tags || []).includes(filtroAtual)));
-        if(presentationSlides.length === 0) { showToast('Não há projetos ativos no filtro atual para apresentar.', 'warning'); return; }
-        currentSlideIndex = 0; document.getElementById('presentation-modal').classList.add('active'); renderSlide();
-    }
-
-    function closePresentation() { document.getElementById('presentation-modal').classList.remove('active'); }
-    function nextSlide() { if (currentSlideIndex < presentationSlides.length - 1) { currentSlideIndex++; renderSlide(); } }
-    function prevSlide() { if (currentSlideIndex > 0) { currentSlideIndex--; renderSlide(); } }
-
-    function renderSlide() {
-        const proj = presentationSlides[currentSlideIndex];
-        const hojeCompare = new Date(new Date().setHours(0,0,0,0));
-        
-        let statusGeral = 'pendente'; let labelStatus = 'Aguardando'; let colorStatus = '#666';
+        temProjetosParaMostrar = true;
+        let statusGeral = 'pendente'; let labelStatus = 'Aguardando'; let slaBadge = '';
         if (!proj.etapas) proj.etapas = [];
         const todasConcluidas = proj.etapas.length > 0 && proj.etapas.every(e => e.status === 'concluido');
         const algumaAtiva = proj.etapas.some(e => e.status === 'ativo');
         
-        if (todasConcluidas) { statusGeral = 'concluido'; labelStatus = 'Concluído'; colorStatus = '#47e299'; } 
-        else if (algumaAtiva) { statusGeral = 'ativo'; labelStatus = 'Em Execução'; colorStatus = '#b68aff'; }
-
-        let leadTimeText = '';
-        if (proj.dataConclusao) { leadTimeText = `🏁 ${diasEntre(proj.dataCriacao, proj.dataConclusao)} dias (Finalizado)`; } 
-        else { leadTimeText = `⏱️ ${diasEntre(proj.dataCriacao, null)} dias ativos`; }
-
-        document.getElementById('pres-client').innerText = proj.cliente;
-        document.getElementById('pres-title').innerText = proj.nome;
-        document.getElementById('pres-lider').innerHTML = `👤 Líder: <strong>${proj.lider}</strong>`;
-        document.getElementById('pres-status').innerHTML = `🎯 Status: <strong style="color:${colorStatus}">${labelStatus}</strong>`;
-        document.getElementById('pres-leadtime').innerText = leadTimeText;
+        if (todasConcluidas) { statusGeral = 'concluido'; labelStatus = 'Concluído'; } 
+        else {
+            if (algumaAtiva) { statusGeral = 'ativo'; labelStatus = 'Em Execução'; }
+            let temAtraso = false; let venceHoje = false;
+            proj.etapas.forEach(e => {
+                if (e.prazo && e.status !== 'concluido') {
+                    const dPrazo = new Date(e.prazo); dPrazo.setMinutes(dPrazo.getMinutes() + dPrazo.getTimezoneOffset());
+                    if (dPrazo < hojeCompare) temAtraso = true; else if (dPrazo.getTime() === hojeCompare.getTime()) venceHoje = true;
+                }
+            });
+            if (temAtraso) slaBadge = '<span class="badge-danger">Atrasado</span>';
+            else if (venceHoje) slaBadge = '<span class="badge-warning">Vence Hoje</span>';
+        }
         
-        document.getElementById('pres-desc').innerText = proj.descricao || 'Nenhuma descrição fornecida.';
-        document.getElementById('pres-licoes').innerText = proj.licoes || 'Nenhuma lição registrada.';
+        const tagsHtml = (proj.tags || []).map(t => `<span class="tag-pill">${sanitize(t)}</span>`).join('');
+        
+        if (modoVisualizacao === 'list' || modoVisualizacao === 'roadmap') {
+            listaNormal += `<div class="project-row" onclick="abrirProjeto('${sanitize(id)}')"><div><div style="font-weight: 500; font-size: 15px; margin-bottom: 5px; display:flex; align-items:center;">${sanitize(proj.nome)} ${slaBadge}</div><div style="display:flex; flex-wrap:wrap; margin-bottom:5px;">${tagsHtml}</div><div style="font-size: 12px; color: var(--cadarn-cinza);">Cliente: ${sanitize(proj.cliente)} • Líder: ${sanitize(proj.lider)}</div></div><div style="font-size: 13px; color: ${statusGeral === 'concluido' ? '#47e299' : (statusGeral === 'ativo' ? '#b68aff' : '#666')}; display: flex; align-items: center; font-weight: 500;"><span class="status-dot dot-${statusGeral}"></span> ${labelStatus}</div></div>`;
+        } else {
+            const cardHtml = `<div class="kanban-card" onclick="abrirProjeto('${sanitize(id)}')"><div style="display:flex; justify-content:space-between; align-items:flex-start;"><div class="kanban-card-title">${sanitize(proj.nome)}</div>${slaBadge}</div><div class="kanban-card-meta">${sanitize(proj.cliente)}</div><div style="margin-top: 10px;">${tagsHtml}</div><div style="margin-top: 10px; border-top: 1px solid rgba(131, 46, 255, 0.1); padding-top: 10px; font-size: 11px; color: var(--cadarn-cinza);">Líder: ${sanitize(proj.lider)}</div></div>`;
+            if(statusGeral === 'pendente') kanbanAguardando += cardHtml; else if(statusGeral === 'ativo') kanbanAtivos += cardHtml; else kanbanConcluidos += cardHtml;
+        }
+    }
 
-        let etapasHtml = '';
-        proj.etapas.forEach((etapa, idx) => {
-            let icone = etapa.status === 'concluido' ? '✓' : (idx + 1);
-            let badge = ''; let valData = '';
+    if (modoVisualizacao === 'list') { 
+        container.innerHTML = listaNormal || '<p style="color:var(--cadarn-cinza); font-size: 13px; padding: 15px;">Nenhum projeto encontrado.</p>'; 
+    } else if (modoVisualizacao === 'kanban') { 
+        container.innerHTML = `<div class="kanban-board"><div class="kanban-col"><div class="kanban-col-header">Aguardando <span class="status-dot dot-pendente" style="margin:0;"></span></div>${kanbanAguardando || '<div style="color:var(--cadarn-cinza); font-size:12px;">Vazio</div>'}</div><div class="kanban-col" style="background: rgba(182, 138, 255, 0.05); border-color: rgba(182, 138, 255, 0.2);"><div class="kanban-col-header" style="color: #b68aff;">Em Execução <span class="status-dot dot-ativo" style="margin:0;"></span></div>${kanbanAtivos || '<div style="color:var(--cadarn-cinza); font-size:12px;">Vazio</div>'}</div><div class="kanban-col" style="background: rgba(71, 226, 153, 0.05); border-color: rgba(71, 226, 153, 0.2);"><div class="kanban-col-header" style="color: #47e299;">Concluídos <span class="status-dot dot-concluido" style="margin:0;"></span></div>${kanbanConcluidos || '<div style="color:var(--cadarn-cinza); font-size:12px;">Vazio</div>'}</div></div>`; 
+    } else if (modoVisualizacao === 'roadmap') {
+        if (!temProjetosParaMostrar) {
+            container.innerHTML = '<p style="color:var(--cadarn-cinza); font-size: 13px; padding: 15px;">Vazio.</p>';
+        } else {
+            let minDate = Infinity; let maxDate = Date.now() + (7 * 86400000); 
+            const projArray = Object.values(bdProjetos).filter(p => !p.arquivado && (filtroAtual === 'Todos' || (p.tags || []).includes(filtroAtual)) && (!filtroMembro || (p.equipeAtual || []).some(m => m.split('(')[0].trim() === filtroMembro)));
+            projArray.forEach(p => { if(p.dataCriacao < minDate) minDate = p.dataCriacao; if(p.dataConclusao && p.dataConclusao > maxDate) maxDate = p.dataConclusao; });
+            if(minDate === Infinity) minDate = Date.now() - (30 * 86400000);
+            const totalDuration = maxDate - minDate;
+
+            let roadmapHtml = `<div style="padding:15px; overflow-x:auto;"><div style="min-width: 500px;">`;
+            projArray.forEach((proj, idx) => {
+                const start = proj.dataCriacao; const end = proj.dataConclusao || Date.now();
+                const leftPct = Math.max(0, ((start - minDate) / totalDuration) * 100);
+                let widthPct = Math.max(2, ((end - start) / totalDuration) * 100);
+                if(leftPct + widthPct > 100) widthPct = 100 - leftPct;
+
+                let color = '#666'; 
+                if (!proj.etapas) proj.etapas = [];
+                const todasConcluidas = proj.etapas.length > 0 && proj.etapas.every(e => e.status === 'concluido');
+                const algumaAtiva = proj.etapas.some(e => e.status === 'ativo');
+                if(todasConcluidas) color = '#47e299'; else if(algumaAtiva) color = '#b68aff';
+                const originalId = Object.keys(bdProjetos).find(key => bdProjetos[key] === proj);
+
+                roadmapHtml += `
+                    <div style="display:flex; align-items:center; margin-bottom: 15px; cursor: pointer;" onclick="abrirProjeto('${originalId}')">
+                        <div style="width: 30%; font-size:13px; font-weight: 500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-right:10px; color:var(--cadarn-branco);">${sanitize(proj.nome)}</div>
+                        <div style="width: 70%; background: rgba(131,46,255,0.05); height: 12px; border-radius: 6px; position: relative;">
+                            <div style="position:absolute; left: ${leftPct}%; width: ${widthPct}%; height: 100%; background: ${color}; border-radius: 6px; box-shadow: 0 0 10px ${color}80;"></div>
+                        </div>
+                    </div>
+                `;
+            });
+            roadmapHtml += `</div></div>`;
+            container.innerHTML = roadmapHtml;
+        }
+    }
+    atualizarDashboard(); 
+}
+
+function novoProjeto() {
+    const novoId = 'proj_' + Date.now();
+    bdProjetos[novoId] = { 
+        cliente: 'Novo Cliente', nome: 'Novo Projeto', lider: '', descricao: 'Descreva...', 
+        equipeAtual: [], equipeAntiga: [], etapas: [{ titulo: 'Etapa Inicial', status: 'pendente', prazo: '' }], 
+        dataCriacao: Date.now(), dataConclusao: null, tags: [], licoes: '', arquivado: false
+    };
+    projetoAbertoAtual = novoId; abrirProjeto(novoId); iniciarEdicao(); 
+}
+
+function arquivarProjeto() {
+    const proj = bdProjetos[projetoAbertoAtual];
+    proj.arquivado = true; 
+    localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos));
+    fecharProjeto(); renderMainProjects();
+
+    showToast('Projeto movido para a lixeira.', 'warning', () => {
+        proj.arquivado = false;
+        localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos));
+        renderMainProjects();
+        if(navigator.onLine) { syncProjetoNuvem(projetoAbertoAtual); }
+    });
+    if(navigator.onLine) { syncProjetoNuvem(projetoAbertoAtual); }
+}
+
+function restaurarProjeto() {
+    const proj = bdProjetos[projetoAbertoAtual];
+    proj.arquivado = false; 
+    localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos));
+    fecharProjeto(); renderMainProjects();
+    showToast('Projeto restaurado com sucesso.', 'success');
+    if(navigator.onLine) { syncProjetoNuvem(projetoAbertoAtual); }
+}
+
+function restaurarProjetoDireto(id) {
+    const proj = bdProjetos[id];
+    proj.arquivado = false; 
+    localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos));
+    renderMainProjects();
+    showToast('Projeto restaurado.', 'success');
+    if(navigator.onLine) { syncProjetoNuvem(id); }
+}
+
+function excluirPermanente() {
+    const id = projetoAbertoAtual;
+    const backup = JSON.parse(JSON.stringify(bdProjetos[id]));
+    delete bdProjetos[id]; 
+    localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos));
+
+    fecharProjeto(); renderMainProjects();
+
+    showToast('Projeto excluído definitivamente.', 'danger', () => {
+        bdProjetos[id] = backup;
+        localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos));
+        renderMainProjects();
+    });
+    if(navigator.onLine) { syncProjetoNuvem(id, true); }
+}
+
+function capturarEstadoAtualDoPainel() {
+    if(!projetoAbertoAtual) return null;
+    const draft = {
+        cliente: document.getElementById('edit-cliente').value,
+        nome: document.getElementById('edit-titulo').value,
+        lider: document.getElementById('edit-lider').value,
+        desc: document.getElementById('edit-desc').value,
+        licoes: document.getElementById('edit-licoes').value,
+        tags: document.getElementById('edit-tags').value,
+        equipe: document.getElementById('edit-equipe').value,
+        equipeAntiga: document.getElementById('edit-equipe-antiga').value,
+        etapas: []
+    };
+    const stepTitles = document.querySelectorAll('[id^="titulo-etapa-"]');
+    const stepStatuses = document.querySelectorAll('[id^="status-etapa-"]');
+    const stepPrazos = document.querySelectorAll('[id^="prazo-etapa-"]');
+    for(let i=0; i<stepTitles.length; i++) {
+        draft.etapas.push({
+            titulo: stepTitles[i].value,
+            status: stepStatuses[i].value,
+            prazo: stepPrazos[i] ? stepPrazos[i].value : ''
+        });
+    }
+    return draft;
+}
+
+function saveDraft() {
+    if(isEditingProjeto && projetoAbertoAtual) {
+        const draft = capturarEstadoAtualDoPainel();
+        localStorage.setItem('cadarn_draft_' + projetoAbertoAtual, JSON.stringify(draft));
+    }
+}
+
+function loadDraft() {
+    if(!projetoAbertoAtual) return;
+    const draftStr = localStorage.getItem('cadarn_draft_' + projetoAbertoAtual);
+    if(draftStr) {
+        const draft = JSON.parse(draftStr);
+        document.getElementById('edit-cliente').value = draft.cliente || '';
+        document.getElementById('edit-titulo').value = draft.nome || '';
+        document.getElementById('edit-lider').value = draft.lider || '';
+        document.getElementById('edit-desc').value = draft.desc || '';
+        document.getElementById('edit-licoes').value = draft.licoes || '';
+        document.getElementById('edit-tags').value = draft.tags || '';
+        document.getElementById('edit-equipe').value = draft.equipe || '';
+        document.getElementById('edit-equipe-antiga').value = draft.equipeAntiga || '';
+        if (draft.etapas) renderEtapas(draft.etapas, true);
+        showToast('Rascunho automático recuperado.', 'info');
+    }
+}
+
+document.getElementById('side-panel').addEventListener('input', () => { saveDraft(); });
+
+function adicionarEtapa() { 
+    if(!projetoAbertoAtual) return;
+    let estado = capturarEstadoAtualDoPainel();
+    estado.etapas.push({ titulo: 'Nova Etapa', status: 'pendente', prazo: '' });
+    renderEtapas(estado.etapas, true);
+    saveDraft();
+}
+
+function removerEtapa(idx) { 
+    if(!projetoAbertoAtual) return;
+    let estado = capturarEstadoAtualDoPainel();
+    estado.etapas.splice(idx, 1);
+    renderEtapas(estado.etapas, true);
+    saveDraft();
+}
+
+function abrirProjeto(id) {
+    projetoAbertoAtual = id; const proj = bdProjetos[id];
+    isEditingProjeto = false;
+
+    document.getElementById('sp-cliente').textContent = proj.cliente; document.getElementById('sp-titulo').textContent = proj.nome; document.getElementById('sp-desc').textContent = proj.descricao;
+    document.getElementById('sp-licoes').textContent = proj.licoes ? proj.licoes : 'Nenhuma lição registrada ainda.';
+    
+    document.getElementById('sp-lider-view').textContent = proj.lider || 'A definir';
+    document.getElementById('edit-lider').value = proj.lider || '';
+
+    document.getElementById('edit-cliente').value = proj.cliente; document.getElementById('edit-titulo').value = proj.nome; document.getElementById('edit-desc').value = proj.descricao;
+    document.getElementById('edit-licoes').value = proj.licoes || '';
+    document.getElementById('edit-tags').value = (proj.tags || []).join(', ');
+    document.getElementById('edit-equipe').value = (proj.equipeAtual || []).join(', '); document.getElementById('edit-equipe-antiga').value = (proj.equipeAntiga || []).join(', ');
+
+    document.getElementById('sp-tags-container').innerHTML = (proj.tags || []).map(t => `<span class="tag-pill">${sanitize(t)}</span>`).join('');
+    document.getElementById('sp-equipe').innerHTML = (proj.equipeAtual || []).map(m => `<li class="team-item team-active">${sanitize(m)}</li>`).join('');
+    document.getElementById('sp-equipe-antiga').innerHTML = (proj.equipeAntiga || []).map(m => `<li class="team-item team-inactive">${sanitize(m)}</li>`).join('');
+    
+    const leadDisplay = document.getElementById('sp-leadtime');
+    if (proj.dataConclusao) { leadDisplay.innerHTML = `🏁 Concluído em ${diasEntre(proj.dataCriacao, proj.dataConclusao)} dias.`; leadDisplay.style.color = "#47e299"; } 
+    else { leadDisplay.innerHTML = `⏱️ Há ${diasEntre(proj.dataCriacao, null)} dias.`; leadDisplay.style.color = "#b68aff"; }
+
+    renderEtapas(proj.etapas, false);
+    
+    document.getElementById('sp-view-header').style.display = 'block'; 
+    document.getElementById('sp-edit-header').style.display = 'none'; 
+    document.getElementById('sp-desc').style.display = 'block'; 
+    document.getElementById('edit-desc').style.display = 'none'; 
+    document.getElementById('sp-tags-container').style.display = 'block'; 
+    document.getElementById('edit-tags').style.display = 'none'; 
+    document.getElementById('sp-equipe-container').style.display = 'block'; 
+    document.getElementById('edit-equipe').style.display = 'none'; 
+    document.getElementById('sp-equipe-antiga-container').style.display = 'block'; 
+    document.getElementById('edit-equipe-antiga').style.display = 'none'; 
+    document.getElementById('titulo-eq-antiga').style.display = 'block';
+    document.getElementById('sp-licoes').style.display = 'block'; 
+    document.getElementById('edit-licoes').style.display = 'none';
+    document.getElementById('sp-lider-view').style.display = 'block';
+    document.getElementById('edit-lider').style.display = 'none';
+    
+    if(proj.arquivado) {
+        document.getElementById('btn-edit').style.display = 'none'; 
+        document.getElementById('btn-delete').style.display = 'none'; 
+        document.getElementById('btn-restore').style.display = 'block'; 
+        document.getElementById('btn-perm-delete').style.display = 'block'; 
+    } else {
+        document.getElementById('btn-edit').style.display = 'block'; 
+        document.getElementById('btn-delete').style.display = 'block'; 
+        document.getElementById('btn-restore').style.display = 'none'; 
+        document.getElementById('btn-perm-delete').style.display = 'none'; 
+    }
+
+    document.getElementById('btn-save').style.display = 'none'; 
+    document.getElementById('btn-add-etapa').style.display = 'none';
+    document.getElementById('panel-overlay').classList.add('active'); document.getElementById('side-panel').classList.add('active');
+}
+
+function renderEtapas(etapas, editMode) {
+    let html = ''; 
+    const hojeCompare = new Date(new Date().setHours(0,0,0,0));
+
+    etapas.forEach((etapa, idx) => {
+        let icone = etapa.status === 'concluido' ? '✓' : (idx + 1);
+        let badge = '';
+        let valData = '';
+
+        if (editMode) {
+            let selectStatus = `<select class="edit-select" id="status-etapa-${idx}"><option value="pendente" ${etapa.status === 'pendente' ? 'selected' : ''}>Pendente</option><option value="ativo" ${etapa.status === 'ativo' ? 'selected' : ''}>Ativo</option><option value="concluido" ${etapa.status === 'concluido' ? 'selected' : ''}>Concluído</option></select>`;
+            let inputData = `<input type="date" id="prazo-etapa-${idx}" class="edit-input" style="width: auto; padding: 4px; margin: 0 10px 0 0;" value="${etapa.prazo || ''}" title="Prazo">`;
+            html += `<div class="step ${etapa.status}"><div class="step-icon">${icone}</div><div class="step-text" style="display:flex; align-items:center; width:100%; flex-wrap:wrap; gap:5px;">${inputData}<input type="text" class="edit-input" style="margin:0; padding:4px; flex-grow:1; min-width: 150px;" id="titulo-etapa-${idx}" value="${sanitize(etapa.titulo)}">${selectStatus}<button class="btn-danger" onclick="removerEtapa(${idx})">✕</button></div></div>`;
+        } else {
             if (etapa.prazo && etapa.status !== 'concluido') {
-                const dPrazo = new Date(etapa.prazo); dPrazo.setMinutes(dPrazo.getMinutes() + dPrazo.getTimezoneOffset());
+                const dPrazo = new Date(etapa.prazo);
+                dPrazo.setMinutes(dPrazo.getMinutes() + dPrazo.getTimezoneOffset());
+                
                 if (dPrazo < hojeCompare) badge = '<span class="badge-danger">Atrasado</span>';
                 else if (dPrazo.getTime() === hojeCompare.getTime()) badge = '<span class="badge-warning">Vence Hoje</span>';
-                valData = `<span style="font-size: 11px; color: var(--cadarn-cinza); margin-right: 8px;">[${dPrazo.toLocaleDateString('pt-BR')}]</span>`;
+                valData = `<span style="font-size: 10px; color: var(--cadarn-cinza); margin-right: 8px;">[${dPrazo.toLocaleDateString('pt-BR')}]</span>`;
             }
-            etapasHtml += `<div class="step ${etapa.status}"><div class="step-icon">${icone}</div><div class="step-text" style="display:flex; align-items:center; width:100%; font-size:16px;">${valData}${sanitize(etapa.titulo)}${badge}</div></div>`;
+            html += `<div class="step ${etapa.status}"><div class="step-icon">${icone}</div><div class="step-text" style="display:flex; align-items:center; width:100%;">${valData}${sanitize(etapa.titulo)}${badge}</div></div>`;
+        }
+    });
+    document.getElementById('sp-etapas').innerHTML = html;
+}
+
+function iniciarEdicao() {
+    isEditingProjeto = true;
+    const proj = bdProjetos[projetoAbertoAtual];
+    
+    document.getElementById('sp-view-header').style.display = 'none'; 
+    document.getElementById('sp-edit-header').style.display = 'block'; 
+    document.getElementById('sp-desc').style.display = 'none'; 
+    document.getElementById('edit-desc').style.display = 'block'; 
+    document.getElementById('sp-tags-container').style.display = 'none'; 
+    document.getElementById('edit-tags').style.display = 'block'; 
+    document.getElementById('sp-equipe-container').style.display = 'none'; 
+    document.getElementById('edit-equipe').style.display = 'block'; 
+    document.getElementById('sp-equipe-antiga-container').style.display = 'none'; 
+    document.getElementById('edit-equipe-antiga').style.display = 'block'; 
+    document.getElementById('titulo-eq-antiga').style.display = 'none';
+    document.getElementById('sp-licoes').style.display = 'none'; 
+    document.getElementById('edit-licoes').style.display = 'block';
+    document.getElementById('sp-lider-view').style.display = 'none';
+    document.getElementById('edit-lider').style.display = 'block';
+
+    document.getElementById('btn-edit').style.display = 'none'; 
+    document.getElementById('btn-save').style.display = 'block'; 
+    document.getElementById('btn-delete').style.display = 'block'; 
+    document.getElementById('btn-add-etapa').style.display = 'block';
+    
+    renderEtapas(proj.etapas, true);
+    loadDraft(); 
+}
+
+async function salvarEdicao() {
+    const estado = capturarEstadoAtualDoPainel();
+    if(!estado) return;
+
+    const proj = bdProjetos[projetoAbertoAtual]; 
+
+    proj.cliente = estado.cliente;
+    proj.nome = estado.nome; 
+    proj.lider = estado.lider.trim() || 'A definir';
+    proj.descricao = estado.desc;
+    proj.licoes = estado.licoes;
+    proj.tags = estado.tags.split(',').map(s => s.trim()).filter(s => s);
+    proj.equipeAtual = estado.equipe.split(',').map(s => s.trim()).filter(s => s); 
+    proj.equipeAntiga = estado.equipeAntiga.split(',').map(s => s.trim()).filter(s => s); 
+    proj.etapas = estado.etapas;
+
+    const todasConcluidas = proj.etapas.length > 0 && proj.etapas.every(e => e.status === 'concluido');
+    if (todasConcluidas && !proj.dataConclusao) { proj.dataConclusao = Date.now(); } else if (!todasConcluidas && proj.dataConclusao) { proj.dataConclusao = null; }
+    
+    localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos));
+    localStorage.removeItem('cadarn_draft_' + projetoAbertoAtual); 
+    
+    showToast('Alterações salvas com sucesso.', 'success');
+
+    if(navigator.onLine) { syncProjetoNuvem(projetoAbertoAtual); }
+    
+    isEditingProjeto = false;
+    renderMainProjects(); 
+    abrirProjeto(projetoAbertoAtual); 
+}
+
+function fecharProjeto() { 
+    document.getElementById('panel-overlay').classList.remove('active'); 
+    document.getElementById('side-panel').classList.remove('active'); 
+    if(isEditingProjeto && projetoAbertoAtual) {
+        saveDraft();
+    }
+    isEditingProjeto = false;
+}
+
+/* --- LÓGICA DO MODO APRESENTAÇÃO --- */
+function startPresentation() {
+    presentationSlides = Object.values(bdProjetos).filter(p => !p.arquivado && (filtroAtual === 'Todos' || (p.tags || []).includes(filtroAtual)));
+    if(presentationSlides.length === 0) { showToast('Não há projetos ativos no filtro atual para apresentar.', 'warning'); return; }
+    currentSlideIndex = 0; document.getElementById('presentation-modal').classList.add('active'); renderSlide();
+}
+
+function closePresentation() { document.getElementById('presentation-modal').classList.remove('active'); }
+function nextSlide() { if (currentSlideIndex < presentationSlides.length - 1) { currentSlideIndex++; renderSlide(); } }
+function prevSlide() { if (currentSlideIndex > 0) { currentSlideIndex--; renderSlide(); } }
+
+function renderSlide() {
+    const proj = presentationSlides[currentSlideIndex];
+    const hojeCompare = new Date(new Date().setHours(0,0,0,0));
+    
+    let statusGeral = 'pendente'; let labelStatus = 'Aguardando'; let colorStatus = '#666';
+    if (!proj.etapas) proj.etapas = [];
+    const todasConcluidas = proj.etapas.length > 0 && proj.etapas.every(e => e.status === 'concluido');
+    const algumaAtiva = proj.etapas.some(e => e.status === 'ativo');
+    
+    if (todasConcluidas) { statusGeral = 'concluido'; labelStatus = 'Concluído'; colorStatus = '#47e299'; } 
+    else if (algumaAtiva) { statusGeral = 'ativo'; labelStatus = 'Em Execução'; colorStatus = '#b68aff'; }
+
+    let leadTimeText = '';
+    if (proj.dataConclusao) { leadTimeText = `🏁 ${diasEntre(proj.dataCriacao, proj.dataConclusao)} dias (Finalizado)`; } 
+    else { leadTimeText = `⏱️ ${diasEntre(proj.dataCriacao, null)} dias ativos`; }
+
+    document.getElementById('pres-client').innerText = proj.cliente;
+    document.getElementById('pres-title').innerText = proj.nome;
+    document.getElementById('pres-lider').innerHTML = `👤 Líder: <strong>${proj.lider}</strong>`;
+    document.getElementById('pres-status').innerHTML = `🎯 Status: <strong style="color:${colorStatus}">${labelStatus}</strong>`;
+    document.getElementById('pres-leadtime').innerText = leadTimeText;
+    
+    document.getElementById('pres-desc').innerText = proj.descricao || 'Nenhuma descrição fornecida.';
+    document.getElementById('pres-licoes').innerText = proj.licoes || 'Nenhuma lição registrada.';
+
+    let etapasHtml = '';
+    proj.etapas.forEach((etapa, idx) => {
+        let icone = etapa.status === 'concluido' ? '✓' : (idx + 1);
+        let badge = ''; let valData = '';
+        if (etapa.prazo && etapa.status !== 'concluido') {
+            const dPrazo = new Date(etapa.prazo); dPrazo.setMinutes(dPrazo.getMinutes() + dPrazo.getTimezoneOffset());
+            if (dPrazo < hojeCompare) badge = '<span class="badge-danger">Atrasado</span>';
+            else if (dPrazo.getTime() === hojeCompare.getTime()) badge = '<span class="badge-warning">Vence Hoje</span>';
+            valData = `<span style="font-size: 11px; color: var(--cadarn-cinza); margin-right: 8px;">[${dPrazo.toLocaleDateString('pt-BR')}]</span>`;
+        }
+        etapasHtml += `<div class="step ${etapa.status}"><div class="step-icon">${icone}</div><div class="step-text" style="display:flex; align-items:center; width:100%; font-size:16px;">${valData}${sanitize(etapa.titulo)}${badge}</div></div>`;
+    });
+    document.getElementById('pres-etapas').innerHTML = etapasHtml || '<p style="color:var(--cadarn-cinza);">Sem etapas cadastradas.</p>';
+
+    document.getElementById('pres-counter').innerText = `${currentSlideIndex + 1} / ${presentationSlides.length}`;
+    document.getElementById('pres-btn-prev').disabled = currentSlideIndex === 0;
+    document.getElementById('pres-btn-next').disabled = currentSlideIndex === presentationSlides.length - 1;
+}
+
+/* --- Lógica das Notas --- */
+function toggleNotes() { document.getElementById('scratchpad').classList.toggle('active'); }
+
+document.addEventListener('click', function(event) {
+    const scratchpadPanel = document.getElementById('scratchpad');
+    const isClickInNotesBtn = event.target.closest('[onclick="toggleNotes()"]');
+    if (scratchpadPanel && scratchpadPanel.classList.contains('active')) {
+        if (!scratchpadPanel.contains(event.target) && !isClickInNotesBtn) { scratchpadPanel.classList.remove('active'); }
+    }
+});
+
+/* --- REQUISIÇÃO DE NOTÍCIAS --- */
+async function fetchNews() {
+    const container = document.getElementById('noticias-container'); 
+    const CACHE_KEY = 'cadarn_news_cache'; 
+    const CACHE_TIME = 10 * 60 * 1000; 
+    
+    const cached = localStorage.getItem(CACHE_KEY); 
+    if (cached) { 
+        const parsedCache = JSON.parse(cached); 
+        if (Date.now() - parsedCache.timestamp < CACHE_TIME && parsedCache.data.length > 0) { 
+            renderNews(parsedCache.data, container); 
+            renderBriefingNews(parsedCache.data);
+            return; 
+        } 
+    }
+    
+    const feeds = [
+        { name: 'Exame', url: 'https://exame.com/feed/' }, 
+        { name: 'CNN Brasil', url: 'https://www.cnnbrasil.com.br/economia/feed/' }, 
+        { name: 'BBC News', url: 'https://feeds.bbci.co.uk/portuguese/rss.xml' }, 
+        { name: 'Estadão', url: 'https://www.estadao.com.br/rss/economia.xml' }
+    ];
+
+    let allItems = [];
+    for (const f of feeds) {
+        try {
+            const dynamicUrl = f.url + (f.url.includes('?') ? '&' : '?') + 'nocache=' + Date.now();
+            const r = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(dynamicUrl)}`, { cache: 'no-store' });
+            if (!r.ok) continue; 
+            const d = await r.json();
+            if (d.items) allItems.push(...d.items.map(i => {
+                let pd = i.pubDate;
+                if(pd && pd.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/)) pd = pd.replace(' ', 'T') + 'Z';
+                return {title: i.title, link: i.link, pubDate: pd, portal: f.name};
+            }));
+        } catch (e) { console.log(`Falha ao ler feed ${f.name}`); }
+    }
+
+    if (allItems.length === 0) {
+        container.innerHTML = `<p style="text-align:center; color:var(--cadarn-cinza); font-size:13px; margin-top:30px;">⏳ Carregando notícias do mercado...</p>`;
+        return;
+    }
+    
+    allItems.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+    const uniqueNews = allItems.filter((v, i, a) => a.findIndex(t => (t.title === v.title)) === i);
+    const finalNews = uniqueNews.slice(0, 12);
+    
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data: finalNews })); 
+    renderNews(finalNews, container);
+    renderBriefingNews(finalNews);
+}
+
+function renderBriefingNews(newsArray) {
+    const container = document.getElementById('briefing-news-list');
+    if(!container) return;
+    const topNews = newsArray.slice(0, 3); 
+    if(topNews.length === 0) {
+        container.innerHTML = '<span style="font-size:12px; color:var(--cadarn-cinza);">Nenhuma notícia recente.</span>';
+        return;
+    }
+    container.innerHTML = topNews.map(item => `<div class="briefing-news-item"><a href="${sanitize(item.link)}" target="_blank">• ${sanitize(item.title)}</a></div>`).join('');
+}
+
+async function forceFetchNews() {
+    const btn = document.getElementById('btn-refresh-news');
+    const container = document.getElementById('noticias-container');
+    
+    if(btn) btn.classList.add('loading');
+    localStorage.removeItem('cadarn_news_cache');
+    
+    if(container) {
+        container.innerHTML = `
+            <div class="skeleton-line" style="height: 15px; margin-bottom: 8px; width: 80%;"></div>
+            <div class="skeleton-line" style="height: 10px; margin-bottom: 20px; width: 30%;"></div>
+            <div class="skeleton-line" style="height: 15px; margin-bottom: 8px; width: 90%;"></div>
+            <div class="skeleton-line" style="height: 10px; margin-bottom: 20px; width: 40%;"></div>
+        `;
+    }
+    
+    await fetchNews();
+    if(btn) btn.classList.remove('loading');
+}
+
+function renderNews(newsArray, containerNode) { 
+    containerNode.innerHTML = newsArray.map(item => {
+        const dateObj = new Date(item.pubDate);
+        const time = !isNaN(dateObj) ? dateObj.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : 'Hoje';
+        return `<a href="${sanitize(item.link)}" target="_blank" class="news-card"><h4>${sanitize(item.title)}</h4><div class="news-meta"><span class="portal-flag">${sanitize(item.portal)}</span><span class="time-flag">às ${time}</span></div></a>`;
+    }).join(''); 
+}
+
+fetchNews(); setInterval(fetchNews, 600000); 
+
+function toggleFullScreen() { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
+const scratchTextArea = document.getElementById('scratch-text');
+function loadScratchpad() { const saved = localStorage.getItem('cadarn_notes'); if(saved) scratchTextArea.value = saved; }
+scratchTextArea.addEventListener('input', () => { localStorage.setItem('cadarn_notes', scratchTextArea.value); }); 
+
+const cmdModal = document.getElementById('cmd-modal');
+const cmdInput = document.getElementById('cmd-input');
+const cmdResults = document.getElementById('cmd-results');
+function abrirCmd() { cmdModal.classList.add('active'); cmdInput.focus(); cmdInput.value = ''; renderCmdResults(''); }
+function fecharCmd(e) { if(e.target === cmdModal) cmdModal.classList.remove('active'); }
+
+document.addEventListener('keydown', (e) => { 
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); abrirCmd(); } 
+    if (e.key === 'Escape') {
+        cmdModal.classList.remove('active'); 
+        const pModal = document.getElementById('presentation-modal');
+        if(pModal && pModal.classList.contains('active')) closePresentation();
+    }
+    const presModal = document.getElementById('presentation-modal');
+    if (presModal && presModal.classList.contains('active')) {
+        if (e.key === 'ArrowRight') nextSlide();
+        if (e.key === 'ArrowLeft') prevSlide();
+    }
+});
+
+cmdInput.addEventListener('input', (e) => { renderCmdResults(e.target.value.toLowerCase()); });
+
+function renderCmdResults(query) {
+    let results = [];
+    if (typeof window.LINKS_DIRETORIO !== 'undefined') {
+        LINKS_DIRETORIO.forEach(link => { 
+            if (link.nome.toLowerCase().includes(query)) results.push({ tipo: 'Link', nome: link.nome, action: `window.open('${link.link}', '_blank')` }); 
         });
-        document.getElementById('pres-etapas').innerHTML = etapasHtml || '<p style="color:var(--cadarn-cinza);">Sem etapas cadastradas.</p>';
-
-        document.getElementById('pres-counter').innerText = `${currentSlideIndex + 1} / ${presentationSlides.length}`;
-        document.getElementById('pres-btn-prev').disabled = currentSlideIndex === 0;
-        document.getElementById('pres-btn-next').disabled = currentSlideIndex === presentationSlides.length - 1;
     }
-
-    /* --- Lógica das Notas --- */
-    function toggleNotes() { document.getElementById('scratchpad').classList.toggle('active'); }
-
-    document.addEventListener('click', function(event) {
-        const scratchpadPanel = document.getElementById('scratchpad');
-        const isClickInNotesBtn = event.target.closest('[onclick="toggleNotes()"]');
-        if (scratchpadPanel && scratchpadPanel.classList.contains('active')) {
-            if (!scratchpadPanel.contains(event.target) && !isClickInNotesBtn) { scratchpadPanel.classList.remove('active'); }
+    
+    Object.entries(bdProjetos).forEach(([id, proj]) => { 
+        if (!proj.arquivado) {
+            const searchStr = `${proj.nome} ${proj.cliente} ${proj.descricao || ''} ${proj.licoes || ''}`.toLowerCase();
+            if (searchStr.includes(query)) {
+                results.push({ tipo: 'Projeto', nome: `${proj.nome} (${proj.cliente})`, action: `fecharAposBusca(); abrirProjeto('${id}')` }); 
+            }
         }
     });
-
-    /* --- REQUISIÇÃO DE NOTÍCIAS --- */
-    async function fetchNews() {
-        const container = document.getElementById('noticias-container'); 
-        const CACHE_KEY = 'cadarn_news_cache'; 
-        const CACHE_TIME = 10 * 60 * 1000; 
-        
-        const cached = localStorage.getItem(CACHE_KEY); 
-        if (cached) { 
-            const parsedCache = JSON.parse(cached); 
-            if (Date.now() - parsedCache.timestamp < CACHE_TIME && parsedCache.data.length > 0) { 
-                renderNews(parsedCache.data, container); 
-                renderBriefingNews(parsedCache.data);
-                return; 
-            } 
-        }
-        
-        const feeds = [
-            { name: 'Exame', url: 'https://exame.com/feed/' }, 
-            { name: 'CNN Brasil', url: 'https://www.cnnbrasil.com.br/economia/feed/' }, 
-            { name: 'BBC News', url: 'https://feeds.bbci.co.uk/portuguese/rss.xml' }, 
-            { name: 'Estadão', url: 'https://www.estadao.com.br/rss/economia.xml' }
-        ];
-
-        let allItems = [];
-        for (const f of feeds) {
-            try {
-                const dynamicUrl = f.url + (f.url.includes('?') ? '&' : '?') + 'nocache=' + Date.now();
-                const r = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(dynamicUrl)}`, { cache: 'no-store' });
-                if (!r.ok) continue; 
-                const d = await r.json();
-                if (d.items) allItems.push(...d.items.map(i => {
-                    let pd = i.pubDate;
-                    if(pd && pd.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/)) pd = pd.replace(' ', 'T') + 'Z';
-                    return {title: i.title, link: i.link, pubDate: pd, portal: f.name};
-                }));
-            } catch (e) { console.log(`Falha ao ler feed ${f.name}`); }
-        }
-
-        if (allItems.length === 0) {
-            container.innerHTML = `<p style="text-align:center; color:var(--cadarn-cinza); font-size:13px; margin-top:30px;">⏳ Carregando notícias do mercado...</p>`;
-            return;
-        }
-        
-        allItems.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
-        const uniqueNews = allItems.filter((v, i, a) => a.findIndex(t => (t.title === v.title)) === i);
-        const finalNews = uniqueNews.slice(0, 12);
-        
-        localStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data: finalNews })); 
-        renderNews(finalNews, container);
-        renderBriefingNews(finalNews);
-    }
     
-    function renderBriefingNews(newsArray) {
-        const container = document.getElementById('briefing-news-list');
-        if(!container) return;
-        const topNews = newsArray.slice(0, 3); 
-        if(topNews.length === 0) {
-            container.innerHTML = '<span style="font-size:12px; color:var(--cadarn-cinza);">Nenhuma notícia recente.</span>';
-            return;
-        }
-        container.innerHTML = topNews.map(item => `<div class="briefing-news-item"><a href="${sanitize(item.link)}" target="_blank">• ${sanitize(item.title)}</a></div>`).join('');
-    }
+    if (results.length === 0) { cmdResults.innerHTML = `<p style="padding: 15px; color: var(--cadarn-cinza); font-size: 13px;">Sem resultados.</p>`; return; }
+    cmdResults.innerHTML = results.map(r => `<div class="cmd-item" onclick="${r.action}"><span>${r.nome}</span><span class="cmd-item-type">${r.tipo}</span></div>`).join('');
+}
 
-    async function forceFetchNews() {
-        const btn = document.getElementById('btn-refresh-news');
-        const container = document.getElementById('noticias-container');
-        
-        if(btn) btn.classList.add('loading');
-        localStorage.removeItem('cadarn_news_cache');
-        
-        if(container) {
-            container.innerHTML = `
-                <div class="skeleton-line" style="height: 15px; margin-bottom: 8px; width: 80%;"></div>
-                <div class="skeleton-line" style="height: 10px; margin-bottom: 20px; width: 30%;"></div>
-                <div class="skeleton-line" style="height: 15px; margin-bottom: 8px; width: 90%;"></div>
-                <div class="skeleton-line" style="height: 10px; margin-bottom: 20px; width: 40%;"></div>
-            `;
-        }
-        
-        await fetchNews();
-        if(btn) btn.classList.remove('loading');
-    }
+function fecharAposBusca() { cmdModal.classList.remove('active'); }
 
-    function renderNews(newsArray, containerNode) { 
-        containerNode.innerHTML = newsArray.map(item => {
-            const dateObj = new Date(item.pubDate);
-            const time = !isNaN(dateObj) ? dateObj.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : 'Hoje';
-            return `<a href="${sanitize(item.link)}" target="_blank" class="news-card"><h4>${sanitize(item.title)}</h4><div class="news-meta"><span class="portal-flag">${sanitize(item.portal)}</span><span class="time-flag">às ${time}</span></div></a>`;
-        }).join(''); 
-    }
+function renderSLARadar() {
+    let upcoming = [];
+    const now = new Date();
+    const limite48h = new Date(now.getTime() + 48 * 60 * 60 * 1000);
     
-    fetchNews(); setInterval(fetchNews, 600000); 
-
-    function toggleFullScreen() { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
-    const scratchTextArea = document.getElementById('scratch-text');
-    function loadScratchpad() { const saved = localStorage.getItem('cadarn_notes'); if(saved) scratchTextArea.value = saved; }
-    scratchTextArea.addEventListener('input', () => { localStorage.setItem('cadarn_notes', scratchTextArea.value); }); 
-
-    const cmdModal = document.getElementById('cmd-modal');
-    const cmdInput = document.getElementById('cmd-input');
-    const cmdResults = document.getElementById('cmd-results');
-    function abrirCmd() { cmdModal.classList.add('active'); cmdInput.focus(); cmdInput.value = ''; renderCmdResults(''); }
-    function fecharCmd(e) { if(e.target === cmdModal) cmdModal.classList.remove('active'); }
-    
-    document.addEventListener('keydown', (e) => { 
-        if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); abrirCmd(); } 
-        if (e.key === 'Escape') {
-            cmdModal.classList.remove('active'); 
-            const pModal = document.getElementById('presentation-modal');
-            if(pModal && pModal.classList.contains('active')) closePresentation();
-        }
-        const presModal = document.getElementById('presentation-modal');
-        if (presModal && presModal.classList.contains('active')) {
-            if (e.key === 'ArrowRight') nextSlide();
-            if (e.key === 'ArrowLeft') prevSlide();
-        }
-    });
-
-    cmdInput.addEventListener('input', (e) => { renderCmdResults(e.target.value.toLowerCase()); });
-    
-    function renderCmdResults(query) {
-        let results = [];
-        if (typeof window.LINKS_DIRETORIO !== 'undefined') {
-            LINKS_DIRETORIO.forEach(link => { 
-                if (link.nome.toLowerCase().includes(query)) results.push({ tipo: 'Link', nome: link.nome, action: `window.open('${link.link}', '_blank')` }); 
-            });
-        }
-        
-        Object.entries(bdProjetos).forEach(([id, proj]) => { 
-            if (!proj.arquivado) {
-                const searchStr = `${proj.nome} ${proj.cliente} ${proj.descricao || ''} ${proj.licoes || ''}`.toLowerCase();
-                if (searchStr.includes(query)) {
-                    results.push({ tipo: 'Projeto', nome: `${proj.nome} (${proj.cliente})`, action: `fecharAposBusca(); abrirProjeto('${id}')` }); 
+    Object.entries(bdProjetos).forEach(([id, proj]) => {
+        if(proj.arquivado) return;
+        (proj.etapas || []).forEach(e => {
+            if(e.status !== 'concluido' && e.prazo) {
+                const dPrazo = new Date(e.prazo);
+                dPrazo.setMinutes(dPrazo.getMinutes() + dPrazo.getTimezoneOffset());
+                
+                if (dPrazo <= limite48h && dPrazo >= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)) { 
+                    upcoming.push({ projName: proj.nome, etapa: e.titulo, prazo: dPrazo, id: id });
                 }
             }
         });
-        
-        if (results.length === 0) { cmdResults.innerHTML = `<p style="padding: 15px; color: var(--cadarn-cinza); font-size: 13px;">Sem resultados.</p>`; return; }
-        cmdResults.innerHTML = results.map(r => `<div class="cmd-item" onclick="${r.action}"><span>${r.nome}</span><span class="cmd-item-type">${r.tipo}</span></div>`).join('');
+    });
+    
+    upcoming.sort((a,b) => a.prazo - b.prazo);
+    const top3 = upcoming.slice(0, 3);
+    
+    const container = document.getElementById('sla-radar-list');
+    if(top3.length === 0) {
+        container.innerHTML = '<div style="color:var(--cadarn-cinza); font-size:12px;">Nenhuma etapa crítica ou vencendo nas próximas 48 horas.</div>';
+        return;
     }
     
-    function fecharAposBusca() { cmdModal.classList.remove('active'); }
+    container.innerHTML = top3.map(item => {
+        const isOverdue = item.prazo < new Date(now.setHours(0,0,0,0));
+        const color = isOverdue ? '#ff8793' : '#ffc107';
+        return `<div class="sla-item" onclick="abrirProjeto('${item.id}')">
+            <span class="sla-time" style="color:${color}; width:65px;">${item.prazo.toLocaleDateString('pt-BR')}</span>
+            <span class="sla-text"><strong>${sanitize(item.projName)}:</strong> ${sanitize(item.etapa)}</span>
+        </div>`;
+    }).join('');
+}
 
-    /* ========================================== */
-    /* ATUALIZAÇÕES DOS RADARES (SLA & TEAM)      */
-    /* ========================================== */
-
-    function renderSLARadar() {
-        let upcoming = [];
-        const now = new Date();
-        const limite48h = new Date(now.getTime() + 48 * 60 * 60 * 1000);
-        
-        Object.entries(bdProjetos).forEach(([id, proj]) => {
-            if(proj.arquivado) return;
-            (proj.etapas || []).forEach(e => {
-                if(e.status !== 'concluido' && e.prazo) {
-                    const dPrazo = new Date(e.prazo);
-                    dPrazo.setMinutes(dPrazo.getMinutes() + dPrazo.getTimezoneOffset());
-                    
-                    if (dPrazo <= limite48h && dPrazo >= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)) { 
-                        upcoming.push({ projName: proj.nome, etapa: e.titulo, prazo: dPrazo, id: id });
-                    }
-                }
-            });
-        });
-        
-        upcoming.sort((a,b) => a.prazo - b.prazo);
-        const top3 = upcoming.slice(0, 3);
-        
-        const container = document.getElementById('sla-radar-list');
-        if(top3.length === 0) {
-            container.innerHTML = '<div style="color:var(--cadarn-cinza); font-size:12px;">Nenhuma etapa crítica ou vencendo nas próximas 48 horas.</div>';
-            return;
-        }
-        
-        container.innerHTML = top3.map(item => {
-            const isOverdue = item.prazo < new Date(now.setHours(0,0,0,0));
-            const color = isOverdue ? '#ff8793' : '#ffc107';
-            return `<div class="sla-item" onclick="abrirProjeto('${item.id}')">
-                <span class="sla-time" style="color:${color}; width:65px;">${item.prazo.toLocaleDateString('pt-BR')}</span>
-                <span class="sla-text"><strong>${sanitize(item.projName)}:</strong> ${sanitize(item.etapa)}</span>
-            </div>`;
-        }).join('');
-    }
-
-   function renderTeamAvailability() {
+function renderTeamAvailability() {
     let workload = {};
     for (const proj of Object.values(bdProjetos)) {
         if (proj.arquivado) continue;
@@ -1480,86 +1351,84 @@ const emailsSocios = [
     }).join('');
 }
 
-    let kpiChartInstance = null;
-    function atualizarDashboard() {
-        let totais = 0, ativos = 0, concluidos = 0, pendentes = 0;
-        for (const proj of Object.values(bdProjetos)) {
-            if (proj.arquivado) continue;
-            totais++; if (!proj.etapas) proj.etapas = [];
-            const todasConcluidas = proj.etapas.length > 0 && proj.etapas.every(e => e.status === 'concluido');
-            const algumaAtiva = proj.etapas.some(e => e.status === 'ativo');
-            if (todasConcluidas) concluidos++; else if (algumaAtiva) ativos++; else pendentes++;
-        }
-        document.getElementById('kpi-total').innerText = totais; document.getElementById('kpi-ativos').innerText = ativos; document.getElementById('kpi-concluidos').innerText = concluidos;
-        
-        const ctx = document.getElementById('kpiChart').getContext('2d');
-        const fontColor = document.body.classList.contains('light-mode') ? '#64748b' : '#a1a1aa';
+let kpiChartInstance = null;
+function atualizarDashboard() {
+    let totais = 0, ativos = 0, concluidos = 0, pendentes = 0;
+    for (const proj of Object.values(bdProjetos)) {
+        if (proj.arquivado) continue;
+        totais++; if (!proj.etapas) proj.etapas = [];
+        const todasConcluidas = proj.etapas.length > 0 && proj.etapas.every(e => e.status === 'concluido');
+        const algumaAtiva = proj.etapas.some(e => e.status === 'ativo');
+        if (todasConcluidas) concluidos++; else if (algumaAtiva) ativos++; else pendentes++;
+    }
+    document.getElementById('kpi-total').innerText = totais; document.getElementById('kpi-ativos').innerText = ativos; document.getElementById('kpi-concluidos').innerText = concluidos;
+    
+    const ctx = document.getElementById('kpiChart').getContext('2d');
+    const fontColor = document.body.classList.contains('light-mode') ? '#64748b' : '#a1a1aa';
 
-        if (kpiChartInstance) { 
-            kpiChartInstance.data.datasets[0].data = [ativos, concluidos, pendentes]; 
-            kpiChartInstance.options.plugins.legend.labels.color = fontColor;
-            kpiChartInstance.update(); 
-        } else { 
-            kpiChartInstance = new Chart(ctx, { 
-                type: 'doughnut', 
-                data: { labels: ['Em Execução', 'Concluídos', 'Aguardando'], datasets: [{ data: [ativos, concluidos, pendentes], backgroundColor: ['#b68aff', '#47e299', '#666666'], borderWidth: 0 }] }, 
-                options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 15, color: fontColor } } } } 
-            }); 
-        }
-
-        renderSLARadar();
-        renderTeamAvailability();
+    if (kpiChartInstance) { 
+        kpiChartInstance.data.datasets[0].data = [ativos, concluidos, pendentes]; 
+        kpiChartInstance.options.plugins.legend.labels.color = fontColor;
+        kpiChartInstance.update(); 
+    } else { 
+        kpiChartInstance = new Chart(ctx, { 
+            type: 'doughnut', 
+            data: { labels: ['Em Execução', 'Concluídos', 'Aguardando'], datasets: [{ data: [ativos, concluidos, pendentes], backgroundColor: ['#b68aff', '#47e299', '#666666'], borderWidth: 0 }] }, 
+            options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 15, color: fontColor } } } } 
+        }); 
     }
 
-    /* ========================================== */
-    /* AUTOCOMPLETE NA EDIÇÃO DE MEMBROS DA EQUIPE*/
-    /* ========================================== */
-    function setupAutocomplete(inputElement) {
-        inputElement.addEventListener("input", function(e) {
-            let a, b, val = this.value;
-            closeAllLists();
-            if (!val) { return false;}
-            
-            let segments = val.split(',');
-            let currentSegment = segments[segments.length - 1].trim().toLowerCase();
-            if(!currentSegment) return false;
+    renderSLARadar();
+    renderTeamAvailability();
+}
 
-            let uniqueMembers = new Set();
-            Object.values(bdProjetos).forEach(p => {
-                (p.equipeAtual || []).forEach(m => uniqueMembers.add(m.trim()));
-                (p.equipeAntiga || []).forEach(m => uniqueMembers.add(m.trim()));
-            });
+function setupAutocomplete(inputElement) {
+    if(!inputElement) return;
+    inputElement.addEventListener("input", function(e) {
+        let a, b, val = this.value;
+        closeAllLists();
+        if (!val) { return false;}
+        
+        let segments = val.split(',');
+        let currentSegment = segments[segments.length - 1].trim().toLowerCase();
+        if(!currentSegment) return false;
 
-            a = document.createElement("DIV");
-            a.setAttribute("id", this.id + "autocomplete-list");
-            a.setAttribute("class", "autocomplete-items");
-            this.parentNode.appendChild(a);
-
-            Array.from(uniqueMembers).forEach(member => {
-                if (member.toLowerCase().includes(currentSegment)) {
-                    b = document.createElement("DIV");
-                    b.innerHTML = member; 
-                    b.innerHTML += "<input type='hidden' value='" + member + "'>";
-                    b.addEventListener("click", function(e) {
-                        segments[segments.length - 1] = " " + this.getElementsByTagName("input")[0].value;
-                        inputElement.value = segments.join(',').trim();
-                        closeAllLists();
-                    });
-                    a.appendChild(b);
-                }
-            });
+        let uniqueMembers = new Set();
+        Object.values(bdProjetos).forEach(p => {
+            (p.equipeAtual || []).forEach(m => uniqueMembers.add(m.trim()));
+            (p.equipeAntiga || []).forEach(m => uniqueMembers.add(m.trim()));
         });
 
-        function closeAllLists(elmnt) {
-            var x = document.getElementsByClassName("autocomplete-items");
-            for (var i = 0; i < x.length; i++) {
-                if (elmnt != x[i] && elmnt != inputElement) {
-                    x[i].parentNode.removeChild(x[i]);
-                }
+        a = document.createElement("DIV");
+        a.setAttribute("id", this.id + "autocomplete-list");
+        a.setAttribute("class", "autocomplete-items");
+        this.parentNode.appendChild(a);
+
+        Array.from(uniqueMembers).forEach(member => {
+            if (member.toLowerCase().includes(currentSegment)) {
+                b = document.createElement("DIV");
+                b.innerHTML = member; 
+                b.innerHTML += "<input type='hidden' value='" + member + "'>";
+                b.addEventListener("click", function(e) {
+                    segments[segments.length - 1] = " " + this.getElementsByTagName("input")[0].value;
+                    inputElement.value = segments.join(',').trim();
+                    closeAllLists();
+                });
+                a.appendChild(b);
+            }
+        });
+    });
+
+    function closeAllLists(elmnt) {
+        var x = document.getElementsByClassName("autocomplete-items");
+        for (var i = 0; i < x.length; i++) {
+            if (elmnt != x[i] && elmnt != inputElement) {
+                x[i].parentNode.removeChild(x[i]);
             }
         }
-        document.addEventListener("click", function (e) { closeAllLists(e.target); });
     }
+    document.addEventListener("click", function (e) { closeAllLists(e.target); });
+}
 
 function toggleEditProfile(forceReadonly = false) {
     const fields = document.querySelectorAll('.profile-field');
@@ -1606,7 +1475,31 @@ function salvarDadosPerfilManual() {
     showToast('Dados de contato e aniversário salvos!', 'success');
     toggleEditProfile(true); 
 }
-    setupAutocomplete(document.getElementById("edit-equipe"));
+
+/* --- SETUP INICIAL, EVENTOS GERAIS E EXPORTAÇÕES --- */
+
+function updateClock() { const now = new Date(); document.getElementById('live-time').innerText = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); document.getElementById('live-date').innerText = now.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).toUpperCase(); }
+setInterval(updateClock, 1000); updateClock();
+
+function getGreeting() { const hour = new Date().getHours(); if (hour >= 5 && hour < 12) return 'BOM DIA,'; if (hour >= 12 && hour < 18) return 'BOA TARDE,'; return 'BOA NOITE,'; }
+
+function aplicarNome(nome) { 
+    const firstName = nome.split(' ')[0]; 
+    document.getElementById('display-greeting').innerText = getGreeting(); 
+    document.getElementById('display-name').innerText = firstName; 
+    document.getElementById('briefing-name').innerText = firstName; 
+    document.getElementById('display-avatar').innerText = firstName.charAt(0).toUpperCase(); 
+}
+
+window.onload = () => { 
+    loadTheme();
+    loadScratchpad(); 
+    renderDailyQuote(); 
+    const editEquipeEl = document.getElementById("edit-equipe");
+    if(editEquipeEl) setupAutocomplete(editEquipeEl);
+    initFirebase(); 
+};
+
 // Expondo funções para o HTML enxergar
 window.loginComGoogle = loginComGoogle;
 window.abrirModalElogio = abrirModalElogio;
@@ -1614,8 +1507,6 @@ window.fecharModalElogio = fecharModalElogio;
 window.enviarElogio = enviarElogio;
 window.toggleNotes = toggleNotes;
 window.fecharCmd = fecharCmd;
-window.checkNewUser = checkNewUser;
-window.salvarNome = salvarNome;
 window.fecharPerfil = fecharPerfil;
 window.toggleEditProfile = toggleEditProfile;
 window.salvarDadosPerfilManual = salvarDadosPerfilManual;
