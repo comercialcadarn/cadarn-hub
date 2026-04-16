@@ -1,7 +1,14 @@
 /* ========================================================= */
     /* NÚCLEO DE AUTENTICAÇÃO E SINCRONIZAÇÃO FIREBASE (V2)      */
     /* ========================================================= */
-
+// Lista de acessos VIP (Sócios + Dev)
+const emailsSocios = [
+    'debora.yuan@cadarnconsultoria.com.br',
+    'felipe.penido@cadarnconsultoria.com.br',
+    'leonardo.assis@cadarnconsultoria.com.br',
+    'juliana.deoracki@cadarnconsultoria.com.br',
+    'victor.mendes@cadarnconsultoria.com.br'
+];
     let db, auth; 
     let firestore = {}; 
     let firebaseAuth = {};
@@ -28,17 +35,16 @@
         db = getFirestore(app);
         auth = getAuth(app);
 
-        // Observador de Estado de Login (O "Segurança da Porta")
+        // Observador de Estado de Login
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                // TRAVA DE SEGURANÇA: Só entra quem for da Cadarn
                 if (user.email.endsWith('@cadarnconsultoria.com.br')) {
                     usuarioLogado = user.displayName;
                     localStorage.setItem('cadarn_user', usuarioLogado);
+                    localStorage.setItem('cadarn_user_email', user.email); // ADICIONE ESTA LINHA <--
+                    
                     document.getElementById('login-modal').classList.remove('active');
                     aplicarNome(usuarioLogado);
-                    
-                    // Só começa a puxar dados do banco se passou na segurança
                     iniciarListeners(); 
                 } else {
                     showToast("Acesso restrito ao domínio @cadarnconsultoria.com.br", "danger");
@@ -46,10 +52,10 @@
                 }
             } else {
                 usuarioLogado = '';
+                localStorage.removeItem('cadarn_user_email'); // ADICIONE ESTA LINHA <--
                 abrirModalLoginReal();
             }
         });
-    }
 
     function abrirModalLoginReal() {
         const modal = document.getElementById('login-modal');
@@ -81,7 +87,18 @@
             location.reload(); // Recarrega a página para limpar a tela
         } catch (error) { console.error("Erro ao sair:", error); }
     }
-
+// NOVA FUNÇÃO: Verifica se quem clicou no botão "Área do Sócio" está na lista VIP
+    function acessarAreaSocio() {
+        const emailAtual = localStorage.getItem('cadarn_user_email');
+        
+        if (emailsSocios.includes(emailAtual)) {
+            // Se o e-mail estiver na lista, manda para a página de sócios
+            window.location.href = 'socios.html';
+        } else {
+            // Se não for sócio, barra com aviso vermelho
+            showToast("Acesso negado. Área restrita a sócios diretivos.", "danger");
+        }
+    }
     // Escuta mudanças no banco 24/7 (Realtime Sync)
     function iniciarListeners() {
         const { collection, onSnapshot } = firestore;
@@ -1615,3 +1632,4 @@ window.restaurarProjeto = restaurarProjeto;
 window.excluirPermanente = excluirPermanente;
 window.salvarEdicao = salvarEdicao;
 window.adicionarEtapa = adicionarEtapa;
+window.acessarAreaSocio = acessarAreaSocio;
