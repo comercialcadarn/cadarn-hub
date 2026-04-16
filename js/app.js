@@ -16,7 +16,6 @@ let firestore = {};
 let firebaseAuth = {};
 
 async function initFirebase() {
-    // Importa Banco e Autenticação
     const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js");
     const { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js");
     const { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js");
@@ -37,7 +36,6 @@ async function initFirebase() {
     db = getFirestore(app);
     auth = getAuth(app);
 
-    // Observador de Estado de Login
     onAuthStateChanged(auth, (user) => {
         if (user) {
             if (user.email.endsWith('@cadarnconsultoria.com.br')) {
@@ -58,7 +56,7 @@ async function initFirebase() {
             abrirModalLoginReal();
         }
     });
-} // <--- ESTA ERA A CHAVE QUE ESTAVA FALTANDO!
+}
 
 function abrirModalLoginReal() {
     const modal = document.getElementById('login-modal');
@@ -108,7 +106,6 @@ function acessarAreaSocio() {
     }
 }
 
-// Escuta mudanças no banco 24/7 (Realtime Sync)
 function iniciarListeners() {
     const { collection, onSnapshot } = firestore;
     
@@ -147,7 +144,6 @@ function iniciarListeners() {
     if(usuarioLogado) checkMorningBriefing(); 
 }
 
-// Funções de Gravação no Firestore
 async function syncProjetoNuvem(idProjeto, isDelete = false) {
     if (!navigator.onLine || !db) return;
     const { doc, setDoc, deleteDoc } = firestore;
@@ -1476,7 +1472,7 @@ function salvarDadosPerfilManual() {
     toggleEditProfile(true); 
 }
 
-/* --- SETUP INICIAL, EVENTOS GERAIS E EXPORTAÇÕES --- */
+/* --- SETUP INICIAL E EVENTOS GERAIS --- */
 
 function updateClock() { const now = new Date(); document.getElementById('live-time').innerText = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); document.getElementById('live-date').innerText = now.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).toUpperCase(); }
 setInterval(updateClock, 1000); updateClock();
@@ -1484,6 +1480,7 @@ setInterval(updateClock, 1000); updateClock();
 function getGreeting() { const hour = new Date().getHours(); if (hour >= 5 && hour < 12) return 'BOM DIA,'; if (hour >= 12 && hour < 18) return 'BOA TARDE,'; return 'BOA NOITE,'; }
 
 function aplicarNome(nome) { 
+    if(!nome) return;
     const firstName = nome.split(' ')[0]; 
     document.getElementById('display-greeting').innerText = getGreeting(); 
     document.getElementById('display-name').innerText = firstName; 
@@ -1500,8 +1497,12 @@ window.onload = () => {
     initFirebase(); 
 };
 
-// Expondo funções para o HTML enxergar
+// =========================================================
+// EXPORTANDO FUNÇÕES PARA O HTML ENXERGAR (Muito Importante!)
+// =========================================================
 window.loginComGoogle = loginComGoogle;
+window.logout = logout;
+window.acessarAreaSocio = acessarAreaSocio;
 window.abrirModalElogio = abrirModalElogio;
 window.fecharModalElogio = fecharModalElogio;
 window.enviarElogio = enviarElogio;
@@ -1529,7 +1530,7 @@ window.restaurarProjeto = restaurarProjeto;
 window.excluirPermanente = excluirPermanente;
 window.salvarEdicao = salvarEdicao;
 window.adicionarEtapa = adicionarEtapa;
-window.acessarAreaSocio = acessarAreaSocio;
+window.removerEtapa = removerEtapa;
 window.abrirProjeto = abrirProjeto;
 window.setFiltro = setFiltro;
 window.limparFiltroMembro = limparFiltroMembro;
@@ -1537,10 +1538,8 @@ window.toggleSelectModeLixeira = toggleSelectModeLixeira;
 window.toggleLixeiraItem = toggleLixeiraItem;
 window.deleteSelectedLixeira = deleteSelectedLixeira;
 window.restaurarProjetoDireto = restaurarProjetoDireto;
-window.removerEtapa = removerEtapa;
 window.handleDropFoto = handleDropFoto;
 window.handleFileFoto = handleFileFoto;
-window.logout = logout;
 window.filtrarProjetosDestePerfil = () => {
     setFiltroMembro(perfilAtualNome);
     document.getElementById('profile-modal').classList.remove('active');
