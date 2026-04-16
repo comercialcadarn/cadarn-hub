@@ -91,11 +91,17 @@ const emailsSocios = [
     function acessarAreaSocio() {
         const emailAtual = localStorage.getItem('cadarn_user_email');
         
-        if (emailsSocios.includes(emailAtual)) {
-            // Se o e-mail estiver na lista, manda para a página de sócios
+        if (!emailAtual) {
+            showToast("Sessão expirada. Por favor, faça login novamente.", "warning");
+            logout(); // Força o usuário a relogar para o sistema gravar o e-mail
+            return;
+        }
+
+        const emailFormatado = emailAtual.toLowerCase().trim();
+        
+        if (emailsSocios.includes(emailFormatado)) {
             window.location.href = 'socios.html';
         } else {
-            // Se não for sócio, barra com aviso vermelho
             showToast("Acesso negado. Área restrita a sócios diretivos.", "danger");
         }
     }
