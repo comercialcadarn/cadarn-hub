@@ -1530,3 +1530,18 @@ window.excluirPermanente = excluirPermanente;
 window.salvarEdicao = salvarEdicao;
 window.adicionarEtapa = adicionarEtapa;
 window.acessarAreaSocio = acessarAreaSocio;
+window.abrirProjeto = abrirProjeto;
+window.setFiltro = setFiltro;
+window.limparFiltroMembro = limparFiltroMembro;
+window.toggleSelectModeLixeira = toggleSelectModeLixeira;
+window.toggleLixeiraItem = toggleLixeiraItem;
+window.deleteSelectedLixeira = deleteSelectedLixeira;
+window.restaurarProjetoDireto = restaurarProjetoDireto;
+window.removerEtapa = removerEtapa;
+window.handleDropFoto = handleDropFoto;
+window.handleFileFoto = handleFileFoto;
+window.logout = logout;
+window.filtrarProjetosDestePerfil = () => {
+    setFiltroMembro(perfilAtualNome);
+    document.getElementById('profile-modal').classList.remove('active');
+};
