@@ -246,7 +246,14 @@ function abrirPerfil(nome) {
 
     for (const [id, proj] of Object.entries(bdProjetos)) {
         if (proj.arquivado) continue;
-        if (proj.visivelHub === false) continue;
+        if (proj.visivelHub === false) continue; // <-- A trava do Rascunho
+        
+        if (filtroAtual !== 'Todos' && !(proj.tags || []).includes(filtroAtual)) continue;
+        if (filtroMembro && !(proj.equipeAtual || []).some(m => m.split('(')[0].trim() === filtroMembro)) continue;
+        
+        temProjetosParaMostrar = true;
+        let statusGeral = 'pendente'; let labelStatus = 'Aguardando'; let slaBadge = '';
+        if (!proj.etapas) proj.etapas = [];
         
         const emEquipe = (proj.equipeAtual || []).some(m => m.split('(')[0].trim() === nome);
         const exEquipe = (proj.equipeAntiga || []).some(m => m.split('(')[0].trim() === nome);
