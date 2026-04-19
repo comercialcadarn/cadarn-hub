@@ -16,7 +16,6 @@ let bdProjetos = {};
 let bdColabs = {};
 let filtroResponsavel = "";
 
-// Variáveis de Controle do Modal (Rascunho)
 let projetoModalAberto = null;
 let isCriandoNovo = false;
 let etapasTemporarias = [];
@@ -186,7 +185,6 @@ function novoProjetoSocio() {
     projetoModalAberto = 'proj_' + Date.now();
     etapasTemporarias = [{ titulo: 'Planejamento Inicial', responsavel: '', prazo: '', status: 'pendente' }];
     
-    // Limpa a tela
     document.getElementById('modal-proj-nome').value = '';
     document.getElementById('modal-proj-cliente').value = '';
     document.getElementById('modal-lider').value = usuarioLogado;
@@ -214,7 +212,6 @@ function abrirModalProjeto(id) {
     document.getElementById('modal-licoes').value = proj.licoes || '';
     document.getElementById('modal-proj-visivel').checked = proj.visivelHub === true;
 
-    // Copia as etapas do banco para a memória (Rascunho local)
     etapasTemporarias = proj.etapas ? JSON.parse(JSON.stringify(proj.etapas)) : [];
     
     renderTarefasModalTemporario();
@@ -229,9 +226,6 @@ function fecharModalProjeto(e) {
     }
 }
 
-// ==========================================
-// TAREFAS/ETAPAS (EM MEMÓRIA ANTES DE SALVAR)
-// ==========================================
 function renderTarefasModalTemporario() {
     let html = '';
     let optionsColabs = '<option value="">Atribuir a...</option>';
@@ -274,12 +268,21 @@ function removerEtapaMemoria(idx) {
 }
 
 // ==========================================
-// SALVAMENTO DEFINITIVO (MANDA PRO FIREBASE)
+// SALVAMENTO DEFINITIVO (FIREBASE)
 // ==========================================
+
+// Previne erro se clicar em "Visível no Hub" num projeto que não existe
+async function toggleVisivelHub(isVisible) {
+    if(!projetoModalAberto || isCriandoNovo) return;
+    try {
+        await firestore.updateDoc(firestore.doc(db, "projetos", projetoModalAberto), { visivelHub: isVisible });
+        showToast(isVisible ? '👁️ Visível no Hub.' : '🙈 Oculto.', 'info');
+    } catch(e) { console.error(e); }
+}
+
 async function salvarProjetoSocio() {
     if (!projetoModalAberto) return;
 
-    // Coleta todos os dados preenchidos
     const projData = {
         nome: document.getElementById('modal-proj-nome').value || 'Projeto Sem Nome',
         cliente: document.getElementById('modal-proj-cliente').value || 'Cliente Não Informado',
@@ -289,7 +292,7 @@ async function salvarProjetoSocio() {
         equipeAtual: document.getElementById('modal-equipe').value.split(',').map(s=>s.trim()).filter(Boolean),
         licoes: document.getElementById('modal-licoes').value,
         visivelHub: document.getElementById('modal-proj-visivel').checked,
-        etapas: etapasTemporarias, // Manda a lista atualizada
+        etapas: etapasTemporarias,
         arquivado: false
     };
 
@@ -301,18 +304,18 @@ async function salvarProjetoSocio() {
     }
 
     try {
-        // Envia para o banco de dados de verdade
         await firestore.setDoc(firestore.doc(db, "projetos", projetoModalAberto), projData, { merge: true });
         showToast('Projeto salvo com sucesso!', 'success');
-        fecharModalProjeto(); // Fecha o modal após salvar
+        fecharModalProjeto(); 
     } catch (e) {
         console.error("Erro ao salvar projeto:", e);
-        showToast('Erro ao salvar no banco de dados.', 'danger');
+        // ALERTA DE ENGENHARIA PARA CAÇAR BUGS DE PERMISSÃO:
+        alert("ERRO NO BANCO DE DADOS FIREBASE: " + e.message); 
     }
 }
 
 // ==========================================
-// MOTOR DE ALOCAÇÃO (WORKLOAD) - Lê a nova chave 'etapas'
+// MOTOR DE ALOCAÇÃO (WORKLOAD)
 // ==========================================
 function renderWorkload() {
     const workload = {};
@@ -323,7 +326,6 @@ function renderWorkload() {
     for (const [pId, proj] of Object.entries(bdProjetos)) {
         if (proj.arquivado || proj.status_crm === 'concluido') continue;
         
-        // Agora usamos proj.etapas para garantir 100% de compatibilidade com o Hub
         (proj.etapas || []).forEach(t => {
             if (t.responsavel && workload[t.responsavel] !== undefined) {
                 if (t.status === 'concluido') {
@@ -384,7 +386,7 @@ function renderWorkload() {
 
 initSegurancaSocios();
 
-// Expondo as funções para os botões do HTML
+// Expondo para o HTML
 window.switchTab = switchTab;
 window.aplicarFiltros = aplicarFiltros;
 window.abrirModalProjeto = abrirModalProjeto;
@@ -394,3 +396,4 @@ window.salvarProjetoSocio = salvarProjetoSocio;
 window.adicionarNovaTarefaModal = adicionarNovaTarefaModal;
 window.atualizarEtapaMemoria = atualizarEtapaMemoria;
 window.removerEtapaMemoria = removerEtapaMemoria;
+window.toggleVisivelHub = toggleVisivelHub;
