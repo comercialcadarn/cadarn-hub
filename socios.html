@@ -11,14 +11,12 @@
     <style>
         .socio-header-badge { background: #FFC107; color: #000; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
         
-        /* Tabs e Filtros */
         .tabs-container { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; }
         .tab-btn { background: transparent; border: 1px solid transparent; color: var(--cadarn-cinza); padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.3s; }
         .tab-btn:hover { background: rgba(255,255,255,0.05); }
         .tab-btn.active { background: rgba(131, 46, 255, 0.15); color: var(--cadarn-branco); border-color: var(--cadarn-roxo); box-shadow: 0 0 15px rgba(131, 46, 255, 0.2); }
-        .filter-bar { display: flex; gap: 15px; margin-bottom: 20px; align-items: center; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); }
+        .filter-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); }
         
-        /* Kanban */
         .kanban-socio-board { display: flex; gap: 20px; overflow-x: auto; padding-bottom: 20px; min-height: 60vh; align-items: flex-start; }
         .kanban-socio-col { flex: 1; min-width: 320px; background: rgba(0,0,0,0.4); border-radius: 12px; padding: 15px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 15px; max-height: 75vh; overflow-y: auto;}
         .col-negociacao { border-top: 3px solid #6c757d; }
@@ -27,7 +25,6 @@
         .kanban-dropzone { min-height: 150px; display: flex; flex-direction: column; gap: 10px; flex-grow: 1; }
         .sortable-ghost { opacity: 0.4; background-color: rgba(131, 46, 255, 0.2); border: 2px dashed var(--cadarn-roxo); }
         
-        /* Workload (Pessoas) */
         .workload-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
         .wl-card { background: rgba(20,20,20,0.8); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
         .wl-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 15px; }
@@ -39,11 +36,13 @@
         .wl-stat-box { background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; text-align: center; }
         .wl-tasks-list { max-height: 150px; overflow-y: auto; font-size: 12px; display: flex; flex-direction: column; gap: 8px; padding-right: 5px;}
         
-        /* Modal de Tarefas (Projetos) */
         .task-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 10px; align-items: center; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid rgba(255,255,255,0.05); }
         .task-row input, .task-row select { width: 100%; background: rgba(0,0,0,0.5); border: 1px solid var(--border-color); color: white; padding: 8px; border-radius: 6px; font-size: 12px; }
         .task-row input:focus, .task-row select:focus { border-color: var(--cadarn-roxo); outline: none; }
-        .status-pendente { color: #6c757d; } .status-andamento { color: #b68aff; } .status-atrasado { color: #ff8793; } .status-concluido { color: #47e299; }
+        
+        /* Classe para transição suave das abas */
+        .fade-view { transition: opacity 0.3s ease; opacity: 1; }
+        .fade-hidden { opacity: 0; pointer-events: none; position: absolute; }
     </style>
 </head>
 <body>
@@ -71,13 +70,17 @@
         </div>
 
         <div class="filter-bar">
-            <span style="font-size: 12px; font-weight: 600; color: var(--cadarn-cinza);">Filtros:</span>
-            <select id="filtro-responsavel" class="edit-select" style="margin:0; padding:8px 12px; font-size: 13px;" onchange="aplicarFiltros()">
-                <option value="">Todos os Colaboradores</option>
-            </select>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <span style="font-size: 12px; font-weight: 600; color: var(--cadarn-cinza);">Filtros:</span>
+                <select id="filtro-responsavel" class="edit-select" style="margin:0; padding:8px 12px; font-size: 13px;" onchange="aplicarFiltros()">
+                    <option value="">Todos os Colaboradores</option>
+                </select>
+            </div>
+            
+            <button class="sp-btn-edit" style="background: var(--cadarn-roxo); color: white; padding: 10px 20px; font-size: 13px;" onclick="novoProjetoSocio()">➕ Criar Projeto Estratégico</button>
         </div>
 
-        <div id="view-projetos">
+        <div id="view-projetos" class="fade-view">
             <div class="kanban-socio-board">
                 <div class="kanban-socio-col col-negociacao">
                     <div class="kanban-col-header">🤝 Em Negociação / Backlog</div>
@@ -96,7 +99,7 @@
             </div>
         </div>
 
-        <div id="view-pessoas" style="display: none;">
+        <div id="view-pessoas" class="fade-view" style="display: none;">
             <div class="workload-grid" id="workload-container">
                 </div>
         </div>
@@ -108,9 +111,16 @@
             <button class="sp-close" onclick="fecharModalProjeto(event)" style="position:absolute; top:20px; right:20px;">✕</button>
             
             <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 20px;">
-                <div>
-                    <div style="font-size: 12px; color: var(--cadarn-roxo-claro); font-weight: 700; text-transform: uppercase; margin-bottom: 5px;" id="modal-proj-cliente">Cliente</div>
-                    <h2 style="font-size: 24px; color: white;" id="modal-proj-nome">Nome do Projeto</h2>
+                <div style="flex-grow: 1; padding-right: 20px;">
+                    <input type="text" id="modal-proj-cliente" class="edit-input" style="font-size: 13px; color: var(--cadarn-roxo-claro); font-weight: 700; text-transform: uppercase; margin-bottom: 5px; background: transparent; border: none; padding: 0;" placeholder="NOME DO CLIENTE" onchange="salvarMetaProjeto('cliente', this.value)">
+                    <input type="text" id="modal-proj-nome" class="edit-input" style="font-size: 26px; color: white; font-weight: bold; background: transparent; border: none; padding: 0;" placeholder="Nome do Projeto" onchange="salvarMetaProjeto('nome', this.value)">
+                </div>
+                
+                <div style="display: flex; align-items: center; background: rgba(0,0,0,0.4); padding: 10px 15px; border-radius: 8px; border: 1px solid var(--border-color);">
+                    <label style="font-size: 12px; color: var(--cadarn-branco); cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 600;">
+                        <input type="checkbox" id="modal-proj-visivel" onchange="toggleVisivelHub(this.checked)" style="accent-color: var(--cadarn-roxo); width: 16px; height: 16px; cursor: pointer;">
+                        👁️ Exibir no Hub da Equipe
+                    </label>
                 </div>
             </div>
 
@@ -127,8 +137,7 @@
                 <div>Ação</div>
             </div>
 
-            <div id="lista-tarefas" style="max-height: 400px; overflow-y: auto; padding-right: 5px;">
-                </div>
+            <div id="lista-tarefas" style="max-height: 400px; overflow-y: auto; padding-right: 5px;"></div>
         </div>
     </div>
 
