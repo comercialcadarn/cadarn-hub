@@ -16,13 +16,14 @@ let bdProjetos = {};
 let bdColabs = {};
 let filtroResponsavel = "";
 let projetoModalAberto = null;
+let usuarioLogado = localStorage.getItem('cadarn_user') || 'Sócio';
 
 async function initSegurancaSocios() {
     const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js");
     const { getAuth, onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js");
-    const { getFirestore, collection, onSnapshot, doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js");
+    const { getFirestore, collection, onSnapshot, doc, updateDoc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js");
 
-    firestore = { collection, onSnapshot, doc, updateDoc };
+    firestore = { collection, onSnapshot, doc, updateDoc, setDoc };
 
     const firebaseConfig = {
         apiKey: "AIzaSyAnClCbOU3JRBehpGvrKj8RrcS86lyl3gg",
@@ -37,10 +38,9 @@ async function initSegurancaSocios() {
     db = getFirestore(app);
     const auth = getAuth(app);
 
-    // GATEKEEPER DE SEGURANÇA
     onAuthStateChanged(auth, (user) => {
         if (!user || !emailsSocios.includes(user.email.toLowerCase().trim())) {
-            window.location.href = 'index.html'; // Expulsa intrusos
+            window.location.href = 'index.html'; 
         } else {
             document.getElementById('conteudo-restrito').style.display = 'block';
             iniciarListeners();
@@ -48,11 +48,7 @@ async function initSegurancaSocios() {
     });
 }
 
-// ==========================================
-// 1. SINCRONIZAÇÃO EM TEMPO REAL (FIREBASE)
-// ==========================================
 function iniciarListeners() {
-    // Escuta Projetos
     firestore.onSnapshot(firestore.collection(db, "projetos"), (snapshot) => {
         snapshot.docChanges().forEach((change) => {
             const id = change.doc.id;
@@ -65,7 +61,6 @@ function iniciarListeners() {
         if(projetoModalAberto) renderTarefasProjeto(projetoModalAberto);
     });
 
-    // Escuta Colaboradores
     firestore.onSnapshot(firestore.collection(db, "colaboradores"), (snapshot) => {
         snapshot.docChanges().forEach((change) => {
             bdColabs[change.doc.id] = change.doc.data();
@@ -78,11 +73,26 @@ function iniciarListeners() {
 }
 
 // ==========================================
-// 2. INTERFACE E NAVEGAÇÃO
+// CORREÇÃO DO BUG: SWITCH TABS E ANIMAÇÃO
 // ==========================================
 function switchTab(tab) {
-    document.getElementById('view-projetos').style.display = tab === 'projetos' ? 'block' : 'none';
-    document.getElementById('view-pessoas').style.display = tab === 'pessoas' ? 'block' : 'none';
+    const vProj = document.getElementById('view-projetos');
+    const vPess = document.getElementById('view-pessoas');
+    
+    // Efeito suave para garantir feedback visual
+    vProj.style.opacity = '0';
+    vPess.style.opacity = '0';
+
+    setTimeout(() => {
+        vProj.style.display = tab === 'projetos' ? 'block' : 'none';
+        vPess.style.display = tab === 'pessoas' ? 'block' : 'none';
+        
+        setTimeout(() => {
+            vProj.style.opacity = '1';
+            vPess.style.opacity = '1';
+        }, 50);
+    }, 150);
+
     document.getElementById('tab-btn-projetos').classList.toggle('active', tab === 'projetos');
     document.getElementById('tab-btn-pessoas').classList.toggle('active', tab === 'pessoas');
 }
@@ -116,8 +126,51 @@ function showToast(message, type='info') {
 }
 
 // ==========================================
-// 3. MÓDULO: KANBAN E PROJETOS
+// CRIAÇÃO E CONTROLE DE PROJETOS ESTRATÉGICOS
 // ==========================================
+async function novoProjetoSocio() {
+    const novoId = 'proj_' + Date.now();
+    const novoProj = { 
+        cliente: 'NOVO CLIENTE', 
+        nome: 'Projeto Estratégico', 
+        lider: usuarioLogado, 
+        descricao: '', 
+        equipeAtual: [], equipeAntiga: [], 
+        tarefas: [], 
+        dataCriacao: Date.now(), 
+        dataConclusao: null, 
+        tags: [], 
+        licoes: '', 
+        arquivado: false,
+        status_crm: 'negociacao',
+        visivelHub: false // Nasce oculto da equipe (Rascunho)
+    };
+    
+    try {
+        await firestore.setDoc(firestore.doc(db, "projetos", novoId), novoProj);
+        showToast('Projeto criado! Configure e libere a visão para a equipe.', 'success');
+        abrirModalProjeto(novoId);
+    } catch(e) {
+        console.error(e);
+        showToast('Erro ao criar projeto.', 'danger');
+    }
+}
+
+async function toggleVisivelHub(isVisible) {
+    if(!projetoModalAberto) return;
+    try {
+        await firestore.updateDoc(firestore.doc(db, "projetos", projetoModalAberto), { visivelHub: isVisible });
+        showToast(isVisible ? '👁️ Projeto agora está visível no Hub principal da Equipe.' : '🙈 Projeto ocultado do Hub principal.', 'info');
+    } catch(e) { console.error(e); }
+}
+
+async function salvarMetaProjeto(campo, valor) {
+    if(!projetoModalAberto) return;
+    try {
+        await firestore.updateDoc(firestore.doc(db, "projetos", projetoModalAberto), { [campo]: valor });
+    } catch(e) { console.error(e); }
+}
+
 function renderKanban() {
     let htmlNegociacao = ''; let htmlAndamento = ''; let htmlConcluido = '';
     const hoje = new Date(new Date().setHours(0,0,0,0));
@@ -125,7 +178,6 @@ function renderKanban() {
     for (const [id, proj] of Object.entries(bdProjetos)) {
         if (proj.arquivado) continue;
 
-        // Lógica de Filtro
         if (filtroResponsavel) {
             const temTarefaResponsavel = (proj.tarefas || []).some(t => t.responsavel === filtroResponsavel);
             if (!temTarefaResponsavel && proj.lider !== filtroResponsavel) continue;
@@ -133,8 +185,8 @@ function renderKanban() {
 
         const statusCrm = proj.status_crm || 'negociacao';
         const tarefas = proj.tarefas || [];
+        const isVisivel = proj.visivelHub ? '<span title="Visível no Hub da Equipe" style="color:#47e299;">👁️</span>' : '<span title="Rascunho (Oculto da equipe)" style="color:#ffc107;">🙈</span>';
         
-        // Verifica atrasos em tarefas do projeto
         let temAtraso = tarefas.some(t => t.status !== 'concluida' && t.prazo && new Date(t.prazo) < hoje);
         let borderStyle = temAtraso ? 'border-color: #dc3545; box-shadow: 0 0 10px rgba(220,53,69,0.3);' : '';
         let atrasoBadge = temAtraso ? '<span style="background:rgba(220,53,69,0.2); color:#ff8793; padding:2px 6px; border-radius:4px; font-size:9px; font-weight:bold; text-transform:uppercase;">Atrasado</span>' : '';
@@ -142,7 +194,7 @@ function renderKanban() {
         const card = `
             <div class="kanban-card" style="${borderStyle}" data-id="${id}" onclick="abrirModalProjeto('${id}')">
                 <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                    <div class="kanban-card-title">${proj.nome || 'Sem Nome'}</div>
+                    <div class="kanban-card-title">${proj.nome || 'Sem Nome'} ${isVisivel}</div>
                     ${atrasoBadge}
                 </div>
                 <div class="kanban-card-meta">${proj.cliente || 'Sem Cliente'}</div>
@@ -185,25 +237,21 @@ function inicializarDragAndDrop() {
                     try {
                         const projRef = firestore.doc(db, "projetos", projetoId);
                         await firestore.updateDoc(projRef, { status_crm: novoStatus });
-                        showToast('Status do projeto atualizado.', 'success');
-                    } catch (e) {
-                        console.error("Erro ao mover card", e);
-                        showToast('Erro ao atualizar projeto.', 'danger');
-                    }
+                    } catch (e) { console.error("Erro ao mover card", e); }
                 }
             },
         });
     });
 }
 
-// ==========================================
-// 4. MÓDULO: GESTÃO DE TAREFAS (MODAL)
-// ==========================================
 function abrirModalProjeto(id) {
     projetoModalAberto = id;
     const proj = bdProjetos[id];
-    document.getElementById('modal-proj-nome').innerText = proj.nome;
-    document.getElementById('modal-proj-cliente').innerText = proj.cliente;
+    
+    document.getElementById('modal-proj-nome').value = proj.nome || '';
+    document.getElementById('modal-proj-cliente').value = proj.cliente || '';
+    document.getElementById('modal-proj-visivel').checked = proj.visivelHub === true;
+
     renderTarefasProjeto(id);
     document.getElementById('modal-projeto').classList.add('active');
 }
@@ -222,7 +270,6 @@ function renderTarefasProjeto(id) {
     let tarefas = proj.tarefas || [];
     let html = '';
     
-    // Select dinâmico com os nomes dos colaboradores do banco
     let optionsColabs = '<option value="">Atribuir a...</option>';
     Object.keys(bdColabs).sort().forEach(nome => { optionsColabs += `<option value="${nome}">${nome}</option>`; });
 
@@ -256,9 +303,8 @@ async function adicionarNovaTarefa() {
     
     tarefas.push({ titulo: '', responsavel: '', prazo: '', status: 'pendente' });
     
-    try {
-        await firestore.updateDoc(firestore.doc(db, "projetos", projetoModalAberto), { tarefas: tarefas });
-    } catch(e) { console.error(e); }
+    try { await firestore.updateDoc(firestore.doc(db, "projetos", projetoModalAberto), { tarefas: tarefas }); } 
+    catch(e) { console.error(e); }
 }
 
 async function salvarAlteracaoTarefa(projetoId, taskIndex, campo, valor) {
@@ -267,9 +313,8 @@ async function salvarAlteracaoTarefa(projetoId, taskIndex, campo, valor) {
     
     if(tarefas[taskIndex]) {
         tarefas[taskIndex][campo] = valor;
-        try {
-            await firestore.updateDoc(firestore.doc(db, "projetos", projetoId), { tarefas: tarefas });
-        } catch(e) { console.error("Erro ao atualizar tarefa", e); }
+        try { await firestore.updateDoc(firestore.doc(db, "projetos", projetoId), { tarefas: tarefas }); } 
+        catch(e) { console.error("Erro ao atualizar tarefa", e); }
     }
 }
 
@@ -277,24 +322,21 @@ async function excluirTarefa(projetoId, taskIndex) {
     let proj = bdProjetos[projetoId];
     let tarefas = proj.tarefas || [];
     tarefas.splice(taskIndex, 1);
-    try {
-        await firestore.updateDoc(firestore.doc(db, "projetos", projetoId), { tarefas: tarefas });
-    } catch(e) { console.error(e); }
+    try { await firestore.updateDoc(firestore.doc(db, "projetos", projetoId), { tarefas: tarefas }); } 
+    catch(e) { console.error(e); }
 }
 
 // ==========================================
-// 5. MÓDULO: PESSOAS (WORKLOAD ALGORITHM)
+// 5. MOTOR DE ALOCAÇÃO (WORKLOAD)
 // ==========================================
 function renderWorkload() {
     const workload = {};
     const hoje = new Date(new Date().setHours(0,0,0,0));
 
-    // Inicializa todos os colaboradores do banco
     Object.keys(bdColabs).forEach(nome => {
         workload[nome] = { ativas: 0, atrasadas: 0, concluidas: 0, tarefasRefs: [] };
     });
 
-    // Varre o banco de dados cruzando informações de carga
     for (const [pId, proj] of Object.entries(bdProjetos)) {
         if (proj.arquivado || proj.status_crm === 'concluido') continue;
         
@@ -319,14 +361,10 @@ function renderWorkload() {
     }
 
     let html = '';
-    
-    // Renderiza os cards
     Object.keys(workload).sort().forEach(nome => {
         if (filtroResponsavel && nome !== filtroResponsavel) return;
 
         const data = workload[nome];
-        
-        // Algoritmo de Saúde (Health Check)
         let statusClass = 'wl-status-ideal'; let statusText = 'Equilibrado';
         if (data.ativas <= 1) { statusClass = 'wl-status-ocioso'; statusText = 'Ocioso (Capacidade)'; }
         if (data.ativas >= 5 || data.atrasadas >= 2) { statusClass = 'wl-status-sobrecarga'; statusText = 'Sobrecarga / Risco'; }
@@ -337,7 +375,6 @@ function renderWorkload() {
                     <div style="font-size:16px; font-weight:700; color:white;">👤 ${nome}</div>
                     <div class="wl-status-badge ${statusClass}">${statusText}</div>
                 </div>
-                
                 <div class="wl-stats">
                     <div class="wl-stat-box">
                         <div style="font-size:10px; color:var(--cadarn-cinza); text-transform:uppercase;">Tarefas Ativas</div>
@@ -348,7 +385,6 @@ function renderWorkload() {
                         <div style="font-size:20px; font-weight:800; color:${data.atrasadas > 0 ? '#ff8793' : 'white'};">${data.atrasadas}</div>
                     </div>
                 </div>
-                
                 <div>
                     <div style="font-size:11px; color:var(--cadarn-cinza); margin-bottom:8px; text-transform:uppercase; font-weight:700;">Lista de Foco (A Fazer)</div>
                     <div class="wl-tasks-list">
@@ -362,7 +398,6 @@ function renderWorkload() {
     document.getElementById('workload-container').innerHTML = html;
 }
 
-// Inicializa a segurança e o Firebase ao carregar o script
 initSegurancaSocios();
 
 // Expondo para o HTML
@@ -373,3 +408,6 @@ window.fecharModalProjeto = fecharModalProjeto;
 window.adicionarNovaTarefa = adicionarNovaTarefa;
 window.salvarAlteracaoTarefa = salvarAlteracaoTarefa;
 window.excluirTarefa = excluirTarefa;
+window.novoProjetoSocio = novoProjetoSocio;
+window.toggleVisivelHub = toggleVisivelHub;
+window.salvarMetaProjeto = salvarMetaProjeto;
