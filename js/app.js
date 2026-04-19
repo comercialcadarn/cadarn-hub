@@ -660,18 +660,46 @@ function renderMainProjects() {
     }
 
     if (modoVisualizacao === 'equipe') {
-        let workload = {};
-        for (const proj of Object.values(bdProjetos)) {
-            if (proj.arquivado) continue;
-            const todasConcluidas = proj.etapas && proj.etapas.length > 0 && proj.etapas.every(e => e.status === 'concluido');
-            if (todasConcluidas) continue; 
-            (proj.equipeAtual || []).forEach(membro => {
-                let nome = membro.split('(')[0].trim();
-                if(!workload[nome]) workload[nome] = { p: 0, atrasados: 0 };
-                workload[nome].p++;
-                if(proj.etapas && proj.etapas.some(e => e.prazo && new Date(e.prazo) < hojeCompare && e.status !== 'concluido')) { workload[nome].atrasados++; }
+        let temProjetosParaMostrar = false;
+
+    for (const [id, proj] of Object.entries(bdProjetos)) {
+        if (proj.arquivado) continue;
+        
+        // TRAVA DO RASCUNHO: Esconde projetos que o sócio não marcou como visíveis
+        if (proj.visivelHub === false) continue;
+        
+        if (filtroAtual !== 'Todos' && !(proj.tags || []).includes(filtroAtual)) continue;
+        if (filtroMembro && !(proj.equipeAtual || []).some(m => m.split('(')[0].trim() === filtroMembro)) continue;
+        
+        temProjetosParaMostrar = true;
+        let statusGeral = 'pendente'; let labelStatus = 'Aguardando'; let slaBadge = '';
+        if (!proj.etapas) proj.etapas = [];
+        const todasConcluidas = proj.etapas.length > 0 && proj.etapas.every(e => e.status === 'concluido');
+        const algumaAtiva = proj.etapas.some(e => e.status === 'ativo');
+        
+        if (todasConcluidas) { statusGeral = 'concluido'; labelStatus = 'Concluído'; } 
+        else {
+            if (algumaAtiva) { statusGeral = 'ativo'; labelStatus = 'Em Execução'; }
+            let temAtraso = false; let venceHoje = false;
+            proj.etapas.forEach(e => {
+                if (e.prazo && e.status !== 'concluido') {
+                    const dPrazo = new Date(e.prazo); dPrazo.setMinutes(dPrazo.getMinutes() + dPrazo.getTimezoneOffset());
+                    if (dPrazo < hojeCompare) temAtraso = true; else if (dPrazo.getTime() === hojeCompare.getTime()) venceHoje = true;
+                }
             });
+            if (temAtraso) slaBadge = '<span class="badge-danger">Atrasado</span>';
+            else if (venceHoje) slaBadge = '<span class="badge-warning">Vence Hoje</span>';
         }
+        
+        const tagsHtml = (proj.tags || []).map(t => `<span class="tag-pill">${sanitize(t)}</span>`).join('');
+        
+        if (modoVisualizacao === 'list' || modoVisualizacao === 'roadmap') {
+            listaNormal += `<div class="project-row" onclick="abrirProjeto('${sanitize(id)}')"><div><div style="font-weight: 500; font-size: 15px; margin-bottom: 5px; display:flex; align-items:center;">${sanitize(proj.nome)} ${slaBadge}</div><div style="display:flex; flex-wrap:wrap; margin-bottom:5px;">${tagsHtml}</div><div style="font-size: 12px; color: var(--cadarn-cinza);">Cliente: ${sanitize(proj.cliente)} • Líder: ${sanitize(proj.lider)}</div></div><div style="font-size: 13px; color: ${statusGeral === 'concluido' ? '#47e299' : (statusGeral === 'ativo' ? '#b68aff' : '#666')}; display: flex; align-items: center; font-weight: 500;"><span class="status-dot dot-${statusGeral}"></span> ${labelStatus}</div></div>`;
+        } else {
+            const cardHtml = `<div class="kanban-card" onclick="abrirProjeto('${sanitize(id)}')"><div style="display:flex; justify-content:space-between; align-items:flex-start;"><div class="kanban-card-title">${sanitize(proj.nome)}</div>${slaBadge}</div><div class="kanban-card-meta">${sanitize(proj.cliente)}</div><div style="margin-top: 10px;">${tagsHtml}</div><div style="margin-top: 10px; border-top: 1px solid rgba(131, 46, 255, 0.1); padding-top: 10px; font-size: 11px; color: var(--cadarn-cinza);">Líder: ${sanitize(proj.lider)}</div></div>`;
+            if(statusGeral === 'pendente') kanbanAguardando += cardHtml; else if(statusGeral === 'ativo') kanbanAtivos += cardHtml; else kanbanConcluidos += cardHtml;
+        }
+    }
         let eqHtml = '<div class="team-matrix-grid">';
         if(Object.keys(workload).length === 0) eqHtml += '<p style="color:var(--cadarn-cinza); font-size: 13px;">Ninguém alocado no momento.</p>';
         for (const [nome, data] of Object.entries(workload)) {
