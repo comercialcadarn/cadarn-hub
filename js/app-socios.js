@@ -77,15 +77,12 @@ function iniciarListeners() {
 function switchTab(tab) {
     const vProj = document.getElementById('view-projetos');
     const vPess = document.getElementById('view-pessoas');
-    
     vProj.style.opacity = '0'; vPess.style.opacity = '0';
-
     setTimeout(() => {
         vProj.style.display = tab === 'projetos' ? 'block' : 'none';
         vPess.style.display = tab === 'pessoas' ? 'block' : 'none';
         setTimeout(() => { vProj.style.opacity = '1'; vPess.style.opacity = '1'; }, 50);
     }, 150);
-
     document.getElementById('tab-btn-projetos').classList.toggle('active', tab === 'projetos');
     document.getElementById('tab-btn-pessoas').classList.toggle('active', tab === 'pessoas');
 }
@@ -112,16 +109,12 @@ function showToast(message, type='info') {
     setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000);
 }
 
-// ==========================================
-// KANBAN E RENDERIZAÇÃO
-// ==========================================
 function renderKanban() {
     let htmlNegociacao = ''; let htmlAndamento = ''; let htmlConcluido = '';
     const hoje = new Date(new Date().setHours(0,0,0,0));
 
     for (const [id, proj] of Object.entries(bdProjetos)) {
         if (proj.arquivado) continue;
-
         if (filtroResponsavel) {
             const temTarefaResponsavel = (proj.etapas || []).some(t => t.responsavel === filtroResponsavel);
             if (!temTarefaResponsavel && proj.lider !== filtroResponsavel && !(proj.equipeAtual || []).includes(filtroResponsavel)) continue;
@@ -129,11 +122,11 @@ function renderKanban() {
 
         const statusCrm = proj.status_crm || 'negociacao';
         const etapas = proj.etapas || [];
-        const isVisivel = proj.visivelHub ? '<span title="Visível no Hub da Equipe" style="color:#47e299;">👁️</span>' : '<span title="Rascunho (Oculto da equipe)" style="color:#ffc107;">🙈</span>';
+        const isVisivel = proj.visivelHub ? '<span title="Visível no Hub" style="color:#47e299;">👁️</span>' : '<span title="Rascunho" style="color:#ffc107;">🙈</span>';
         
         let temAtraso = etapas.some(t => t.status !== 'concluido' && t.prazo && new Date(t.prazo) < hoje);
         let borderStyle = temAtraso ? 'border-color: #dc3545; box-shadow: 0 0 10px rgba(220,53,69,0.3);' : '';
-        let atrasoBadge = temAtraso ? '<span style="background:rgba(220,53,69,0.2); color:#ff8793; padding:2px 6px; border-radius:4px; font-size:9px; font-weight:bold; text-transform:uppercase;">Atrasado</span>' : '';
+        let atrasoBadge = temAtraso ? '<span style="background:rgba(220,53,69,0.2); color:#ff8793; padding:2px 6px; border-radius:4px; font-size:9px; font-weight:bold;">Atrasado</span>' : '';
 
         const card = `
             <div class="kanban-card" style="${borderStyle}" data-id="${id}" onclick="abrirModalProjeto('${id}')">
@@ -147,12 +140,10 @@ function renderKanban() {
                 </div>
             </div>
         `;
-
         if (statusCrm === 'negociacao') htmlNegociacao += card;
         else if (statusCrm === 'andamento') htmlAndamento += card;
         else if (statusCrm === 'concluido') htmlConcluido += card;
     }
-
     document.getElementById('col-negociacao').innerHTML = htmlNegociacao || '<div style="font-size:12px; color:var(--cadarn-cinza);">Vazio</div>';
     document.getElementById('col-andamento').innerHTML = htmlAndamento || '<div style="font-size:12px; color:var(--cadarn-cinza);">Vazio</div>';
     document.getElementById('col-concluidos').innerHTML = htmlConcluido || '<div style="font-size:12px; color:var(--cadarn-cinza);">Vazio</div>';
@@ -167,19 +158,15 @@ function inicializarDragAndDrop() {
                 const itemEl = evt.item; const toList = evt.to;
                 const projetoId = itemEl.getAttribute('data-id');
                 const novoStatus = toList.getAttribute('data-status');
-
                 if(projetoId && novoStatus) {
                     try { await firestore.updateDoc(firestore.doc(db, "projetos", projetoId), { status_crm: novoStatus }); } 
-                    catch (e) { console.error(e); }
+                    catch (e) { alert("ERRO AO MOVER CARD: " + e.message); }
                 }
             },
         });
     });
 }
 
-// ==========================================
-// CRIAÇÃO E SALVAMENTO DE PROJETOS (MODAL)
-// ==========================================
 function novoProjetoSocio() {
     isCriandoNovo = true;
     projetoModalAberto = 'proj_' + Date.now();
@@ -213,7 +200,6 @@ function abrirModalProjeto(id) {
     document.getElementById('modal-proj-visivel').checked = proj.visivelHub === true;
 
     etapasTemporarias = proj.etapas ? JSON.parse(JSON.stringify(proj.etapas)) : [];
-    
     renderTarefasModalTemporario();
     document.getElementById('modal-projeto').classList.add('active');
 }
@@ -233,7 +219,6 @@ function renderTarefasModalTemporario() {
 
     etapasTemporarias.forEach((t, idx) => {
         let optionsResps = optionsColabs.replace(`value="${t.responsavel || ''}"`, `value="${t.responsavel || ''}" selected`);
-        
         html += `
             <div class="task-row">
                 <input type="text" value="${t.titulo || ''}" placeholder="Descrição da etapa" onchange="atualizarEtapaMemoria(${idx}, 'titulo', this.value)">
@@ -244,7 +229,7 @@ function renderTarefasModalTemporario() {
                     <option value="ativo" ${t.status === 'ativo'?'selected':''}>Ativo/Fazendo</option>
                     <option value="concluido" ${t.status === 'concluido'?'selected':''}>Concluída</option>
                 </select>
-                <button class="sp-btn-edit" style="background: rgba(220,53,69,0.2); color: #ff8793; border-color: transparent; padding: 6px;" onclick="removerEtapaMemoria(${idx})" title="Excluir">🗑️</button>
+                <button class="sp-btn-edit" style="background: rgba(220,53,69,0.2); color: #ff8793; border-color: transparent; padding: 6px;" onclick="removerEtapaMemoria(${idx})">🗑️</button>
             </div>
         `;
     });
@@ -258,27 +243,8 @@ function adicionarNovaTarefaModal() {
     renderTarefasModalTemporario();
 }
 
-function atualizarEtapaMemoria(idx, campo, valor) {
-    if(etapasTemporarias[idx]) etapasTemporarias[idx][campo] = valor;
-}
-
-function removerEtapaMemoria(idx) {
-    etapasTemporarias.splice(idx, 1);
-    renderTarefasModalTemporario();
-}
-
-// ==========================================
-// SALVAMENTO DEFINITIVO (FIREBASE)
-// ==========================================
-
-// Previne erro se clicar em "Visível no Hub" num projeto que não existe
-async function toggleVisivelHub(isVisible) {
-    if(!projetoModalAberto || isCriandoNovo) return;
-    try {
-        await firestore.updateDoc(firestore.doc(db, "projetos", projetoModalAberto), { visivelHub: isVisible });
-        showToast(isVisible ? '👁️ Visível no Hub.' : '🙈 Oculto.', 'info');
-    } catch(e) { console.error(e); }
-}
+function atualizarEtapaMemoria(idx, campo, valor) { if(etapasTemporarias[idx]) etapasTemporarias[idx][campo] = valor; }
+function removerEtapaMemoria(idx) { etapasTemporarias.splice(idx, 1); renderTarefasModalTemporario(); }
 
 async function salvarProjetoSocio() {
     if (!projetoModalAberto) return;
@@ -305,18 +271,15 @@ async function salvarProjetoSocio() {
 
     try {
         await firestore.setDoc(firestore.doc(db, "projetos", projetoModalAberto), projData, { merge: true });
-        showToast('Projeto salvo com sucesso!', 'success');
+        showToast('Projeto salvo com sucesso no Firebase!', 'success');
         fecharModalProjeto(); 
     } catch (e) {
+        // ESSE ALERTA É PARA VOCÊ SABER SE O FIREBASE BLOQUEOU SEU ACESSO
+        alert("ERRO AO SALVAR NO FIREBASE: " + e.message + "\n\nVerifique se as Rules do Firestore estão corretas.");
         console.error("Erro ao salvar projeto:", e);
-        // ALERTA DE ENGENHARIA PARA CAÇAR BUGS DE PERMISSÃO:
-        alert("ERRO NO BANCO DE DADOS FIREBASE: " + e.message); 
     }
 }
 
-// ==========================================
-// MOTOR DE ALOCAÇÃO (WORKLOAD)
-// ==========================================
 function renderWorkload() {
     const workload = {};
     const hoje = new Date(new Date().setHours(0,0,0,0));
@@ -328,9 +291,8 @@ function renderWorkload() {
         
         (proj.etapas || []).forEach(t => {
             if (t.responsavel && workload[t.responsavel] !== undefined) {
-                if (t.status === 'concluido') {
-                    workload[t.responsavel].concluidas++;
-                } else {
+                if (t.status === 'concluido') { workload[t.responsavel].concluidas++; } 
+                else {
                     workload[t.responsavel].ativas++;
                     let isAtrasada = t.prazo && new Date(t.prazo) < hoje;
                     if(isAtrasada) workload[t.responsavel].atrasadas++;
@@ -380,13 +342,11 @@ function renderWorkload() {
             </div>
         `;
     });
-
     document.getElementById('workload-container').innerHTML = html;
 }
 
 initSegurancaSocios();
 
-// Expondo para o HTML
 window.switchTab = switchTab;
 window.aplicarFiltros = aplicarFiltros;
 window.abrirModalProjeto = abrirModalProjeto;
@@ -396,4 +356,3 @@ window.salvarProjetoSocio = salvarProjetoSocio;
 window.adicionarNovaTarefaModal = adicionarNovaTarefaModal;
 window.atualizarEtapaMemoria = atualizarEtapaMemoria;
 window.removerEtapaMemoria = removerEtapaMemoria;
-window.toggleVisivelHub = toggleVisivelHub;
