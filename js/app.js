@@ -246,6 +246,7 @@ function abrirPerfil(nome) {
 
     for (const [id, proj] of Object.entries(bdProjetos)) {
         if (proj.arquivado) continue;
+        if (proj.visivelHub === false) continue;
         
         const emEquipe = (proj.equipeAtual || []).some(m => m.split('(')[0].trim() === nome);
         const exEquipe = (proj.equipeAntiga || []).some(m => m.split('(')[0].trim() === nome);
@@ -766,16 +767,6 @@ function renderMainProjects() {
         }
     }
     atualizarDashboard(); 
-}
-
-function novoProjeto() {
-    const novoId = 'proj_' + Date.now();
-    bdProjetos[novoId] = { 
-        cliente: 'Novo Cliente', nome: 'Novo Projeto', lider: '', descricao: 'Descreva...', 
-        equipeAtual: [], equipeAntiga: [], etapas: [{ titulo: 'Etapa Inicial', status: 'pendente', prazo: '' }], 
-        dataCriacao: Date.now(), dataConclusao: null, tags: [], licoes: '', arquivado: false
-    };
-    projetoAbertoAtual = novoId; abrirProjeto(novoId); iniciarEdicao(); 
 }
 
 function arquivarProjeto() {
@@ -1517,7 +1508,6 @@ window.toggleTheme = toggleTheme;
 window.toggleFullScreen = toggleFullScreen;
 window.setVisualizacao = setVisualizacao;
 window.startPresentation = startPresentation;
-window.novoProjeto = novoProjeto;
 window.forceFetchNews = forceFetchNews;
 window.fecharBriefing = fecharBriefing;
 window.closePresentation = closePresentation;
