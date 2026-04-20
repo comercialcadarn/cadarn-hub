@@ -94,6 +94,13 @@
     <button class="view-btn" id="tab-btn-cronograma" onclick="switchTab('cronograma')">📈 Cronograma</button>
     <button class="view-btn" id="tab-btn-calendario" onclick="switchTab('calendario')">📅 Calendário</button>
 </div>
+        <div class="import-controls" style="margin-left: 20px;">
+    <input type="file" id="file-import-pipe" accept=".csv" style="display:none" onchange="importarDados(event, 'pipe')">
+    <input type="file" id="file-import-projetos" accept=".csv" style="display:none" onchange="importarDados(event, 'projetos')">
+
+    <button class="sp-btn-edit" onclick="document.getElementById('file-import-pipe').click()">📥 Importar Pipe</button>
+    <button class="sp-btn-edit" onclick="document.getElementById('file-import-projetos').click()">📂 Importar Projetos</button>
+</div>
 
             <div style="display: flex; gap: 15px; align-items: center;">
                 <div style="display: flex; align-items: center; gap: 10px;">
