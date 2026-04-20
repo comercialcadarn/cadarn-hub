@@ -24,9 +24,9 @@ let usuarioLogado = localStorage.getItem('cadarn_user') || 'Sócio';
 async function initSegurancaSocios() {
     const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js");
     const { getAuth, onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js");
-    const { getFirestore, collection, onSnapshot, doc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js");
+    const { getFirestore, collection, onSnapshot, doc, updateDoc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js");
 
-    firestore = { collection, onSnapshot, doc, setDoc };
+    firestore = { collection, onSnapshot, doc, updateDoc, setDoc };
 
     const firebaseConfig = {
         apiKey: "AIzaSyAnClCbOU3JRBehpGvrKj8RrcS86lyl3gg",
@@ -182,7 +182,6 @@ function inicializarDragAndDrop() {
 
                 if(projetoId && novoStatus) {
                     try { 
-                        // Usando setDoc com merge resolve o problema do banco rejeitar
                         await firestore.setDoc(firestore.doc(db, "projetos", projetoId), { status_crm: novoStatus }, { merge: true }); 
                     } 
                     catch (e) { console.error("Erro ao mover card:", e); }
@@ -282,11 +281,18 @@ function removerEtapaMemoria(idx) {
     renderTarefasModalTemporario();
 }
 
-// O NÚCLEO DO SALVAMENTO (O que impedia do projeto aparecer)
+// A FUNÇÃO QUE FALTAVA NA EXPORTAÇÃO
+async function toggleVisivelHub(isVisible) {
+    if(!projetoModalAberto || isCriandoNovo) return;
+    try {
+        await firestore.updateDoc(firestore.doc(db, "projetos", projetoModalAberto), { visivelHub: isVisible });
+        showToast(isVisible ? '👁️ Visível no Hub.' : '🙈 Oculto.', 'info');
+    } catch(e) { console.error(e); }
+}
+
 async function salvarProjetoSocio() {
     if (!projetoModalAberto) return;
 
-    // Se o sócio esquecer o nome, a gente põe um padrão pra não quebrar
     const nomeProj = document.getElementById('modal-proj-nome').value.trim() || 'Projeto Estratégico';
     const clienteProj = document.getElementById('modal-proj-cliente').value.trim() || 'Cliente';
 
@@ -311,7 +317,6 @@ async function salvarProjetoSocio() {
     }
 
     try {
-        // SET DOC garante que o Firebase crie o documento forçadamente se ele não existir
         await firestore.setDoc(firestore.doc(db, "projetos", projetoModalAberto), projData, { merge: true });
         showToast('✅ Projeto salvo e sincronizado na nuvem!', 'success');
         fecharModalProjeto(); 
@@ -403,3 +408,4 @@ window.salvarProjetoSocio = salvarProjetoSocio;
 window.adicionarNovaTarefaModal = adicionarNovaTarefaModal;
 window.atualizarEtapaMemoria = atualizarEtapaMemoria;
 window.removerEtapaMemoria = removerEtapaMemoria;
+window.toggleVisivelHub = toggleVisivelHub;
