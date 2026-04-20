@@ -13,9 +13,10 @@
         --glass: rgba(255, 255, 255, 0.03);
         --glass-border: rgba(255, 255, 255, 0.08);
         --premium-gold: linear-gradient(135deg, #FFC107, #FF9800);
+        --premium-roxo: #832EFF;
     }
 
-    body { background-color: #050505; color: #e0e0e0; font-family: 'Inter', sans-serif; overflow-x: hidden; }
+    body { background-color: #050505; color: #e0e0e0; font-family: 'Inter', sans-serif; overflow-x: hidden; margin: 0; }
 
     /* Efeito de Iluminação de Fundo */
     .ambient-glow {
@@ -129,15 +130,44 @@
         color: #fff; padding: 10px 15px; border-radius: 10px;
         font-size: 13px; outline: none; cursor: pointer;
     }
+
+    /* --- CORREÇÃO DO WORKLOAD (GRID) --- */
+    .workload-grid { 
+        display: grid; 
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); 
+        gap: 25px; 
+    }
+    .wl-card { 
+        background: rgba(255,255,255,0.02); 
+        border: 1px solid var(--glass-border); 
+        border-radius: 20px; padding: 25px; transition: 0.3s;
+    }
+    .wl-status-badge { padding: 4px 12px; border-radius: 20px; font-size: 10px; font-weight: 800; text-transform: uppercase; margin-top: 5px; display: inline-block; }
+    .wl-status-ocioso { background: rgba(71, 226, 153, 0.1); color: #47e299; }
+    .wl-status-ideal { background: rgba(131, 46, 255, 0.1); color: #c5a3ff; }
+    .wl-status-sobrecarga { background: rgba(220, 53, 69, 0.1); color: #ff8793; }
+
+    /* --- CORREÇÃO DO CALENDÁRIO (GRID) --- */
+    .calendar-wrapper { background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); border-radius: 20px; overflow: hidden; }
+    .calendar-header { display: flex; justify-content: space-between; align-items: center; padding: 20px; border-bottom: 1px solid var(--glass-border); }
+    .calendar-grid { 
+        display: grid; 
+        grid-template-columns: repeat(7, 1fr); /* Força as 7 colunas */
+        background: var(--glass-border); gap: 1px; 
+    }
+    .calendar-day-name { background: #0a0a0a; padding: 15px; font-size: 11px; font-weight: 800; color: #666; text-transform: uppercase; text-align: center; }
+    .calendar-day { background: #0f0f0f; min-height: 120px; padding: 10px; transition: 0.2s; }
+    .calendar-day.today { background: rgba(131, 46, 255, 0.05); }
+    .calendar-date { font-size: 14px; font-weight: 700; margin-bottom: 10px; display: block; }
+    .cal-task { background: rgba(131, 46, 255, 0.2); color: #c5a3ff; font-size: 10px; padding: 5px 8px; border-radius: 6px; margin-bottom: 4px; border-left: 3px solid var(--premium-roxo); }
     </style>
 </head>
 <body>
     <div id="toast-container" class="toast-container"></div>
+    <div class="ambient-glow"></div>
 
     <div class="container" style="display: none;" id="conteudo-restrito">
         
-        <div class="ambient-glow"></div>
-
         <header>
             <div class="brand-container">
                 <div class="logo-text">CADARN <span>HUB</span></div>
@@ -171,7 +201,7 @@
                 </div>
                 
                 <button class="btn-create" onclick="novoProjetoSocio()">
-                    <span style="font-size: 18px; margin-right: 5px;">+</span> Criar Projeto
+                    <span>+</span> Criar Projeto
                 </button>
             </div>
         </div>
@@ -201,37 +231,29 @@
         </div>
 
         <div id="view-pessoas" class="fade-view" style="display: none; padding: 0 40px;">
-        <div class="workload-grid" id="workload-container">
-            </div>
-    </div>
+            <div class="workload-grid" id="workload-container"></div>
+        </div>
 
         <div id="view-cronograma" class="fade-view" style="display: none; padding: 0 40px;">
             <div id="gantt-master-container"></div>
         </div>
 
         <div id="view-calendario" class="fade-view" style="display: none; padding: 0 40px;">
-        <div class="calendar-wrapper">
-            <div class="calendar-header">
-                <div class="calendar-title" id="cal-month-year">Abril 2026</div>
-                <div class="calendar-nav">
-                    <button class="btn-import" onclick="mudarMes(-1)">← Anterior</button>
-                    <button class="btn-import" onclick="irParaHoje()">Hoje</button>
-                    <button class="btn-import" onclick="mudarMes(1)">Próximo →</button>
+            <div class="calendar-wrapper">
+                <div class="calendar-header">
+                    <div class="calendar-title" id="cal-month-year">Abril 2026</div>
+                    <div class="calendar-nav">
+                        <button class="btn-import" onclick="mudarMes(-1)">← Anterior</button>
+                        <button class="btn-import" onclick="irParaHoje()">Hoje</button>
+                        <button class="btn-import" onclick="mudarMes(1)">Próximo →</button>
+                    </div>
                 </div>
-            </div>
-            <div class="calendar-grid">
-                <div class="calendar-day-name">Seg</div>
-                <div class="calendar-day-name">Ter</div>
-                <div class="calendar-day-name">Qua</div>
-                <div class="calendar-day-name">Qui</div>
-                <div class="calendar-day-name">Sex</div>
-                <div class="calendar-day-name">Sáb</div>
-                <div class="calendar-day-name">Dom</div>
-            </div>
-            <div class="calendar-grid" id="calendar-body">
+                <div class="calendar-grid">
+                    <div class="calendar-day-name">Seg</div><div class="calendar-day-name">Ter</div><div class="calendar-day-name">Qua</div><div class="calendar-day-name">Qui</div><div class="calendar-day-name">Sex</div><div class="calendar-day-name">Sáb</div><div class="calendar-day-name">Dom</div>
                 </div>
+                <div class="calendar-grid" id="calendar-body"></div>
+            </div>
         </div>
-    </div>
 
         <div id="modal-projeto" class="modal-overlay" onclick="fecharModalProjeto(event)">
             <div class="modal-content" style="max-width: 1100px; width: 95%; text-align: left; max-height: 90vh; overflow-y: auto; background: rgba(15,15,15,0.98); border: 1px solid rgba(255,193,7,0.3); box-shadow: 0 30px 80px rgba(0,0,0,0.9);" onclick="event.stopPropagation()">
@@ -286,7 +308,8 @@
                 </div>
             </div>
         </div>
-        </div>
+
+    </div>
 
     <script type="module" src="js/app-socios.js"></script>
 </body>
