@@ -1242,7 +1242,8 @@ function renderTeamAvailability() {
     });
     
     members.sort((a, b) => b.pct - a.pct);
-    const topMembers = members.slice(0, 6);
+    // Aumentamos o limite para aproveitar a barra de rolagem
+    const topMembers = members.slice(0, 15);
 
     const container = document.getElementById('teamAvailabilityContainer');
     if (topMembers.length === 0) {
@@ -1250,7 +1251,11 @@ function renderTeamAvailability() {
         return;
     }
 
+    // CORREÇÃO: Liga a barra de rolagem horizontal!
+    container.style.display = 'flex';
     container.style.gap = '18px'; 
+    container.style.overflowX = 'auto'; // Habilita rolagem lateral
+    container.style.paddingBottom = '15px'; // Espaço para a barra de rolagem não cortar os avatares
     
     container.innerHTML = topMembers.map(m => {
         let ringColor = '#47e299';
@@ -1260,7 +1265,7 @@ function renderTeamAvailability() {
         return `
             <div style="display:flex; flex-direction:column; align-items:center; cursor:pointer; gap:8px; min-width: 65px; flex-shrink: 0; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" onclick="abrirPerfil('${sanitize(m.nome)}')">
                 <div style="width: 50px; height: 50px; border-radius: 50%; background: conic-gradient(${ringColor} ${m.pct}%, rgba(255,255,255,0.05) 0); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 15px ${ringColor}40;">
-                    <div style="width: 44px; height: 44px; border-radius: 50%; background: var(--bg-card); display: flex; align-items: center; justify-content: center;">
+                    <div style="width: 44px; height: 44px; border-radius: 50%; background: var(--bg-card, #151515); display: flex; align-items: center; justify-content: center;">
                         ${getAvatarHtml(m.nome, 40)}
                     </div>
                 </div>
