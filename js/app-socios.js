@@ -593,24 +593,28 @@ function setupAutocompleteMulti(inputElement, arr) {
 // ==========================================
 // MOTOR DO CALENDÁRIO MENSAL (GRID)
 // ==========================================
-// Variável global para controlar o mês atual do calendário
-window.dataCalendarioSocio = new Date();
+// Unificamos a variável para 'window.dataAtualCalendario'
+window.dataAtualCalendario = new Date();
 
 window.mudarMes = function(direcao) {
-    window.dataCalendarioSocio.setMonth(window.dataCalendarioSocio.getMonth() + direcao);
+    // Agora o botão atualiza a variável correta
+    window.dataAtualCalendario.setMonth(window.dataAtualCalendario.getMonth() + direcao);
     renderCalendario();
 };
 
 window.irParaHoje = function() {
-    window.dataCalendarioSocio = new Date();
+    // Retorna para o mês atual
+    window.dataAtualCalendario = new Date();
     renderCalendario();
 };
+
 function renderCalendario() {
     const calendarBody = document.getElementById('calendar-body');
     if (!calendarBody) return;
 
-    const year = dataAtualCalendario.getFullYear();
-    const month = dataAtualCalendario.getMonth();
+    // Lendo as datas da mesma variável que os botões modificam!
+    const year = window.dataAtualCalendario.getFullYear();
+    const month = window.dataAtualCalendario.getMonth();
     
     const mesesStr = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
     const elTitulo = document.getElementById('cal-month-year');
@@ -626,7 +630,6 @@ function renderCalendario() {
             }
         });
     }
-
     let primeiroDia = new Date(year, month, 1).getDay();
     let indexPrimeiroDia = primeiroDia === 0 ? 6 : primeiroDia - 1; 
     let diasNoMes = new Date(year, month + 1, 0).getDate();
