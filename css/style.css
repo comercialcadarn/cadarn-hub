@@ -488,3 +488,33 @@
 .gb-concluido { background: linear-gradient(90deg, #47e299, #20c997); color: #000; }
 .gb-concluido .gantt-bar-avatar { border-color: rgba(0,0,0,0.2); color: #000; }
 .gb-atrasado { background: linear-gradient(90deg, #ff8793, #dc3545); }
+
+/* ========================================================= */
+/* SCROLLBAR PREMIUM PARA OS COLABORADORES ALOCADOS          */
+/* ========================================================= */
+
+#teamAvailabilityContainer {
+    /* Garante que o scroll é suave no celular e visível no PC */
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.02);
+    padding-bottom: 15px; /* Espaço para a barra não cortar os nomes */
+}
+
+/* Estilização para Chrome, Edge e Safari */
+#teamAvailabilityContainer::-webkit-scrollbar {
+    height: 6px; /* Altura da barra (fina e elegante) */
+}
+
+#teamAvailabilityContainer::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.02); /* Fundo da trilha quase invisível */
+    border-radius: 10px;
+}
+
+#teamAvailabilityContainer::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15); /* Cor da barrinha (vidro fosco) */
+    border-radius: 10px;
+}
+
+#teamAvailabilityContainer::-webkit-scrollbar-thumb:hover {
+    background: rgba(131, 46, 255, 0.6); /* Brilha com a cor roxa premium ao passar o mouse */
+}
