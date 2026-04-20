@@ -97,7 +97,7 @@ function iniciarListeners() {
 function switchTab(tab) {
     const views = ['projetos', 'pessoas', 'cronograma', 'calendario'];
     
-    // 1. Esconde todas as telas com transição
+    // 1. Esconde todas as telas
     views.forEach(v => {
         const el = document.getElementById(`view-${v}`);
         if(el) {
@@ -113,22 +113,19 @@ function switchTab(tab) {
     const targetBtn = document.getElementById(`tab-btn-${tab}`);
     
     if(targetView) {
-        targetView.style.display = 'block';
+        // CORREÇÃO: Respeitar a grade (Grid) do Pipeline
+        if (tab === 'projetos') {
+            targetView.style.display = 'grid';
+        } else {
+            targetView.style.display = 'block';
+        }
+        
         if(targetBtn) targetBtn.classList.add('active');
         
-        // Pequeno atraso para a animação de fade-in
         setTimeout(() => {
             targetView.style.opacity = '1';
-            
-            // 3. GATILHOS DE RENDERIZAÇÃO (O segredo para não aparecer branco)
-            if(tab === 'cronograma') {
-                console.log("Renderizando Cronograma...");
-                renderCronograma('gantt-master-container', filtroResponsavel);
-            }
-            if(tab === 'calendario') {
-                console.log("Renderizando Calendário...");
-                renderCalendario();
-            }
+            if(tab === 'cronograma') renderCronograma('gantt-master-container', filtroResponsavel);
+            if(tab === 'calendario') renderCalendario();
         }, 50);
     }
 }
