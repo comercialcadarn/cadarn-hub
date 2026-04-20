@@ -30,9 +30,6 @@ let isCriandoNovo = false;
 let etapasTemporarias = [];
 let usuarioLogado = localStorage.getItem('cadarn_user') || 'Sócio';
 
-// Controle do Calendário
-let dataAtualCalendario = new Date();
-
 async function initSegurancaSocios() {
     const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js");
     const { getAuth, onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js");
@@ -76,7 +73,6 @@ function iniciarUI() {
     if(datalistLider) {
         datalistLider.innerHTML = listaColaboradores.map(nome => `<option value="${nome}">`).join('');
     }
-
     setupAutocompleteMulti(document.getElementById("modal-equipe"), listaColaboradores);
 }
 
@@ -89,13 +85,13 @@ function iniciarListeners() {
         });
         renderKanban();
         renderWorkload();
-        renderCalendario(); // Renderiza calendário na atualização
+        renderCronograma('gantt-master-container', filtroResponsavel);
     });
     inicializarDragAndDrop();
 }
 
 function switchTab(tab) {
-    const views = ['projetos', 'pessoas', 'calendario'];
+    const views = ['projetos', 'pessoas', 'cronograma'];
     views.forEach(v => {
         const el = document.getElementById(`view-${v}`);
         if(el) el.style.opacity = '0';
@@ -111,7 +107,7 @@ function switchTab(tab) {
                 const el = document.getElementById(`view-${v}`);
                 if(el) el.style.opacity = '1';
             });
-            if(tab === 'calendario') renderCalendario(); // Força render do calendário ao abrir
+            if(tab === 'cronograma') renderCronograma('gantt-master-container', filtroResponsavel);
         }, 50);
     }, 150);
 
@@ -123,7 +119,7 @@ function switchTab(tab) {
 
 function aplicarFiltros() {
     filtroResponsavel = document.getElementById('filtro-responsavel').value;
-    renderKanban(); renderWorkload(); renderCalendario();
+    renderKanban(); renderWorkload(); renderCronograma('gantt-master-container', filtroResponsavel);
 }
 
 function showToast(message, type='info') {
@@ -142,7 +138,7 @@ function sanitize(str) {
 }
 
 // ==========================================
-// KANBAN RENDER
+// KANBAN
 // ==========================================
 function renderKanban() {
     let htmlNegociacao = ''; let htmlAndamento = ''; let htmlConcluido = '';
@@ -211,7 +207,7 @@ function inicializarDragAndDrop() {
 }
 
 // ==========================================
-// CONTROLE DO MODAL (C/ KICK-OFF EXPANDIDO)
+// MODAL DO PROJETO
 // ==========================================
 function novoProjetoSocio() {
     isCriandoNovo = true;
@@ -271,7 +267,6 @@ function renderTarefasModalTemporario() {
 
     etapasTemporarias.forEach((t, idx) => {
         let optionsResps = optionsColabs.replace(`value="${t.responsavel || ''}"`, `value="${t.responsavel || ''}" selected`);
-        
         html += `
             <div class="task-container">
                 <div class="task-row">
@@ -283,15 +278,14 @@ function renderTarefasModalTemporario() {
                         <option value="ativo" ${t.status === 'ativo'?'selected':''}>Fazendo</option>
                         <option value="concluido" ${t.status === 'concluido'?'selected':''}>Concluída</option>
                     </select>
-                    <button class="sp-btn-edit" style="background: rgba(220,53,69,0.2); color: #ff8793; border-color: transparent; padding: 6px 12px;" onclick="removerEtapaMemoria(${idx})" title="Excluir Etapa">✕</button>
+                    <button class="sp-btn-edit" style="background: rgba(220,53,69,0.2); color: #ff8793; border-color: transparent; padding: 6px 12px;" onclick="removerEtapaMemoria(${idx})" title="Excluir">✕</button>
                 </div>
                 <div class="task-kickoff">
-                    <textarea placeholder="🔗 Informações de Kick-off: Cole links de pastas do Drive, documentos de referência, ou instruções claras para o colaborador..." onchange="atualizarEtapaMemoria(${idx}, 'kickoff', this.value)">${t.kickoff || ''}</textarea>
+                    <textarea placeholder="🔗 Kick-off: Cole links e instruções..." onchange="atualizarEtapaMemoria(${idx}, 'kickoff', this.value)">${t.kickoff || ''}</textarea>
                 </div>
             </div>
         `;
     });
-
     if(etapasTemporarias.length === 0) html = '<div style="color:var(--cadarn-cinza); font-size:13px; padding:15px; text-align:center;">Nenhuma tarefa estruturada.</div>';
     document.getElementById('lista-tarefas').innerHTML = html;
 }
@@ -340,13 +334,12 @@ async function salvarProjetoSocio() {
         showToast('✅ Projeto salvo e sincronizado na nuvem!', 'success');
         fecharModalProjeto(); 
     } catch (e) {
-        console.error("Erro ao salvar projeto:", e);
         alert("ALERTA DE SEGURANÇA: O Firebase rejeitou a gravação.\nMotivo: " + e.message); 
     }
 }
 
 // ==========================================
-// WORKLOAD ALGORITHM
+// MOTOR DE ALOCAÇÃO (WORKLOAD)
 // ==========================================
 function renderWorkload() {
     const workload = {};
@@ -415,98 +408,122 @@ function renderWorkload() {
 }
 
 // ==========================================
-// CALENDÁRIO MASTER (NATIVO)
+// CRONOGRAMA GANTT (NOVO E EXPLOSIVO)
 // ==========================================
-function mudarMes(delta) {
-    dataAtualCalendario.setMonth(dataAtualCalendario.getMonth() + delta);
-    renderCalendario();
-}
+function renderCronograma(containerId, filterUser = null) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
 
-function irParaHoje() {
-    dataAtualCalendario = new Date();
-    renderCalendario();
-}
+    // Janela de Tempo: 10 dias atrás até 50 dias no futuro (Total 60 dias de visão)
+    const startDate = new Date(); 
+    startDate.setDate(startDate.getDate() - 10);
+    startDate.setHours(0,0,0,0);
+    const totalDays = 60;
+    const colWidth = 40; // Pixels por dia
 
-function renderCalendario() {
-    const calendarBody = document.getElementById('calendar-body');
-    if (!calendarBody) return;
-
-    const year = dataAtualCalendario.getFullYear();
-    const month = dataAtualCalendario.getMonth();
+    // 1. Constrói o Cabeçalho de Dias
+    let headersHtml = '';
+    const mesesStr = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+    const diasSemana = ["D", "S", "T", "Q", "Q", "S", "S"];
     
-    // Nomes dos meses em português
-    const mesesStr = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
-    document.getElementById('cal-month-year').innerText = `${mesesStr[month]} ${year}`;
+    for(let i=0; i<totalDays; i++) {
+        let d = new Date(startDate); d.setDate(d.getDate() + i);
+        let isHoje = d.getTime() === new Date(new Date().setHours(0,0,0,0)).getTime();
+        
+        headersHtml += `
+            <div class="gantt-day-col ${isHoje ? 'hoje' : ''}">
+                <div class="gantt-day-name">${diasSemana[d.getDay()]}</div>
+                <div class="gantt-day-num">${d.getDate()}</div>
+            </div>
+        `;
+    }
 
-    // Mapeamento de tarefas por data (YYYY-MM-DD)
-    let tarefasPorData = {};
-    for (const [id, proj] of Object.entries(bdProjetos)) {
-        if (proj.arquivado) continue;
-        if (filtroResponsavel) {
-            const temTarefaResponsavel = (proj.etapas || []).some(t => t.responsavel === filtroResponsavel);
-            if (!temTarefaResponsavel && proj.lider !== filtroResponsavel && !(proj.equipeAtual || []).includes(filtroResponsavel)) continue;
+    // 2. Constrói o Corpo (Barra Lateral Esquerda + Grid Direito)
+    let sidebarHtml = `<div class="gantt-sidebar-header">Projetos e Entregas</div>`;
+    let timelineHtml = `<div class="gantt-header-row" style="width: ${totalDays * colWidth}px;">${headersHtml}</div><div class="gantt-body" style="width: ${totalDays * colWidth}px;">`;
+
+    let temProjetos = false;
+
+    // Filtra e desenha os projetos
+    Object.entries(bdProjetos).forEach(([id, proj]) => {
+        if(proj.arquivado) return; // Sócios veem tudo, mas não o lixo
+        
+        let etapasProj = proj.etapas || [];
+        
+        if(filterUser) {
+            etapasProj = etapasProj.filter(e => e.responsavel === filterUser);
+            if(etapasProj.length === 0 && proj.lider !== filterUser && !(proj.equipeAtual || []).includes(filterUser)) return;
         }
-        
-        (proj.etapas || []).forEach(t => {
-            if (t.prazo && (!filtroResponsavel || t.responsavel === filtroResponsavel)) {
-                if (!tarefasPorData[t.prazo]) tarefasPorData[t.prazo] = [];
-                tarefasPorData[t.prazo].push({ ...t, projId: id, projNome: proj.nome });
-            }
-        });
-    }
 
-    // Lógica do Calendário (Iniciando na Segunda-feira = 1, Domingo = 0 no JS)
-    let primeiroDia = new Date(year, month, 1).getDay();
-    let indexPrimeiroDia = primeiroDia === 0 ? 6 : primeiroDia - 1; // Converte para array SEG a DOM
-    let diasNoMes = new Date(year, month + 1, 0).getDate();
-    
-    let html = '';
-    const hojeStr = new Date().toISOString().split('T')[0];
-    const dataDeHoje = new Date(new Date().setHours(0,0,0,0));
+        temProjetos = true;
 
-    // Dias do mês anterior para preencher a primeira semana
-    const diasMesAnterior = new Date(year, month, 0).getDate();
-    for (let i = indexPrimeiroDia - 1; i >= 0; i--) {
-        const dia = diasMesAnterior - i;
-        html += `<div class="calendar-day other-month"><div class="calendar-date">${dia}</div></div>`;
-    }
+        // Desenha a linha do Título do Projeto (Esquerda e Direita vazia)
+        sidebarHtml += `<div class="gantt-sidebar-item gantt-sidebar-proj" onclick="abrirModalProjeto('${id}')">📁 ${sanitize(proj.nome)}</div>`;
+        timelineHtml += `<div class="gantt-row" style="background: rgba(255,255,255,0.02);"></div>`;
 
-    // Dias do mês atual
-    for (let i = 1; i <= diasNoMes; i++) {
-        // Monta string YYYY-MM-DD perfeita
-        const mesStr = String(month + 1).padStart(2, '0');
-        const diaStr = String(i).padStart(2, '0');
-        const dataKey = `${year}-${mesStr}-${diaStr}`;
-        
-        const isHoje = dataKey === hojeStr ? 'today' : '';
-        
-        let tarefasHtml = '';
-        if (tarefasPorData[dataKey]) {
-            tarefasPorData[dataKey].forEach(t => {
-                let statusClass = t.status; // pendente, ativo, concluido
-                if (statusClass !== 'concluido' && new Date(t.prazo) < dataDeHoje) statusClass = 'atrasado';
-                
-                const emoji = t.responsavel ? `👤 ${t.responsavel.split(' ')[0]}` : '⚠️ Sem Dono';
-                tarefasHtml += `
-                    <div class="cal-task ${statusClass}" onclick="abrirModalProjeto('${t.projId}')" title="${sanitize(t.titulo)} - ${sanitize(t.projNome)}">
-                        <span>${sanitize(t.titulo)}</span>
-                        <span>${emoji}</span>
+        // Desenha as barras de tarefas desse projeto
+        etapasProj.forEach(t => {
+            if(!t.prazo) return; // Se não tem data, não vai pro Gantt
+            
+            let deadline = new Date(t.prazo);
+            deadline.setMinutes(deadline.getMinutes() + deadline.getTimezoneOffset());
+            deadline.setHours(0,0,0,0);
+
+            // Simula um "Início de Tarefa" 4 dias antes do prazo para dar aquele visual de barra (já que o sistema atual só tem Deadline)
+            let startTask = new Date(deadline); 
+            startTask.setDate(startTask.getDate() - 4);
+
+            let startDiff = Math.floor((startTask - startDate) / (1000 * 60 * 60 * 24));
+            let endDiff = Math.floor((deadline - startDate) / (1000 * 60 * 60 * 24));
+
+            if(endDiff < 0 || startDiff >= totalDays) return; // Tarefa totalmente fora do radar da tela
+
+            // Ajusta corte se a barra vazar as bordas da tela
+            startDiff = Math.max(0, startDiff);
+            endDiff = Math.min(totalDays - 1, endDiff);
+            
+            let widthPx = (endDiff - startDiff + 1) * colWidth;
+            let leftPx = startDiff * colWidth;
+
+            // Cores baseadas no Status
+            let colorClass = 'gb-pendente';
+            if(t.status === 'concluido') colorClass = 'gb-concluido';
+            else if(t.status === 'ativo') colorClass = 'gb-ativo';
+            else if(deadline < new Date(new Date().setHours(0,0,0,0))) colorClass = 'gb-atrasado';
+
+            const respNome = t.responsavel ? t.responsavel.split(' ')[0] : 'S/ Dono';
+            const respInicial = respNome.charAt(0).toUpperCase();
+
+            // Esquerda (Nome da Tarefa)
+            sidebarHtml += `<div class="gantt-sidebar-item" style="padding-left: 30px; color: var(--cadarn-cinza);" onclick="abrirModalProjeto('${id}')">↳ ${sanitize(t.titulo)}</div>`;
+            
+            // Direita (A Barra Colorida)
+            timelineHtml += `
+                <div class="gantt-row">
+                    <div class="gantt-bar-wrapper" style="left: ${leftPx}px; width: ${widthPx}px;">
+                        <div class="gantt-bar ${colorClass}" title="${sanitize(t.titulo)} - Responsável: ${sanitize(t.responsavel)}" onclick="abrirModalProjeto('${id}')">
+                            <div class="gantt-bar-avatar">${respInicial}</div>
+                            ${sanitize(t.titulo)}
+                        </div>
                     </div>
-                `;
-            });
-        }
+                </div>
+            `;
+        });
+    });
 
-        html += `<div class="calendar-day ${isHoje}"><div class="calendar-date">${i}</div>${tarefasHtml}</div>`;
+    if(!temProjetos) {
+        container.innerHTML = `<div style="padding: 30px; text-align: center; color: var(--cadarn-cinza);">Nenhuma entrega com prazo mapeada no filtro atual.</div>`;
+        return;
     }
 
-    // Dias do próximo mês para completar o grid de 42 blocos (6 semanas)
-    const totalRenderizado = indexPrimeiroDia + diasNoMes;
-    const diasFaltando = 42 - totalRenderizado;
-    for (let i = 1; i <= diasFaltando; i++) {
-        html += `<div class="calendar-day other-month"><div class="calendar-date">${i}</div></div>`;
-    }
+    timelineHtml += `</div>`; // Fecha corpo
 
-    calendarBody.innerHTML = html;
+    container.innerHTML = `
+        <div class="gantt-wrapper">
+            <div class="gantt-sidebar">${sidebarHtml}</div>
+            <div class="gantt-timeline-container">${timelineHtml}</div>
+        </div>
+    `;
 }
 
 // ==========================================
@@ -581,5 +598,3 @@ window.salvarProjetoSocio = salvarProjetoSocio;
 window.adicionarNovaTarefaModal = adicionarNovaTarefaModal;
 window.atualizarEtapaMemoria = atualizarEtapaMemoria;
 window.removerEtapaMemoria = removerEtapaMemoria;
-window.mudarMes = mudarMes;
-window.irParaHoje = irParaHoje;
