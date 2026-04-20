@@ -452,50 +452,65 @@
             font-weight: 500 !important;
         }    
 /* ========================================================= */
-/* CRONOGRAMA GANTT                     */
+/* BLINDAGEM DO GANTT E CONTÊINER PRINCIPAL                  */
 /* ========================================================= */
 
+/* 1. Trava o contêiner principal para não esticar a tela */
+#main-projects-container {
+    overflow-x: hidden !important;
+}
+
+/* 2. O Aquário do Gráfico */
 .gantt-wrapper { 
     display: flex; 
     flex-wrap: nowrap; 
-    width: max-content; /* Permite que o gráfico cresça o quanto precisar */
-    min-width: 100%; /* Garante que não fique menor que a tela se houver poucos dias */
+    width: 100%;
+    max-width: 100%;
+    border: 1px solid rgba(255,255,255,0.08); 
+    border-radius: 12px; 
     background: #121212; 
     position: relative;
+    overflow: hidden; 
 }
 
+/* 3. A Barra Lateral (Imóvel e inquebrável) */
 .gantt-sidebar { 
+    flex: 0 0 260px; /* Impede de crescer ou encolher, trava exato em 260px */
     width: 260px; 
-    min-width: 260px; 
-    max-width: 260px; 
     background: rgba(15,15,15,0.95); 
     border-right: 1px solid rgba(255,255,255,0.08); 
     z-index: 10; 
     box-shadow: 5px 0 15px rgba(0,0,0,0.5); 
     display: flex; 
     flex-direction: column; 
-    position: sticky; /* Mantém a barra lateral parada enquanto o gráfico rola */
-    left: 0;
 }
 
+/* 4. A Linha do Tempo (Com rolagem forçada) */
 .gantt-timeline-container { 
-    flex-grow: 1; 
-    display: flex; 
-    flex-direction: column; 
+    flex: 1 1 auto; /* Ocupa exatamente o espaço restante */
+    min-width: 0; /* TRUQUE DE MESTRE: Obriga a div a respeitar a tela e gerar o scroll */
+    overflow-x: auto; 
+    overflow-y: hidden;
     background: repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,255,255,0.02) 39px, rgba(255,255,255,0.02) 40px); 
+    padding-bottom: 8px;
 }
 
-/* O resto do CSS das barras, status, etc., permanece o mesmo */
-/* Cabeçalhos (Linha de Tempo e Títulos) */
+/* --- Deixando a barra de rolagem do Roadmap premium --- */
+.gantt-timeline-container::-webkit-scrollbar { height: 8px; }
+.gantt-timeline-container::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.02); border-radius: 10px; }
+.gantt-timeline-container::-webkit-scrollbar-thumb { background: rgba(131, 46, 255, 0.5); border-radius: 10px; }
+.gantt-timeline-container::-webkit-scrollbar-thumb:hover { background: rgba(131, 46, 255, 0.8); }
+
+/* --- Cabeçalhos (Dias e Títulos) --- */
 .gantt-header-row { display: flex; border-bottom: 1px solid rgba(255,255,255,0.1); background: #0a0a0a; height: 50px; width: max-content; }
-.gantt-sidebar-header { height: 50px; padding: 15px 20px; font-size: 11px; font-weight: 800; color: var(--cadarn-cinza); text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid rgba(255,255,255,0.1); background: #0a0a0a; display: flex; align-items: center; }
+.gantt-sidebar-header { height: 50px; padding: 15px 20px; font-size: 11px; font-weight: 800; color: #a1a1aa; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid rgba(255,255,255,0.1); background: #0a0a0a; display: flex; align-items: center; }
 .gantt-day-col { min-width: 40px; width: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1px solid rgba(255,255,255,0.05); }
 .gantt-day-name { font-size: 9px; color: #666; text-transform: uppercase; font-weight: 700; margin-bottom: 2px; }
 .gantt-day-num { font-size: 12px; color: #aaa; font-weight: 600; }
-.gantt-day-col.hoje { background: rgba(131, 46, 255, 0.15); border-bottom: 2px solid var(--cadarn-roxo); }
+.gantt-day-col.hoje { background: rgba(131, 46, 255, 0.15); border-bottom: 2px solid #832EFF; }
 .gantt-day-col.hoje .gantt-day-num { color: #fff; font-weight: 800; }
 
-/* Corpo e Linhas */
+/* --- Corpo e Linhas --- */
 .gantt-body { display: flex; flex-direction: column; width: max-content; }
 .gantt-row { height: 46px; border-bottom: 1px solid rgba(255,255,255,0.03); position: relative; display: flex; align-items: center; transition: background 0.2s; width: 100%; }
 .gantt-row:hover { background: rgba(255,255,255,0.02); }
@@ -503,13 +518,12 @@
 .gantt-sidebar-item:hover { color: #fff; background: rgba(131, 46, 255, 0.1); }
 .gantt-sidebar-proj { background: rgba(255,255,255,0.02); font-weight: 700; color: #fff; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
 
-/* Barras de Tarefa */
+/* --- Barras de Tarefa e Cores --- */
 .gantt-bar-wrapper { position: absolute; height: 100%; top: 0; display: flex; align-items: center; z-index: 5; padding: 6px 0; }
 .gantt-bar { height: 100%; width: 100%; border-radius: 6px; display: flex; align-items: center; padding: 0 10px; font-size: 10px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer; transition: 0.2s; position: relative; }
 .gantt-bar:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(0,0,0,0.5); filter: brightness(1.2); z-index: 10; }
 .gantt-bar-avatar { width: 18px; height: 18px; border-radius: 50%; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; margin-right: 6px; font-size: 9px; border: 1px solid rgba(255,255,255,0.2); }
 
-/* Cores dos Status */
 .gb-pendente { background: linear-gradient(90deg, #FFC107, #ff9800); color: #000; }
 .gb-pendente .gantt-bar-avatar { border-color: rgba(0,0,0,0.2); color: #000; }
 .gb-ativo { background: linear-gradient(90deg, #b68aff, #832EFF); }
