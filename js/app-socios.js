@@ -29,6 +29,7 @@ let projetoModalAberto = null;
 let isCriandoNovo = false;
 let etapasTemporarias = [];
 let usuarioLogado = localStorage.getItem('cadarn_user') || 'Sócio';
+
 // Controle do Calendário
 let dataAtualCalendario = new Date();
 
@@ -87,7 +88,7 @@ function iniciarListeners() {
         });
         renderKanban();
         renderWorkload();
-        renderCronograma('gantt-master-container', filtroResponsavel); // NOVO
+        renderCronograma('gantt-master-container', filtroResponsavel);
     });
     inicializarDragAndDrop();
 }
@@ -123,7 +124,7 @@ function aplicarFiltros() {
     filtroResponsavel = document.getElementById('filtro-responsavel').value;
     renderKanban(); 
     renderWorkload(); 
-    renderCronograma('gantt-master-container', filtroResponsavel); // NOVO
+    renderCronograma('gantt-master-container', filtroResponsavel);
 }
 
 function showToast(message, type='info') {
@@ -142,7 +143,7 @@ function sanitize(str) {
 }
 
 // ==========================================
-// KANBAN
+// KANBAN RENDER
 // ==========================================
 function renderKanban() {
     let htmlNegociacao = ''; let htmlAndamento = ''; let htmlConcluido = '';
@@ -211,7 +212,7 @@ function inicializarDragAndDrop() {
 }
 
 // ==========================================
-// MODAL DO PROJETO
+// CONTROLE DO MODAL DE PROJETOS
 // ==========================================
 function novoProjetoSocio() {
     isCriandoNovo = true;
@@ -271,6 +272,7 @@ function renderTarefasModalTemporario() {
 
     etapasTemporarias.forEach((t, idx) => {
         let optionsResps = optionsColabs.replace(`value="${t.responsavel || ''}"`, `value="${t.responsavel || ''}" selected`);
+        
         html += `
             <div class="task-container">
                 <div class="task-row">
@@ -282,14 +284,15 @@ function renderTarefasModalTemporario() {
                         <option value="ativo" ${t.status === 'ativo'?'selected':''}>Fazendo</option>
                         <option value="concluido" ${t.status === 'concluido'?'selected':''}>Concluída</option>
                     </select>
-                    <button class="sp-btn-edit" style="background: rgba(220,53,69,0.2); color: #ff8793; border-color: transparent; padding: 6px 12px;" onclick="removerEtapaMemoria(${idx})" title="Excluir">✕</button>
+                    <button class="sp-btn-edit" style="background: rgba(220,53,69,0.2); color: #ff8793; border-color: transparent; padding: 6px 12px;" onclick="removerEtapaMemoria(${idx})" title="Excluir Etapa">✕</button>
                 </div>
                 <div class="task-kickoff">
-                    <textarea placeholder="🔗 Kick-off: Cole links e instruções..." onchange="atualizarEtapaMemoria(${idx}, 'kickoff', this.value)">${t.kickoff || ''}</textarea>
+                    <textarea placeholder="🔗 Kick-off: Cole links de pastas, documentos ou instruções..." onchange="atualizarEtapaMemoria(${idx}, 'kickoff', this.value)">${t.kickoff || ''}</textarea>
                 </div>
             </div>
         `;
     });
+
     if(etapasTemporarias.length === 0) html = '<div style="color:var(--cadarn-cinza); font-size:13px; padding:15px; text-align:center;">Nenhuma tarefa estruturada.</div>';
     document.getElementById('lista-tarefas').innerHTML = html;
 }
@@ -304,6 +307,7 @@ function removerEtapaMemoria(idx) { etapasTemporarias.splice(idx, 1); renderTare
 
 async function salvarProjetoSocio() {
     if (!projetoModalAberto) return;
+
     const elNome = document.getElementById('modal-proj-nome');
     const elCliente = document.getElementById('modal-proj-cliente');
     const elLider = document.getElementById('modal-lider');
@@ -338,6 +342,7 @@ async function salvarProjetoSocio() {
         showToast('✅ Projeto salvo e sincronizado na nuvem!', 'success');
         fecharModalProjeto(); 
     } catch (e) {
+        console.error("Erro ao salvar projeto:", e);
         alert("ALERTA DE SEGURANÇA: O Firebase rejeitou a gravação.\nMotivo: " + e.message); 
     }
 }
@@ -356,9 +361,8 @@ function renderWorkload() {
         
         (proj.etapas || []).forEach(t => {
             if (t.responsavel && workload[t.responsavel] !== undefined) {
-                if (t.status === 'concluido') {
-                    workload[t.responsavel].concluidas++;
-                } else {
+                if (t.status === 'concluido') { workload[t.responsavel].concluidas++; } 
+                else {
                     workload[t.responsavel].ativas++;
                     let isAtrasada = t.prazo && new Date(t.prazo) < hoje;
                     if(isAtrasada) workload[t.responsavel].atrasadas++;
@@ -414,44 +418,41 @@ function renderWorkload() {
 // ==========================================
 // CRONOGRAMA GANTT (NOVO E EXPLOSIVO)
 // ==========================================
+function mudarMes(delta) {
+    dataAtualCalendario.setMonth(dataAtualCalendario.getMonth() + delta);
+    renderCronograma('gantt-master-container', filtroResponsavel);
+}
+
+function irParaHoje() {
+    dataAtualCalendario = new Date();
+    renderCronograma('gantt-master-container', filtroResponsavel);
+}
+
 function renderCronograma(containerId, filterUser = null) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    // Janela de Tempo: 10 dias atrás até 50 dias no futuro (Total 60 dias de visão)
     const startDate = new Date(); 
     startDate.setDate(startDate.getDate() - 10);
     startDate.setHours(0,0,0,0);
     const totalDays = 60;
-    const colWidth = 40; // Pixels por dia
+    const colWidth = 40; 
 
-    // 1. Constrói o Cabeçalho de Dias
     let headersHtml = '';
-    const mesesStr = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
     const diasSemana = ["D", "S", "T", "Q", "Q", "S", "S"];
     
     for(let i=0; i<totalDays; i++) {
         let d = new Date(startDate); d.setDate(d.getDate() + i);
         let isHoje = d.getTime() === new Date(new Date().setHours(0,0,0,0)).getTime();
-        
-        headersHtml += `
-            <div class="gantt-day-col ${isHoje ? 'hoje' : ''}">
-                <div class="gantt-day-name">${diasSemana[d.getDay()]}</div>
-                <div class="gantt-day-num">${d.getDate()}</div>
-            </div>
-        `;
+        headersHtml += `<div class="gantt-day-col ${isHoje ? 'hoje' : ''}"><div class="gantt-day-name">${diasSemana[d.getDay()]}</div><div class="gantt-day-num">${d.getDate()}</div></div>`;
     }
 
-    // 2. Constrói o Corpo (Barra Lateral Esquerda + Grid Direito)
     let sidebarHtml = `<div class="gantt-sidebar-header">Projetos e Entregas</div>`;
     let timelineHtml = `<div class="gantt-header-row" style="width: ${totalDays * colWidth}px;">${headersHtml}</div><div class="gantt-body" style="width: ${totalDays * colWidth}px;">`;
-
     let temProjetos = false;
 
-    // Filtra e desenha os projetos
     Object.entries(bdProjetos).forEach(([id, proj]) => {
-        if(proj.arquivado) return; // Sócios veem tudo, mas não o lixo
-        
+        if(proj.arquivado) return; 
         let etapasProj = proj.etapas || [];
         
         if(filterUser) {
@@ -460,36 +461,23 @@ function renderCronograma(containerId, filterUser = null) {
         }
 
         temProjetos = true;
-
-        // Desenha a linha do Título do Projeto (Esquerda e Direita vazia)
         sidebarHtml += `<div class="gantt-sidebar-item gantt-sidebar-proj" onclick="abrirModalProjeto('${id}')">📁 ${sanitize(proj.nome)}</div>`;
         timelineHtml += `<div class="gantt-row" style="background: rgba(255,255,255,0.02);"></div>`;
 
-        // Desenha as barras de tarefas desse projeto
         etapasProj.forEach(t => {
-            if(!t.prazo) return; // Se não tem data, não vai pro Gantt
+            if(!t.prazo) return; 
             
-            let deadline = new Date(t.prazo);
-            deadline.setMinutes(deadline.getMinutes() + deadline.getTimezoneOffset());
-            deadline.setHours(0,0,0,0);
-
-            // Simula um "Início de Tarefa" 4 dias antes do prazo para dar aquele visual de barra (já que o sistema atual só tem Deadline)
-            let startTask = new Date(deadline); 
-            startTask.setDate(startTask.getDate() - 4);
+            let deadline = new Date(t.prazo); deadline.setMinutes(deadline.getMinutes() + deadline.getTimezoneOffset()); deadline.setHours(0,0,0,0);
+            let startTask = new Date(deadline); startTask.setDate(startTask.getDate() - 4);
 
             let startDiff = Math.floor((startTask - startDate) / (1000 * 60 * 60 * 24));
             let endDiff = Math.floor((deadline - startDate) / (1000 * 60 * 60 * 24));
 
-            if(endDiff < 0 || startDiff >= totalDays) return; // Tarefa totalmente fora do radar da tela
+            if(endDiff < 0 || startDiff >= totalDays) return; 
 
-            // Ajusta corte se a barra vazar as bordas da tela
-            startDiff = Math.max(0, startDiff);
-            endDiff = Math.min(totalDays - 1, endDiff);
-            
-            let widthPx = (endDiff - startDiff + 1) * colWidth;
-            let leftPx = startDiff * colWidth;
+            startDiff = Math.max(0, startDiff); endDiff = Math.min(totalDays - 1, endDiff);
+            let widthPx = (endDiff - startDiff + 1) * colWidth; let leftPx = startDiff * colWidth;
 
-            // Cores baseadas no Status
             let colorClass = 'gb-pendente';
             if(t.status === 'concluido') colorClass = 'gb-concluido';
             else if(t.status === 'ativo') colorClass = 'gb-ativo';
@@ -498,20 +486,8 @@ function renderCronograma(containerId, filterUser = null) {
             const respNome = t.responsavel ? t.responsavel.split(' ')[0] : 'S/ Dono';
             const respInicial = respNome.charAt(0).toUpperCase();
 
-            // Esquerda (Nome da Tarefa)
             sidebarHtml += `<div class="gantt-sidebar-item" style="padding-left: 30px; color: var(--cadarn-cinza);" onclick="abrirModalProjeto('${id}')">↳ ${sanitize(t.titulo)}</div>`;
-            
-            // Direita (A Barra Colorida)
-            timelineHtml += `
-                <div class="gantt-row">
-                    <div class="gantt-bar-wrapper" style="left: ${leftPx}px; width: ${widthPx}px;">
-                        <div class="gantt-bar ${colorClass}" title="${sanitize(t.titulo)} - Responsável: ${sanitize(t.responsavel)}" onclick="abrirModalProjeto('${id}')">
-                            <div class="gantt-bar-avatar">${respInicial}</div>
-                            ${sanitize(t.titulo)}
-                        </div>
-                    </div>
-                </div>
-            `;
+            timelineHtml += `<div class="gantt-row"><div class="gantt-bar-wrapper" style="left: ${leftPx}px; width: ${widthPx}px;"><div class="gantt-bar ${colorClass}" title="${sanitize(t.titulo)} - Responsável: ${sanitize(t.responsavel)}" onclick="abrirModalProjeto('${id}')"><div class="gantt-bar-avatar">${respInicial}</div>${sanitize(t.titulo)}</div></div></div>`;
         });
     });
 
@@ -519,15 +495,8 @@ function renderCronograma(containerId, filterUser = null) {
         container.innerHTML = `<div style="padding: 30px; text-align: center; color: var(--cadarn-cinza);">Nenhuma entrega com prazo mapeada no filtro atual.</div>`;
         return;
     }
-
-    timelineHtml += `</div>`; // Fecha corpo
-
-    container.innerHTML = `
-        <div class="gantt-wrapper">
-            <div class="gantt-sidebar">${sidebarHtml}</div>
-            <div class="gantt-timeline-container">${timelineHtml}</div>
-        </div>
-    `;
+    timelineHtml += `</div>`;
+    container.innerHTML = `<div class="gantt-wrapper"><div class="gantt-sidebar">${sidebarHtml}</div><div class="gantt-timeline-container">${timelineHtml}</div></div>`;
 }
 
 // ==========================================
