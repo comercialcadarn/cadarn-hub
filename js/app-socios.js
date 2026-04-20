@@ -301,18 +301,26 @@ async function toggleVisivelHub(isVisible) {
 async function salvarProjetoSocio() {
     if (!projetoModalAberto) return;
 
-    const nomeProj = document.getElementById('modal-proj-nome').value.trim() || 'Projeto Estratégico';
-    const clienteProj = document.getElementById('modal-proj-cliente').value.trim() || 'Cliente';
+    // PROGRAMAÇÃO DEFENSIVA: Captura os elementos com segurança
+    const elNome = document.getElementById('modal-proj-nome');
+    const elCliente = document.getElementById('modal-proj-cliente');
+    const elLider = document.getElementById('modal-lider');
+    const elDesc = document.getElementById('modal-desc');
+    const elTags = document.getElementById('modal-tags');
+    const elEquipe = document.getElementById('modal-equipe');
+    const elLicoes = document.getElementById('modal-licoes');
+    const elVisivel = document.getElementById('modal-proj-visivel');
 
+    // Monta o objeto verificando se o elemento existe (usando ?.)
     const projData = {
-        nome: nomeProj,
-        cliente: clienteProj,
-        lider: document.getElementById('modal-lider').value.trim(),
-        descricao: document.getElementById('modal-desc').value,
-        tags: document.getElementById('modal-tags').value.split(',').map(s=>s.trim()).filter(Boolean),
-        equipeAtual: document.getElementById('modal-equipe').value.split(',').map(s=>s.trim()).filter(Boolean),
-        licoes: document.getElementById('modal-licoes').value,
-        visivelHub: document.getElementById('modal-proj-visivel').checked,
+        nome: elNome?.value?.trim() || 'Projeto Estratégico',
+        cliente: elCliente?.value?.trim() || 'Cliente Não Informado',
+        lider: elLider?.value?.trim() || usuarioLogado,
+        descricao: elDesc?.value || '',
+        tags: elTags?.value ? elTags.value.split(',').map(s=>s.trim()).filter(Boolean) : [],
+        equipeAtual: elEquipe?.value ? elEquipe.value.split(',').map(s=>s.trim()).filter(Boolean) : [],
+        licoes: elLicoes?.value || '',
+        visivelHub: elVisivel?.checked || false,
         etapas: etapasTemporarias,
         arquivado: false
     };
