@@ -150,85 +150,93 @@
 
     <div class="container" style="display: none;" id="conteudo-restrito">
         
-        <div class="view-toggle" style="background: rgba(0,0,0,0.3); padding: 5px;">
-    <button class="view-btn active" id="tab-btn-projetos" onclick="switchTab('projetos')">📊 Pipeline</button>
-    <button class="view-btn" id="tab-btn-pessoas" onclick="switchTab('pessoas')">👥 Workload</button>
-    <button class="view-btn" id="tab-btn-cronograma" onclick="switchTab('cronograma')">📈 Cronograma</button>
-    <button class="view-btn" id="tab-btn-calendario" onclick="switchTab('calendario')">📅 Calendário</button>
-</div>
-        <div class="import-controls" style="margin-left: 20px;">
-    <input type="file" id="file-import-pipe" accept=".csv" style="display:none" onchange="importarDados(event, 'pipe')">
-    <input type="file" id="file-import-projetos" accept=".csv" style="display:none" onchange="importarDados(event, 'projetos')">
+       <div class="ambient-glow"></div>
 
-    <button class="sp-btn-edit" onclick="document.getElementById('file-import-pipe').click()">📥 Importar Pipe</button>
-    <button class="sp-btn-edit" onclick="document.getElementById('file-import-projetos').click()">📂 Importar Projetos</button>
-</div>
+    <header>
+        <div class="brand-container">
+            <div class="logo-text">CADARN <span>HUB</span></div>
+            <div class="socio-badge">Acesso VIP Sócio</div>
+        </div>
+        <div class="header-controls">
+            <button class="btn-import" onclick="logout()" style="cursor: pointer;">Sair</button>
+            <a href="index.html" class="btn-create" style="text-decoration: none; background: rgba(255,255,255,0.05); color: #fff; border: 1px solid var(--glass-border);">← Voltar ao Hub</a>
+        </div>
+    </header>
 
-            <div style="display: flex; gap: 15px; align-items: center;">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <span style="font-size: 12px; font-weight: 600; color: var(--cadarn-cinza);">Filtro:</span>
-                    <select id="filtro-responsavel" class="edit-select" style="margin:0; padding:8px 15px; font-size: 13px; border-radius: 8px;" onchange="aplicarFiltros()">
-                        <option value="">Todos da Equipe</option>
-                    </select>
-                </div>
-                <button class="btn-present" onclick="novoProjetoSocio()" style="background: linear-gradient(135deg, #198754, #157347); border-color: #198754; box-shadow: 0 4px 15px rgba(25, 135, 84, 0.3);">
-                    ➕ Criar Projeto
-                </button>
-            </div>
+    <div class="dashboard-ctrl">
+        <div class="nav-tabs">
+            <button class="view-btn active" id="tab-btn-projetos" onclick="switchTab('projetos')">📊 Pipeline</button>
+            <button class="view-btn" id="tab-btn-pessoas" onclick="switchTab('pessoas')">👥 Workload</button>
+            <button class="view-btn" id="tab-btn-cronograma" onclick="switchTab('cronograma')">📈 Cronograma</button>
+            <button class="view-btn" id="tab-btn-calendario" onclick="switchTab('calendario')">📅 Calendário</button>
         </div>
 
-        <div id="view-projetos" class="fade-view anim-2">
-            <div class="kanban-socio-board">
-                <div class="kanban-socio-col">
-                    <div class="kanban-col-header" style="color: #6c757d;">🤝 Em Negociação / Backlog <span class="status-dot dot-pendente" style="margin:0;"></span></div>
-                    <div class="kanban-dropzone" id="col-negociacao" data-status="negociacao"></div>
-                </div>
-                <div class="kanban-socio-col" style="background: rgba(182, 138, 255, 0.05); border-color: rgba(182, 138, 255, 0.1);">
-                    <div class="kanban-col-header" style="color:#b68aff;">🚀 Ativos (Delivery) <span class="status-dot dot-ativo" style="margin:0;"></span></div>
-                    <div class="kanban-dropzone" id="col-andamento" data-status="andamento"></div>
-                </div>
-                <div class="kanban-socio-col" style="background: rgba(71, 226, 153, 0.05); border-color: rgba(71, 226, 153, 0.1);">
-                    <div class="kanban-col-header" style="color:#47e299;">🏁 Concluídos <span class="status-dot dot-concluido" style="margin:0;"></span></div>
-                    <div class="kanban-dropzone" id="col-concluidos" data-status="concluido"></div>
+        <div class="action-group">
+            <select id="filtro-responsavel" class="premium-select" onchange="aplicarFiltros()">
+                <option value="">Toda a Equipe</option>
+            </select>
+            
+            <div style="display: flex; gap: 8px;">
+                <input type="file" id="file-import-pipe" accept=".csv" style="display:none" onchange="importarDados(event, 'pipe')">
+                <input type="file" id="file-import-projetos" accept=".csv" style="display:none" onchange="importarDados(event, 'projetos')">
+                
+                <button class="btn-import" onclick="document.getElementById('file-import-pipe').click()">📥 Pipe</button>
+                <button class="btn-import" onclick="document.getElementById('file-import-projetos').click()">📂 Projetos</button>
+            </div>
+            
+            <button class="btn-create" onclick="novoProjetoSocio()">
+                <span style="font-size: 18px; margin-right: 5px;">+</span> Criar Projeto
+            </button>
+        </div>
+    </div>
+
+    <div id="view-projetos" class="kanban-socio-board fade-view">
+        <div class="kanban-socio-col">
+            <div class="kanban-col-header" style="color: #ffc107;">
+                <span>🤝 Negociação</span>
+                <span class="status-badge-count" id="count-negociacao">0</span>
+            </div>
+            <div class="kanban-dropzone" id="col-negociacao" data-status="negociacao"></div>
+        </div>
+        <div class="kanban-socio-col">
+            <div class="kanban-col-header" style="color: #b68aff;">
+                <span>🚀 Delivery</span>
+                <span class="status-badge-count" id="count-andamento">0</span>
+            </div>
+            <div class="kanban-dropzone" id="col-andamento" data-status="andamento"></div>
+        </div>
+        <div class="kanban-socio-col">
+            <div class="kanban-col-header" style="color: #47e299;">
+                <span>🏁 Concluídos</span>
+                <span class="status-badge-count" id="count-concluido">0</span>
+            </div>
+            <div class="kanban-dropzone" id="col-concluidos" data-status="concluido"></div>
+        </div>
+    </div>
+
+    <div id="view-pessoas" class="fade-view" style="display: none; padding: 0 40px;">
+        <div class="workload-grid" id="workload-container"></div>
+    </div>
+
+    <div id="view-cronograma" class="fade-view" style="display: none; padding: 0 40px;">
+        <div id="gantt-master-container"></div>
+    </div>
+
+    <div id="view-calendario" class="fade-view" style="display: none; padding: 0 40px;">
+        <div class="calendar-wrapper">
+            <div class="calendar-header">
+                <div class="calendar-title" id="cal-month-year">Abril 2026</div>
+                <div class="calendar-nav">
+                    <button class="btn-import" onclick="mudarMes(-1)">← Anterior</button>
+                    <button class="btn-import" onclick="irParaHoje()">Hoje</button>
+                    <button class="btn-import" onclick="mudarMes(1)">Próximo →</button>
                 </div>
             </div>
-        </div>
-
-        <div id="view-pessoas" class="fade-view anim-2" style="display: none;">
-            <div class="card">
-                <h2 class="section-header"><div class="section-header-title">Matriz de Carga de Trabalho da Equipe</div></h2>
-                <div class="workload-grid" id="workload-container"></div>
+            <div class="calendar-grid" style="background: rgba(255,255,255,0.03);">
+                <div class="calendar-day-name">Seg</div><div class="calendar-day-name">Ter</div><div class="calendar-day-name">Qua</div><div class="calendar-day-name">Qui</div><div class="calendar-day-name">Sex</div><div class="calendar-day-name">Sáb</div><div class="calendar-day-name">Dom</div>
             </div>
+            <div class="calendar-grid" id="calendar-body"></div>
         </div>
-    
-    <div id="view-cronograma" class="fade-view anim-2" style="display: none;">
-    <div class="card" style="padding: 0;">
-        <div id="gantt-master-container"></div> </div>
-</div>
-
-        <div id="view-calendario" class="fade-view anim-2" style="display: none;">
-            <div class="calendar-wrapper">
-                <div class="calendar-header">
-                    <div class="calendar-title" id="cal-month-year">Abril 2026</div>
-                    <div class="calendar-nav">
-                        <button onclick="mudarMes(-1)">← Anterior</button>
-                        <button onclick="irParaHoje()">Hoje</button>
-                        <button onclick="mudarMes(1)">Próximo →</button>
-                    </div>
-                </div>
-                <div class="calendar-grid">
-                    <div class="calendar-day-name">Seg</div>
-                    <div class="calendar-day-name">Ter</div>
-                    <div class="calendar-day-name">Qua</div>
-                    <div class="calendar-day-name">Qui</div>
-                    <div class="calendar-day-name">Sex</div>
-                    <div class="calendar-day-name">Sáb</div>
-                    <div class="calendar-day-name">Dom</div>
-                </div>
-                <div class="calendar-grid" id="calendar-body"></div>
-            </div>
-        </div>
-
     </div>
 
     <div id="modal-projeto" class="modal-overlay" onclick="fecharModalProjeto(event)">
