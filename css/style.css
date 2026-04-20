@@ -670,3 +670,37 @@ h1, h2, h3, h4,
     font-weight: 800;
     letter-spacing: -1px;
 }
+/* ==================================================== */
+/* WIDGETS FINANCEIROS (ÁREA DO SÓCIO)                  */
+/* ==================================================== */
+
+/* O Selo Dourado de Valor no Kanban */
+.badge-contract {
+    font-family: 'Outfit', sans-serif;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 10px rgba(255, 193, 7, 0.2);
+    text-transform: uppercase;
+}
+
+/* Efeito Hover nos Cards do Topo (Fee, Margem, Alertas) */
+.fin-card {
+    transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    cursor: default;
+}
+
+.fin-card:hover {
+    border-color: rgba(131, 46, 255, 0.4) !important;
+    background: rgba(131, 46, 255, 0.05) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+}
+
+/* Remove as setinhas de aumentar/diminuir do input de número */
+input[type=number]::-webkit-inner-spin-button, 
+input[type=number]::-webkit-outer-spin-button { 
+  -webkit-appearance: none; 
+  margin: 0; 
+}
+input[type=number] {
+    -moz-appearance: textfield; /* Para Firefox */
+}
