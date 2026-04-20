@@ -449,15 +449,6 @@ function renderWorkload() {
 // ==========================================
 // CRONOGRAMA GANTT (NOVO E EXPLOSIVO)
 // ==========================================
-function mudarMes(delta) {
-    dataAtualCalendario.setMonth(dataAtualCalendario.getMonth() + delta);
-    renderCronograma('gantt-master-container', filtroResponsavel);
-}
-
-function irParaHoje() {
-    dataAtualCalendario = new Date();
-    renderCronograma('gantt-master-container', filtroResponsavel);
-}
 
 function renderCronograma(containerId, filterUser = null) {
     const container = document.getElementById(containerId);
@@ -594,28 +585,13 @@ function setupAutocompleteMulti(inputElement, arr) {
 // MOTOR DO CALENDÁRIO MENSAL (GRID)
 // ==========================================
 
-// 1. Declaramos uma ÚNICA variável global para o calendário
-window.dataAtualCalendario = new Date();
-
-window.mudarMes = function(direcao) {
-    // Atualiza a variável correta
-    window.dataAtualCalendario.setMonth(window.dataAtualCalendario.getMonth() + direcao);
-    renderCalendario();
-};
-
-window.irParaHoje = function() {
-    // Restaura a variável correta para hoje
-    window.dataAtualCalendario = new Date();
-    renderCalendario();
-};
-
 function renderCalendario() {
     const calendarBody = document.getElementById('calendar-body');
     if (!calendarBody) return;
 
-    // 2. Puxa o ano e mês EXATAMENTE da mesma variável que os botões alteram!
-    const year = window.dataAtualCalendario.getFullYear();
-    const month = window.dataAtualCalendario.getMonth();
+    // Usando a variável global original
+    const year = dataAtualCalendario.getFullYear();
+    const month = dataAtualCalendario.getMonth();
     
     const mesesStr = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
     const elTitulo = document.getElementById('cal-month-year');
@@ -670,15 +646,16 @@ function renderCalendario() {
     calendarBody.innerHTML = html;
 }
 
-// Funções de navegação do calendário
-window.mudarMes = (delta) => {
+// Funções definitivas de navegação do calendário
+function mudarMes(delta) {
     dataAtualCalendario.setMonth(dataAtualCalendario.getMonth() + delta);
     renderCalendario();
-};
-window.irParaHoje = () => {
+}
+
+function irParaHoje() {
     dataAtualCalendario = new Date();
     renderCalendario();
-};
+}
 
 initSegurancaSocios();
 
