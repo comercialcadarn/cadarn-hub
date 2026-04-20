@@ -95,32 +95,42 @@ function iniciarListeners() {
 }
 
 function switchTab(tab) {
-    const views = ['projetos', 'pessoas', 'cronograma', 'calendario']; // <--- ADICIONADO
+    const views = ['projetos', 'pessoas', 'cronograma', 'calendario'];
+    
+    // 1. Esconde todas as telas com transição
     views.forEach(v => {
         const el = document.getElementById(`view-${v}`);
-        if(el) el.style.opacity = '0';
-    });
-
-    setTimeout(() => {
-        views.forEach(v => {
-            const el = document.getElementById(`view-${v}`);
-            if(el) el.style.display = (tab === v) ? 'block' : 'none';
-        });
-        setTimeout(() => { 
-            views.forEach(v => {
-                const el = document.getElementById(`view-${v}`);
-                if(el) el.style.opacity = '1';
-            });
-            // Dispara a renderização correta dependendo da aba
-            if(tab === 'cronograma') renderCronograma('gantt-master-container', filtroResponsavel);
-            if(tab === 'calendario') renderCalendario(); // <--- NOVO
-        }, 50);
-    }, 150);
-
-    views.forEach(v => {
+        if(el) {
+            el.style.opacity = '0';
+            el.style.display = 'none';
+        }
         const btn = document.getElementById(`tab-btn-${v}`);
-        if(btn) btn.classList.toggle('active', tab === v);
+        if(btn) btn.classList.remove('active');
     });
+
+    // 2. Mostra a tela selecionada
+    const targetView = document.getElementById(`view-${tab}`);
+    const targetBtn = document.getElementById(`tab-btn-${tab}`);
+    
+    if(targetView) {
+        targetView.style.display = 'block';
+        if(targetBtn) targetBtn.classList.add('active');
+        
+        // Pequeno atraso para a animação de fade-in
+        setTimeout(() => {
+            targetView.style.opacity = '1';
+            
+            // 3. GATILHOS DE RENDERIZAÇÃO (O segredo para não aparecer branco)
+            if(tab === 'cronograma') {
+                console.log("Renderizando Cronograma...");
+                renderCronograma('gantt-master-container', filtroResponsavel);
+            }
+            if(tab === 'calendario') {
+                console.log("Renderizando Calendário...");
+                renderCalendario();
+            }
+        }, 50);
+    }
 }
 
 function aplicarFiltros() {
@@ -638,6 +648,9 @@ window.irParaHoje = () => {
 
 initSegurancaSocios();
 
+// =========================================================
+// EXPOSIÇÃO GLOBAL
+// =========================================================
 window.switchTab = switchTab;
 window.aplicarFiltros = aplicarFiltros;
 window.abrirModalProjeto = abrirModalProjeto;
@@ -649,3 +662,5 @@ window.atualizarEtapaMemoria = atualizarEtapaMemoria;
 window.removerEtapaMemoria = removerEtapaMemoria;
 window.mudarMes = mudarMes;
 window.irParaHoje = irParaHoje;
+window.renderCalendario = renderCalendario;
+window.renderCronograma = renderCronograma;
