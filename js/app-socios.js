@@ -93,11 +93,10 @@ function iniciarListeners() {
         renderWorkload();
         renderCronograma('gantt-master-container', filtroResponsavel);
         renderCalendario();
-        
-        // NOVA CHAMADA: Atualiza os círculos de alocação no topo
-        renderTeamAvailability(); 
+        renderCalendario(); 
+        renderTeamAvailability();
+        renderFinancialHealth();
     });
-    
     inicializarDragAndDrop();
 }
 
@@ -184,14 +183,20 @@ function renderKanban() {
         
         const tagsHtml = (proj.tags || []).slice(0,3).map(t => `<span style="background: rgba(131, 46, 255, 0.15); color: #c5a3ff; font-size: 9px; font-weight: 700; padding: 3px 8px; border-radius: 12px; border: 1px solid rgba(131,46,255,0.3);">${sanitize(t)}</span>`).join('');
 
+        // Cria o selo dourado se o projeto tiver valor de contrato
+        const contractBadge = proj.valorContrato > 0 ? `<div class="badge-contract" style="background: linear-gradient(135deg, #FFC107, #FF9800); color: #000; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 900; display: inline-block;">R$ ${proj.valorContrato.toLocaleString('pt-BR')}</div>` : '';
+
         const card = `
             <div class="kanban-card" style="${borderStyle} padding: 18px;" data-id="${id}" onclick="abrirModalProjeto('${id}')">
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 10px;">
-                    <div style="font-size: 16px; font-weight: 700; color: white;">${sanitize(proj.nome || 'Sem Nome')}</div>
+                    <div class="kanban-card-title">${sanitize(proj.nome || 'Sem Nome')}</div>
                     ${atrasoBadge}
                 </div>
                 <div style="font-size: 12px; color: var(--cadarn-cinza); margin-bottom: 10px; font-weight: 500;">${sanitize(proj.cliente || 'Sem Cliente')}</div>
-                <div style="display:flex; gap: 5px; flex-wrap: wrap; margin-bottom: 15px;">${tagsHtml}</div>
+                <div style="display:flex; gap: 5px; flex-wrap: wrap; margin-bottom: 15px; align-items: center;">
+                    ${tagsHtml}
+                    ${contractBadge}
+                </div>
                 <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px; font-size: 11px;">
                     <div style="color: var(--cadarn-cinza);">📝 ${etapas.filter(t => t.status === 'concluido').length}/${etapas.length} Etapas</div>
                     <div style="font-weight: bold; font-size: 10px;">${isVisivel}</div>
@@ -236,7 +241,7 @@ function novoProjetoSocio() {
     projetoModalAberto = 'proj_' + Date.now();
     etapasTemporarias = [{ titulo: 'Planejamento Inicial', responsavel: '', prazo: '', status: 'pendente', kickoff: '' }];
     
-    const camposParaLimpar = ['modal-proj-nome', 'modal-proj-cliente', 'modal-desc', 'modal-tags', 'modal-equipe', 'modal-licoes'];
+    const camposParaLimpar = ['modal-proj-nome', 'modal-proj-cliente', 'modal-desc', 'modal-tags', 'modal-equipe', 'modal-licoes', 'modal-valor-contrato', 'modal-horas-orcadas', 'modal-horas-reais'];
     camposParaLimpar.forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
 
     const elLider = document.getElementById('modal-lider');
@@ -263,6 +268,9 @@ function abrirModalProjeto(id) {
     setVal('modal-tags', (proj.tags || []).join(', '));
     setVal('modal-equipe', (proj.equipeAtual || []).join(', '));
     setVal('modal-licoes', proj.licoes || '');
+    setVal('modal-valor-contrato', proj.valorContrato || '');
+    setVal('modal-horas-orcadas', proj.horasOrcadas || '');
+    setVal('modal-horas-reais', proj.horasReais || '');
 
     const elVisivel = document.getElementById('modal-proj-visivel');
     if (elVisivel) elVisivel.checked = proj.visivelHub === true;
@@ -353,7 +361,10 @@ async function salvarProjetoSocio() {
         licoes: elLicoes?.value || '',
         visivelHub: elVisivel?.checked || false,
         etapas: etapasTemporarias,
-        arquivado: false
+        arquivado: false,
+        valorContrato: Number(document.getElementById('modal-valor-contrato')?.value) || 0,
+        horasOrcadas: Number(document.getElementById('modal-horas-orcadas')?.value) || 0,
+        horasReais: Number(document.getElementById('modal-horas-reais')?.value) || 0
     };
 
     if (isCriandoNovo) {
@@ -809,4 +820,47 @@ function renderTeamAvailability() {
             </div>
         `;
     }).join('');
+}
+// ==========================================
+// PAINEL DE SAÚDE FINANCEIRA DO PORTFÓLIO
+// ==========================================
+function renderFinancialHealth() {
+    let feeTotal = 0;
+    let margens = [];
+    let alertas = 0;
+
+    Object.values(bdProjetos).forEach(proj => {
+        if (proj.arquivado || proj.status_crm === 'concluido') return; // Ignora lixeira e projetos concluídos para o fee ativo
+
+        // Soma o valor do contrato
+        feeTotal += (proj.valorContrato || 0);
+
+        // Calcula a margem: (Valor Contrato - (Horas Reais * R$150)) / Valor Contrato
+        if (proj.valorContrato > 0) {
+            const custoHoras = (proj.horasReais || 0) * 150; 
+            const margem = (proj.valorContrato - custoHoras) / proj.valorContrato;
+            margens.push(margem);
+        }
+
+        // Conta quantos projetos já comeram mais de 90% das horas orçadas
+        if (proj.horasOrcadas > 0 && proj.horasReais >= (proj.horasOrcadas * 0.9)) {
+            alertas++;
+        }
+    });
+
+    // Calcula a média das margens
+    const margemMedia = margens.length > 0 ? (margens.reduce((a, b) => a + b) / margens.length) * 100 : 0;
+
+    const elFee = document.getElementById('fin-fee-total');
+    const elMargem = document.getElementById('fin-margem-media');
+    const elAlertas = document.getElementById('fin-alertas-escopo');
+
+    if (elFee) elFee.innerText = `R$ ${feeTotal.toLocaleString('pt-BR')}`;
+    if (elAlertas) elAlertas.innerText = `${alertas} Projetos`;
+    
+    if (elMargem) {
+        elMargem.innerText = `${margemMedia.toFixed(1)}%`;
+        // Margem menor que 20% fica vermelha, caso contrário, verde
+        elMargem.style.color = margemMedia < 20 ? '#dc3545' : '#47e299';
+    }
 }
