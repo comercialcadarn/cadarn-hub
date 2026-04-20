@@ -139,6 +139,24 @@ function iniciarListeners() {
     if(usuarioLogado) checkMorningBriefing(); 
 }
 
+async function syncProjetoNuvem(idProjeto, isDelete = false) {
+    if (!navigator.onLine || !db) return;
+    const { doc, setDoc, deleteDoc } = firestore;
+    try {
+        if (isDelete) { await deleteDoc(doc(db, "projetos", idProjeto)); } 
+        else { await setDoc(doc(db, "projetos", idProjeto), bdProjetos[idProjeto], { merge: true }); }
+    } catch (error) { console.error("Erro ao salvar projeto no Firebase:", error); }
+}
+
+async function syncDeleteLoteNuvem(idsParaExcluir) {
+    if (!navigator.onLine || !db) return;
+    const { doc, deleteDoc } = firestore;
+    idsParaExcluir.forEach(async (id) => {
+        try { await deleteDoc(doc(db, "projetos", id)); } 
+        catch (e) { console.error("Erro na exclusão em lote:", e); }
+    });
+}
+
 async function syncColabsNuvem(nomesAfetados) {
     if (!navigator.onLine || !db) return;
     const { doc, setDoc } = firestore;
@@ -156,6 +174,18 @@ async function syncColabsNuvem(nomesAfetados) {
 
 let usuarioLogado = localStorage.getItem('cadarn_user') || '';
 let configColaboradores = JSON.parse(localStorage.getItem('cadarn_colabs')) || {};
+
+// Variáveis globais essenciais (Se faltar uma, o site inteiro trava)
+let bdProjetos = {};
+let projetoAbertoAtual = null;
+let isEditingProjeto = false;
+let modoVisualizacao = 'list'; 
+let filtroAtual = 'Todos';
+let filtroMembro = null; 
+let isSelectModeLixeira = false;
+let selectedLixeiraItems = new Set();
+let presentationSlides = [];
+let currentSlideIndex = 0;
 
 function autoDetectGender(name) {
     const first = name.toLowerCase().split(' ')[0];
@@ -377,16 +407,6 @@ function diasEntre(dataInicial, dataFinal) {
     const diffTempo = Math.abs(fim - new Date(dataInicial));
     return Math.ceil(diffTempo / (1000 * 60 * 60 * 24)); 
 }
-
-let bdProjetos = {};
-let projetoAbertoAtual = null;
-let modoVisualizacao = 'list'; 
-let filtroAtual = 'Todos';
-let filtroMembro = null; 
-let isSelectModeLixeira = false;
-let selectedLixeiraItems = new Set();
-let presentationSlides = [];
-let currentSlideIndex = 0;
 
 const insights = [
     { text: "A inovação distingue um líder de um seguidor.", author: "Steve Jobs" },
@@ -847,10 +867,9 @@ function renderEtapas(etapas, editMode) {
     let html = ''; 
     const hojeCompare = new Date(new Date().setHours(0,0,0,0));
 
-    etapas.forEach((etapa, idx) => {
+    (etapas || []).forEach((etapa, idx) => {
         let icone = etapa.status === 'concluido' ? '✓' : (idx + 1);
-        let badge = '';
-        let valData = '';
+        let badge = ''; let valData = '';
 
         if (editMode) {
             let selectStatus = `<select class="edit-select" id="status-etapa-${idx}"><option value="pendente" ${etapa.status === 'pendente' ? 'selected' : ''}>Pendente</option><option value="ativo" ${etapa.status === 'ativo' ? 'selected' : ''}>Ativo</option><option value="concluido" ${etapa.status === 'concluido' ? 'selected' : ''}>Concluído</option></select>`;
@@ -865,10 +884,23 @@ function renderEtapas(etapas, editMode) {
                 else if (dPrazo.getTime() === hojeCompare.getTime()) badge = '<span class="badge-warning">Vence Hoje</span>';
                 valData = `<span style="font-size: 10px; color: var(--cadarn-cinza); margin-right: 8px;">[${dPrazo.toLocaleDateString('pt-BR')}]</span>`;
             }
-            html += `<div class="step ${etapa.status}"><div class="step-icon">${icone}</div><div class="step-text" style="display:flex; align-items:center; width:100%;">${valData}${sanitize(etapa.titulo)}${badge}</div></div>`;
+            
+            let kickoffHtml = etapa.kickoff ? `<div style="margin-top: 8px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px; font-size: 11px; color: #e2d3ff; border: 1px solid rgba(255,255,255,0.05); white-space: pre-wrap;">🔗 <strong>KICK-OFF / INSTRUÇÕES:</strong><br>${sanitize(etapa.kickoff)}</div>` : '';
+
+            html += `
+            <div class="step ${etapa.status}" style="flex-direction: column; align-items: stretch; padding: 12px;">
+                <div style="display:flex; align-items:center; width:100%;">
+                    <div class="step-icon">${icone}</div>
+                    <div class="step-text" style="display:flex; align-items:center; width:100%; justify-content:space-between;">
+                        <div>${valData}${sanitize(etapa.titulo)}${badge}</div>
+                        <div style="font-size: 10px; color: var(--cadarn-cinza); font-weight: bold; text-transform:uppercase;">${sanitize(etapa.responsavel || 'Sem Dono')}</div>
+                    </div>
+                </div>
+                ${kickoffHtml}
+            </div>`;
         }
     });
-    document.getElementById('sp-etapas').innerHTML = html;
+    document.getElementById('sp-etapas').innerHTML = html || '<p style="color:var(--cadarn-cinza); font-size: 12px;">Nenhuma entrega mapeada ainda.</p>';
 }
 
 function iniciarEdicao() {
@@ -942,7 +974,7 @@ function fecharProjeto() {
 
 /* --- LÓGICA DO MODO APRESENTAÇÃO --- */
 function startPresentation() {
-    presentationSlides = Object.values(bdProjetos).filter(p => !p.arquivado && (filtroAtual === 'Todos' || (p.tags || []).includes(filtroAtual)));
+    presentationSlides = Object.values(bdProjetos).filter(p => !p.arquivado && p.visivelHub && (filtroAtual === 'Todos' || (p.tags || []).includes(filtroAtual)));
     if(presentationSlides.length === 0) { showToast('Não há projetos ativos no filtro atual para apresentar.', 'warning'); return; }
     currentSlideIndex = 0; document.getElementById('presentation-modal').classList.add('active'); renderSlide();
 }
@@ -986,7 +1018,7 @@ function renderSlide() {
             else if (dPrazo.getTime() === hojeCompare.getTime()) badge = '<span class="badge-warning">Vence Hoje</span>';
             valData = `<span style="font-size: 11px; color: var(--cadarn-cinza); margin-right: 8px;">[${dPrazo.toLocaleDateString('pt-BR')}]</span>`;
         }
-        etapasHtml += `<div class="step ${etapa.status}"><div class="step-icon">${icone}</div><div class="step-text" style="display:flex; align-items:center; width:100%; font-size:16px;">${valData}${sanitize(etapa.titulo)}${badge}</div></div>`;
+        etapasHtml += `<div class="step ${etapa.status}"><div class="step-icon">${icone}</div><div class="step-text" style="display:flex; align-items:center; width:100%; font-size:16px; justify-content:space-between;"><div>${valData}${sanitize(etapa.titulo)}${badge}</div><div style="font-size: 11px; color: var(--cadarn-cinza); font-weight: bold; text-transform:uppercase;">${sanitize(etapa.responsavel || 'Sem Dono')}</div></div></div>`;
     });
     document.getElementById('pres-etapas').innerHTML = etapasHtml || '<p style="color:var(--cadarn-cinza);">Sem etapas cadastradas.</p>';
 
@@ -1135,7 +1167,7 @@ function renderCmdResults(query) {
     }
     
     Object.entries(bdProjetos).forEach(([id, proj]) => { 
-        if (!proj.arquivado) {
+        if (!proj.arquivado && proj.visivelHub) {
             const searchStr = `${proj.nome} ${proj.cliente} ${proj.descricao || ''} ${proj.licoes || ''}`.toLowerCase();
             if (searchStr.includes(query)) {
                 results.push({ tipo: 'Projeto', nome: `${proj.nome} (${proj.cliente})`, action: `fecharAposBusca(); abrirProjeto('${id}')` }); 
@@ -1155,9 +1187,9 @@ function renderSLARadar() {
     const limite48h = new Date(now.getTime() + 48 * 60 * 60 * 1000);
     
     Object.entries(bdProjetos).forEach(([id, proj]) => {
-        if(proj.arquivado) return;
+        if(proj.arquivado || proj.visivelHub === false) return;
         (proj.etapas || []).forEach(e => {
-            if(e.status !== 'concluido' && e.prazo) {
+            if(e.status !== 'concluido' && e.prazo && e.responsavel === usuarioLogado) { 
                 const dPrazo = new Date(e.prazo);
                 dPrazo.setMinutes(dPrazo.getMinutes() + dPrazo.getTimezoneOffset());
                 
@@ -1173,7 +1205,7 @@ function renderSLARadar() {
     
     const container = document.getElementById('sla-radar-list');
     if(top3.length === 0) {
-        container.innerHTML = '<div style="color:var(--cadarn-cinza); font-size:12px;">Nenhuma etapa crítica ou vencendo nas próximas 48 horas.</div>';
+        container.innerHTML = '<div style="color:var(--cadarn-cinza); font-size:12px;">Nenhuma entrega crítica ou vencendo nas próximas 48h para você.</div>';
         return;
     }
     
@@ -1190,18 +1222,23 @@ function renderSLARadar() {
 function renderTeamAvailability() {
     let workload = {};
     for (const proj of Object.values(bdProjetos)) {
-        if (proj.arquivado) continue;
+        if (proj.arquivado || proj.visivelHub === false) continue;
         const todasConcluidas = proj.etapas && proj.etapas.length > 0 && proj.etapas.every(e => e.status === 'concluido');
         if (todasConcluidas) continue; 
-        (proj.equipeAtual || []).forEach(m => {
-            let nome = m.split('(')[0].trim();
-            if(nome) workload[nome] = (workload[nome] || 0) + 1;
+        (proj.etapas || []).forEach(t => {
+            if(t.responsavel && t.status !== 'concluido') {
+                let nome = t.responsavel.split('(')[0].trim();
+                if(nome) {
+                    if(!workload[nome]) workload[nome] = { p: 0, atrasados: 0 };
+                    workload[nome].p++;
+                }
+            }
         });
     }
     
     const MAX_PROJECTS = 5; 
     const members = Object.keys(workload).map(nome => {
-        return { nome, p: workload[nome], pct: Math.min(Math.round((workload[nome] / MAX_PROJECTS) * 100), 100) };
+        return { nome, p: workload[nome].p, pct: Math.min(Math.round((workload[nome].p / MAX_PROJECTS) * 100), 100) };
     });
     
     members.sort((a, b) => b.pct - a.pct);
@@ -1240,7 +1277,7 @@ let kpiChartInstance = null;
 function atualizarDashboard() {
     let totais = 0, ativos = 0, concluidos = 0, pendentes = 0;
     for (const proj of Object.values(bdProjetos)) {
-        if (proj.arquivado) continue;
+        if (proj.arquivado || proj.visivelHub === false) continue;
         totais++; if (!proj.etapas) proj.etapas = [];
         const todasConcluidas = proj.etapas.length > 0 && proj.etapas.every(e => e.status === 'concluido');
         const algumaAtiva = proj.etapas.some(e => e.status === 'ativo');
@@ -1429,6 +1466,7 @@ window.restaurarProjetoDireto = restaurarProjetoDireto;
 window.handleDropFoto = handleDropFoto;
 window.handleFileFoto = handleFileFoto;
 window.filtrarProjetosDestePerfil = () => {
-    setFiltroMembro(perfilAtualNome);
+    filtroMembro = perfilAtualNome;
+    renderMainProjects();
     document.getElementById('profile-modal').classList.remove('active');
 };
