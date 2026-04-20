@@ -33,7 +33,7 @@ async function initFirebase() {
     };
 
     const app = initializeApp(firebaseConfig);
-    db = getFirestore(app);
+    db = getFirestore(app, "cadarn-hub");
     auth = getAuth(app);
 
     onAuthStateChanged(auth, (user) => {
