@@ -518,3 +518,47 @@
 #teamAvailabilityContainer::-webkit-scrollbar-thumb:hover {
     background: rgba(131, 46, 255, 0.6); /* Brilha com a cor roxa premium ao passar o mouse */
 }
+/* ========================================================= */
+/* BLINDAGEM DO ROADMAP (GANTT) PARA NÃO ESTICAR A TELA      */
+/* ========================================================= */
+
+.gantt-wrapper {
+    display: flex;
+    width: 100%;
+    max-width: 100%; /* Impede o bloco de crescer infinitamente */
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    overflow: hidden; /* Prende o conteúdo que tentar vazar */
+}
+
+.gantt-sidebar {
+    width: 260px;
+    flex-shrink: 0; /* Impede a barra lateral de ser esmagada */
+    background: rgba(0, 0, 0, 0.3);
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    overflow-y: auto;
+}
+
+.gantt-timeline-container {
+    flex-grow: 1;
+    overflow-x: auto; /* Cria a barra de rolagem horizontal SÓ no gráfico */
+    overflow-y: hidden;
+    padding-bottom: 10px;
+}
+
+/* Deixando a barra de rolagem do Roadmap premium */
+.gantt-timeline-container::-webkit-scrollbar {
+    height: 8px;
+}
+.gantt-timeline-container::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 10px;
+}
+.gantt-timeline-container::-webkit-scrollbar-thumb {
+    background: rgba(131, 46, 255, 0.5); /* Roxo Premium */
+    border-radius: 10px;
+}
+.gantt-timeline-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(131, 46, 255, 0.8);
+}
