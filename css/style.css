@@ -452,12 +452,13 @@
             font-weight: 500 !important;
         }    
 /* ========================================================= */
-/* BLINDAGEM DO GANTT E CONTÊINER PRINCIPAL                  */
+/* CRONOGRAMA GANTT (SCROLL HORIZONTAL BLINDADO)             */
 /* ========================================================= */
 
-/* 1. Trava o contêiner principal para não esticar a tela */
-#main-projects-container {
-    overflow-x: hidden !important;
+/* 1. Blindagem dos Contêineres Pais (Hub e Sócios) */
+#view-cronograma, #main-projects-container {
+    max-width: 100%;
+    overflow-x: hidden !important; /* Impede a tela inteira de criar scroll */
 }
 
 /* 2. O Aquário do Gráfico */
@@ -470,13 +471,13 @@
     border-radius: 12px; 
     background: #121212; 
     position: relative;
-    overflow: hidden; 
+    overflow: hidden; /* Corta tudo que tentar vazar da caixa principal */
 }
 
-/* 3. A Barra Lateral (Imóvel e inquebrável) */
+/* 3. A Barra Lateral (Nomes e Títulos - Fica parada) */
 .gantt-sidebar { 
-    flex: 0 0 260px; /* Impede de crescer ou encolher, trava exato em 260px */
-    width: 260px; 
+    flex: 0 0 260px; /* Trava absoluta: não cresce, não encolhe, fixo em 260px */
+    max-width: 260px; 
     background: rgba(15,15,15,0.95); 
     border-right: 1px solid rgba(255,255,255,0.08); 
     z-index: 10; 
@@ -485,24 +486,25 @@
     flex-direction: column; 
 }
 
-/* 4. A Linha do Tempo (Com rolagem forçada) */
+/* 4. A Linha do Tempo (Aqui nasce a barra de rolagem!) */
 .gantt-timeline-container { 
-    flex: 1 1 auto; /* Ocupa exatamente o espaço restante */
+    flex: 1 1 auto; 
     min-width: 0; /* TRUQUE DE MESTRE: Obriga a div a respeitar a tela e gerar o scroll */
-    overflow-x: auto; 
+    width: calc(100% - 260px);
+    overflow-x: auto; /* 🟢 ROLAGEM HORIZONTAL ATIVADA AQUI */
     overflow-y: hidden;
     background: repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,255,255,0.02) 39px, rgba(255,255,255,0.02) 40px); 
-    padding-bottom: 8px;
+    padding-bottom: 8px; /* Espaço para a barra não engolir a última linha */
 }
 
-/* --- Deixando a barra de rolagem do Roadmap premium --- */
+/* --- Deixando a barra de rolagem Premium --- */
 .gantt-timeline-container::-webkit-scrollbar { height: 8px; }
 .gantt-timeline-container::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.02); border-radius: 10px; }
 .gantt-timeline-container::-webkit-scrollbar-thumb { background: rgba(131, 46, 255, 0.5); border-radius: 10px; }
 .gantt-timeline-container::-webkit-scrollbar-thumb:hover { background: rgba(131, 46, 255, 0.8); }
 
 /* --- Cabeçalhos (Dias e Títulos) --- */
-.gantt-header-row { display: flex; border-bottom: 1px solid rgba(255,255,255,0.1); background: #0a0a0a; height: 50px; width: max-content; }
+.gantt-header-row { display: flex; border-bottom: 1px solid rgba(255,255,255,0.1); background: #0a0a0a; height: 50px; width: max-content; min-width: 100%; }
 .gantt-sidebar-header { height: 50px; padding: 15px 20px; font-size: 11px; font-weight: 800; color: #a1a1aa; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid rgba(255,255,255,0.1); background: #0a0a0a; display: flex; align-items: center; }
 .gantt-day-col { min-width: 40px; width: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1px solid rgba(255,255,255,0.05); }
 .gantt-day-name { font-size: 9px; color: #666; text-transform: uppercase; font-weight: 700; margin-bottom: 2px; }
@@ -511,7 +513,7 @@
 .gantt-day-col.hoje .gantt-day-num { color: #fff; font-weight: 800; }
 
 /* --- Corpo e Linhas --- */
-.gantt-body { display: flex; flex-direction: column; width: max-content; }
+.gantt-body { display: flex; flex-direction: column; width: max-content; min-width: 100%; }
 .gantt-row { height: 46px; border-bottom: 1px solid rgba(255,255,255,0.03); position: relative; display: flex; align-items: center; transition: background 0.2s; width: 100%; }
 .gantt-row:hover { background: rgba(255,255,255,0.02); }
 .gantt-sidebar-item { height: 46px; border-bottom: 1px solid rgba(255,255,255,0.03); display: flex; align-items: center; padding: 0 15px; font-size: 12px; font-weight: 500; color: #ddd; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; transition: 0.2s; }
