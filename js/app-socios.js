@@ -743,3 +743,63 @@ async function importarDados(event, tipo) {
     reader.readAsText(file, 'UTF-8');
 }
 window.importarDados = importarDados;
+
+// ==========================================
+// RINGS DE ALOCAÇÃO DA EQUIPE (ÁREA DO SÓCIO)
+// ==========================================
+function renderTeamAvailability() {
+    let workload = {};
+    for (const proj of Object.values(bdProjetos)) {
+        if (proj.arquivado) continue;
+        const todasConcluidas = proj.etapas && proj.etapas.length > 0 && proj.etapas.every(e => e.status === 'concluido');
+        if (todasConcluidas) continue; 
+        
+        (proj.etapas || []).forEach(t => {
+            if(t.responsavel && t.status !== 'concluido') {
+                let nome = t.responsavel.split('(')[0].trim();
+                if(nome) {
+                    if(!workload[nome]) workload[nome] = { p: 0 };
+                    workload[nome].p++;
+                }
+            }
+        });
+    }
+    
+    const MAX_PROJECTS = 5; // Limite que define os 100% (ajuste como quiser)
+    const members = Object.keys(workload).map(nome => {
+        return { nome, p: workload[nome].p, pct: Math.min(Math.round((workload[nome].p / MAX_PROJECTS) * 100), 100) };
+    });
+    
+    members.sort((a, b) => b.pct - a.pct);
+
+    const container = document.getElementById('teamAvailabilityContainer');
+    if (!container) return; // Se a div não existir, ele não faz nada
+
+    if (members.length === 0) {
+        container.innerHTML = '<div style="color:var(--cadarn-cinza); font-size:12px;">Ninguém alocado no momento.</div>';
+        return;
+    }
+    
+    container.innerHTML = members.map(m => {
+        let ringColor = '#47e299'; // Verde
+        if (m.pct >= 80) ringColor = '#ff8793'; // Vermelho
+        else if (m.pct >= 50) ringColor = '#ffc107'; // Amarelo
+
+        // Pegamos a primeira letra do nome
+        const inicial = m.nome.charAt(0).toUpperCase();
+
+        return `
+            <div style="display:flex; flex-direction:column; align-items:center; cursor:pointer; gap:8px; min-width: 65px; flex-shrink: 0; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                <div style="width: 50px; height: 50px; border-radius: 50%; background: conic-gradient(${ringColor} ${m.pct}%, rgba(255,255,255,0.05) 0); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 15px ${ringColor}40;">
+                    <div style="width: 44px; height: 44px; border-radius: 50%; background: var(--bg-card, #151515); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 16px;">
+                        ${inicial}
+                    </div>
+                </div>
+                <div style="text-align:center;">
+                    <div style="font-size:11px; font-weight:600; color:white; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width: 65px;">${m.nome.split(' ')[0]}</div>
+                    <div style="font-size:10px; color:${ringColor}; font-weight:700;">${m.pct}%</div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
