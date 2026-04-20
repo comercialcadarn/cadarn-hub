@@ -9,9 +9,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 
     <style>
-        /* Estilos Premium Exclusivos para Sócios */
         .socio-header-badge { background: linear-gradient(135deg, #FFC107, #FF9800); color: #000; padding: 4px 14px; border-radius: 20px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 0 10px rgba(255, 193, 7, 0.4); }
-        
         .fade-view { transition: opacity 0.3s ease; opacity: 1; }
         
         .kanban-socio-board { display: flex; gap: 20px; overflow-x: auto; padding-bottom: 10px; align-items: flex-start; }
@@ -32,6 +30,12 @@
         .task-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 10px; align-items: center; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; margin-bottom: 8px; border: 1px solid var(--border-color); }
         .task-row input, .task-row select { width: 100%; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 10px; border-radius: 6px; font-size: 13px; font-family: 'Inter'; transition: 0.3s; }
         .task-row input:focus, .task-row select:focus { border-color: var(--cadarn-roxo); box-shadow: 0 0 10px rgba(131,46,255,0.2); outline: none; }
+
+        /* Estilos do Autocomplete Inteligente */
+        .autocomplete-items { position: absolute; border: 1px solid var(--cadarn-roxo); border-top: none; z-index: 99; top: 100%; left: 0; right: 0; border-radius: 0 0 8px 8px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.8); background-color: rgba(15,15,15,0.98); max-height: 200px; overflow-y: auto; }
+        .autocomplete-items div { padding: 12px; cursor: pointer; color: white; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px; font-weight: 500; }
+        .autocomplete-items div:hover { background-color: rgba(131, 46, 255, 0.2); color: #c5a3ff; }
+        .autocomplete-active { background-color: rgba(131, 46, 255, 0.4) !important; color: #ffffff; }
     </style>
 </head>
 <body>
@@ -78,12 +82,10 @@
                     <div class="kanban-col-header" style="color: #6c757d;">🤝 Em Negociação / Backlog <span class="status-dot dot-pendente" style="margin:0;"></span></div>
                     <div class="kanban-dropzone" id="col-negociacao" data-status="negociacao"></div>
                 </div>
-
                 <div class="kanban-socio-col" style="background: rgba(182, 138, 255, 0.05); border-color: rgba(182, 138, 255, 0.1);">
                     <div class="kanban-col-header" style="color:#b68aff;">🚀 Ativos (Delivery) <span class="status-dot dot-ativo" style="margin:0;"></span></div>
                     <div class="kanban-dropzone" id="col-andamento" data-status="andamento"></div>
                 </div>
-
                 <div class="kanban-socio-col" style="background: rgba(71, 226, 153, 0.05); border-color: rgba(71, 226, 153, 0.1);">
                     <div class="kanban-col-header" style="color:#47e299;">🏁 Concluídos <span class="status-dot dot-concluido" style="margin:0;"></span></div>
                     <div class="kanban-dropzone" id="col-concluidos" data-status="concluido"></div>
@@ -120,8 +122,12 @@
 
             <div style="display: grid; grid-template-columns: 1fr 1.8fr; gap: 35px;">
                 <div style="display: flex; flex-direction: column; gap: 18px; background: rgba(255,255,255,0.02); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
-                    <div><label style="font-size: 11px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">👤 Líder do Projeto</label>
-                    <input type="text" id="modal-lider" class="edit-input" placeholder="Nome do Líder"></div>
+                    
+                    <div>
+                        <label style="font-size: 11px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">👤 Líder do Projeto</label>
+                        <input type="text" id="modal-lider" class="edit-input" placeholder="Comece a digitar o nome..." list="lista-nomes-datalist" autocomplete="off">
+                        <datalist id="lista-nomes-datalist"></datalist>
+                    </div>
                     
                     <div><label style="font-size: 11px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">📝 Escopo Estratégico</label>
                     <textarea id="modal-desc" class="edit-textarea" placeholder="Detalhes do projeto..."></textarea></div>
@@ -129,8 +135,10 @@
                     <div><label style="font-size: 11px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">🏷️ Tags</label>
                     <input type="text" id="modal-tags" class="edit-input" placeholder="Ex: Financeiro, TI (vírgula)"></div>
 
-                    <div><label style="font-size: 11px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">👥 Equipe</label>
-                    <input type="text" id="modal-equipe" class="edit-input" placeholder="Ex: Victor, Felipe"></div>
+                    <div style="position: relative;">
+                        <label style="font-size: 11px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">👥 Equipe (Separe com vírgula)</label>
+                        <input type="text" id="modal-equipe" class="edit-input" placeholder="Digite um nome..." autocomplete="off">
+                    </div>
                 </div>
 
                 <div>
