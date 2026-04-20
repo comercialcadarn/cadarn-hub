@@ -648,3 +648,25 @@
     min-width: 0;
     max-width: 100%;
 }
+
+/* ==================================================== */
+/* TIPOGRAFIA: TÍTULOS E NÚMEROS    */
+/* ==================================================== */
+h1, h2, h3, h4, 
+.logo-text, 
+.section-header-title, 
+.kanban-col-header, 
+.quote-text,
+.visao-stats strong,
+.tm-info,
+.project-row div[style*="font-size: 15px"] {
+    font-family: 'Outfit', sans-serif;
+    letter-spacing: -0.5px;
+}
+
+/* Deixa os grandes números dos KPIs super elegantes */
+.kpi-number, #kpi-total, #kpi-ativos, #kpi-concluidos {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    letter-spacing: -1px;
+}
