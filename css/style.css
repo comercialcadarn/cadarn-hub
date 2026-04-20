@@ -135,14 +135,30 @@
         @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
 
         /* --- VISÃO EXECUTIVA (KPIs) --- */
-        .visao-executiva-wrapper { display: grid; grid-template-columns: 180px 1fr 1.3fr; gap: 20px; align-items: stretch; }
-        .visao-chart { width: 180px; height: 180px; margin: 0 auto;}
-        .visao-stats { display: flex; flex-direction: column; gap: 15px; width: 100%; justify-content: center;}
-        
-        /* Flex Horizontal Layout for Top Colabs & Highlight */
-        .team-availability-wrapper { position: relative; display: flex; flex-direction: row; background: rgba(0,0,0,0.15); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); width: 100%; overflow: hidden; align-items: stretch; }
-        .team-list-container { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
-        .colab-mes-container { width: 160px; border-left: 1px solid var(--border-color); padding-left: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; }
+.visao-executiva-wrapper { 
+    display: grid; 
+    grid-template-columns: 260px 1fr 200px; /* Gráfico de 260px, Stats no meio, Colab do mês na ponta */
+    gap: 30px; 
+    align-items: stretch; 
+}
+
+.visao-chart { 
+    width: 260px; /* Aumentamos o tamanho! */
+    height: 260px; 
+    margin: 0 auto;
+}
+
+.visao-stats { 
+    display: flex; flex-direction: column; gap: 15px; width: 100%; justify-content: center;
+}
+
+.team-availability-wrapper { 
+    position: relative; display: flex; flex-direction: column; justify-content: center; background: rgba(0,0,0,0.15); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); width: 100%; overflow: hidden; align-items: stretch; 
+}
+
+.colab-mes-container { 
+    width: 100%; border-left: none; padding-left: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; 
+}
 
         #teamAvailabilityContainer { display: flex; gap: 18px; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
         #teamAvailabilityContainer::-webkit-scrollbar { display: none; }
