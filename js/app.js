@@ -459,14 +459,32 @@ function fecharBriefing() {
 
 function setVisualizacao(modo) {
     modoVisualizacao = modo;
+    
+    // 1. Atualiza os botões visuais
     document.getElementById('btn-view-list').classList.toggle('active', modo === 'list');
     document.getElementById('btn-view-kanban').classList.toggle('active', modo === 'kanban');
     document.getElementById('btn-view-roadmap').classList.toggle('active', modo === 'roadmap');
     document.getElementById('btn-view-equipe').classList.toggle('active', modo === 'equipe');
     document.getElementById('btn-view-lixeira').classList.toggle('active', modo === 'lixeira');
     
-    isSelectModeLixeira = false; selectedLixeiraItems.clear();
+    // ==========================================
+    // 2. EXPANSÃO (Roadmap Tela Cheia)
+    // ==========================================
+    const heroGrid = document.querySelector('.hero-grid');
+    if (heroGrid) {
+        if (modo === 'roadmap') {
+            heroGrid.style.gridTemplateColumns = '1fr'; // Força 1 coluna (tela cheia)
+        } else {
+            heroGrid.style.gridTemplateColumns = ''; // Devolve a proporção original dividida
+        }
+    }
+    
+    // 3. Lógica de lixeira e tags
+    isSelectModeLixeira = false; 
+    selectedLixeiraItems.clear();
     document.getElementById('tags-filter-container').style.display = (modo === 'equipe' || modo === 'lixeira') ? 'none' : 'flex';
+    
+    // 4. Renderiza o conteúdo central
     renderMainProjects();
 }
 
