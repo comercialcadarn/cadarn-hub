@@ -201,29 +201,37 @@
         </div>
 
         <div id="view-pessoas" class="fade-view" style="display: none; padding: 0 40px;">
-            <div class="workload-grid" id="workload-container"></div>
-        </div>
+        <div class="workload-grid" id="workload-container">
+            </div>
+    </div>
 
         <div id="view-cronograma" class="fade-view" style="display: none; padding: 0 40px;">
             <div id="gantt-master-container"></div>
         </div>
 
         <div id="view-calendario" class="fade-view" style="display: none; padding: 0 40px;">
-            <div class="calendar-wrapper">
-                <div class="calendar-header">
-                    <div class="calendar-title" id="cal-month-year">Abril 2026</div>
-                    <div class="calendar-nav">
-                        <button class="btn-import" onclick="mudarMes(-1)">← Anterior</button>
-                        <button class="btn-import" onclick="irParaHoje()">Hoje</button>
-                        <button class="btn-import" onclick="mudarMes(1)">Próximo →</button>
-                    </div>
+        <div class="calendar-wrapper">
+            <div class="calendar-header">
+                <div class="calendar-title" id="cal-month-year">Abril 2026</div>
+                <div class="calendar-nav">
+                    <button class="btn-import" onclick="mudarMes(-1)">← Anterior</button>
+                    <button class="btn-import" onclick="irParaHoje()">Hoje</button>
+                    <button class="btn-import" onclick="mudarMes(1)">Próximo →</button>
                 </div>
-                <div class="calendar-grid" style="background: rgba(255,255,255,0.03);">
-                    <div class="calendar-day-name">Seg</div><div class="calendar-day-name">Ter</div><div class="calendar-day-name">Qua</div><div class="calendar-day-name">Qui</div><div class="calendar-day-name">Sex</div><div class="calendar-day-name">Sáb</div><div class="calendar-day-name">Dom</div>
-                </div>
-                <div class="calendar-grid" id="calendar-body"></div>
             </div>
+            <div class="calendar-grid">
+                <div class="calendar-day-name">Seg</div>
+                <div class="calendar-day-name">Ter</div>
+                <div class="calendar-day-name">Qua</div>
+                <div class="calendar-day-name">Qui</div>
+                <div class="calendar-day-name">Sex</div>
+                <div class="calendar-day-name">Sáb</div>
+                <div class="calendar-day-name">Dom</div>
+            </div>
+            <div class="calendar-grid" id="calendar-body">
+                </div>
         </div>
+    </div>
 
         <div id="modal-projeto" class="modal-overlay" onclick="fecharModalProjeto(event)">
             <div class="modal-content" style="max-width: 1100px; width: 95%; text-align: left; max-height: 90vh; overflow-y: auto; background: rgba(15,15,15,0.98); border: 1px solid rgba(255,193,7,0.3); box-shadow: 0 30px 80px rgba(0,0,0,0.9);" onclick="event.stopPropagation()">
