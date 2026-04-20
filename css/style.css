@@ -452,14 +452,49 @@
             font-weight: 500 !important;
         }    
 /* ========================================================= */
-/* CRONOGRAMA GANTT                    */
+/* CRONOGRAMA GANTT (UNIFICADO E BLINDADO)                   */
 /* ========================================================= */
-.gantt-wrapper { display: flex; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; overflow: hidden; background: #121212; position: relative; }
-.gantt-sidebar { width: 260px; min-width: 260px; background: rgba(15,15,15,0.95); border-right: 1px solid rgba(255,255,255,0.08); z-index: 10; position: sticky; left: 0; box-shadow: 5px 0 15px rgba(0,0,0,0.5); display: flex; flex-direction: column; }
-.gantt-timeline-container { overflow-x: auto; flex-grow: 1; display: flex; flex-direction: column; background: repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,255,255,0.02) 39px, rgba(255,255,255,0.02) 40px); }
+.gantt-wrapper { 
+    display: flex; 
+    width: 100%;
+    max-width: 100%;
+    border: 1px solid rgba(255,255,255,0.08); 
+    border-radius: 12px; 
+    overflow: hidden; 
+    background: #121212; 
+    position: relative; 
+}
+
+.gantt-sidebar { 
+    width: 260px; 
+    min-width: 260px; 
+    flex-shrink: 0; /* Impede a barra de nomes de ser esmagada */
+    background: rgba(15,15,15,0.95); 
+    border-right: 1px solid rgba(255,255,255,0.08); 
+    z-index: 10; 
+    box-shadow: 5px 0 15px rgba(0,0,0,0.5); 
+    display: flex; 
+    flex-direction: column; 
+}
+
+.gantt-timeline-container { 
+    flex-grow: 1; 
+    min-width: 0; /* A MÁGICA! Força o container a não esticar a tela */
+    overflow-x: auto; 
+    display: flex; 
+    flex-direction: column; 
+    background: repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,255,255,0.02) 39px, rgba(255,255,255,0.02) 40px); 
+    padding-bottom: 8px; /* Dá espaço para a barra de rolagem */
+}
+
+/* Deixando a barra de rolagem do Roadmap premium */
+.gantt-timeline-container::-webkit-scrollbar { height: 8px; }
+.gantt-timeline-container::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.02); border-radius: 10px; }
+.gantt-timeline-container::-webkit-scrollbar-thumb { background: rgba(131, 46, 255, 0.5); border-radius: 10px; }
+.gantt-timeline-container::-webkit-scrollbar-thumb:hover { background: rgba(131, 46, 255, 0.8); }
 
 /* Cabeçalhos (Linha de Tempo e Títulos) */
-.gantt-header-row { display: flex; border-bottom: 1px solid rgba(255,255,255,0.1); background: #0a0a0a; height: 50px; }
+.gantt-header-row { display: flex; border-bottom: 1px solid rgba(255,255,255,0.1); background: #0a0a0a; height: 50px; width: max-content; }
 .gantt-sidebar-header { height: 50px; padding: 15px 20px; font-size: 11px; font-weight: 800; color: var(--cadarn-cinza); text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid rgba(255,255,255,0.1); background: #0a0a0a; display: flex; align-items: center; }
 .gantt-day-col { min-width: 40px; width: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1px solid rgba(255,255,255,0.05); }
 .gantt-day-name { font-size: 9px; color: #666; text-transform: uppercase; font-weight: 700; margin-bottom: 2px; }
@@ -468,8 +503,8 @@
 .gantt-day-col.hoje .gantt-day-num { color: #fff; font-weight: 800; }
 
 /* Corpo e Linhas */
-.gantt-body { display: flex; flex-direction: column; }
-.gantt-row { height: 46px; border-bottom: 1px solid rgba(255,255,255,0.03); position: relative; display: flex; align-items: center; transition: background 0.2s; }
+.gantt-body { display: flex; flex-direction: column; width: max-content; }
+.gantt-row { height: 46px; border-bottom: 1px solid rgba(255,255,255,0.03); position: relative; display: flex; align-items: center; transition: background 0.2s; width: 100%; }
 .gantt-row:hover { background: rgba(255,255,255,0.02); }
 .gantt-sidebar-item { height: 46px; border-bottom: 1px solid rgba(255,255,255,0.03); display: flex; align-items: center; padding: 0 15px; font-size: 12px; font-weight: 500; color: #ddd; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; transition: 0.2s; }
 .gantt-sidebar-item:hover { color: #fff; background: rgba(131, 46, 255, 0.1); }
@@ -490,75 +525,10 @@
 .gb-atrasado { background: linear-gradient(90deg, #ff8793, #dc3545); }
 
 /* ========================================================= */
-/* SCROLLBAR PREMIUM PARA OS COLABORADORES ALOCADOS          */
+/* SCROLLBAR PARA OS COLABORADORES ALOCADOS          */
 /* ========================================================= */
-
-#teamAvailabilityContainer {
-    /* Garante que o scroll é suave no celular e visível no PC */
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.02);
-    padding-bottom: 15px; /* Espaço para a barra não cortar os nomes */
-}
-
-/* Estilização para Chrome, Edge e Safari */
-#teamAvailabilityContainer::-webkit-scrollbar {
-    height: 6px; /* Altura da barra (fina e elegante) */
-}
-
-#teamAvailabilityContainer::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.02); /* Fundo da trilha quase invisível */
-    border-radius: 10px;
-}
-
-#teamAvailabilityContainer::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.15); /* Cor da barrinha (vidro fosco) */
-    border-radius: 10px;
-}
-
-#teamAvailabilityContainer::-webkit-scrollbar-thumb:hover {
-    background: rgba(131, 46, 255, 0.6); /* Brilha com a cor roxa premium ao passar o mouse */
-}
-/* ========================================================= */
-/* BLINDAGEM DO ROADMAP (GANTT) PARA NÃO ESTICAR A TELA      */
-/* ========================================================= */
-
-.gantt-wrapper {
-    display: flex;
-    width: 100%;
-    max-width: 100%; /* Impede o bloco de crescer infinitamente */
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 16px;
-    overflow: hidden; /* Prende o conteúdo que tentar vazar */
-}
-
-.gantt-sidebar {
-    width: 260px;
-    flex-shrink: 0; /* Impede a barra lateral de ser esmagada */
-    background: rgba(0, 0, 0, 0.3);
-    border-right: 1px solid rgba(255, 255, 255, 0.08);
-    overflow-y: auto;
-}
-
-.gantt-timeline-container {
-    flex-grow: 1;
-    overflow-x: auto; /* Cria a barra de rolagem horizontal SÓ no gráfico */
-    overflow-y: hidden;
-    padding-bottom: 10px;
-}
-
-/* Deixando a barra de rolagem do Roadmap premium */
-.gantt-timeline-container::-webkit-scrollbar {
-    height: 8px;
-}
-.gantt-timeline-container::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.02);
-    border-radius: 10px;
-}
-.gantt-timeline-container::-webkit-scrollbar-thumb {
-    background: rgba(131, 46, 255, 0.5); /* Roxo Premium */
-    border-radius: 10px;
-}
-.gantt-timeline-container::-webkit-scrollbar-thumb:hover {
-    background: rgba(131, 46, 255, 0.8);
-}
+#teamAvailabilityContainer { scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.02); padding-bottom: 15px; }
+#teamAvailabilityContainer::-webkit-scrollbar { height: 6px; }
+#teamAvailabilityContainer::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.02); border-radius: 10px; }
+#teamAvailabilityContainer::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 10px; }
+#teamAvailabilityContainer::-webkit-scrollbar-thumb:hover { background: rgba(131, 46, 255, 0.6); }
