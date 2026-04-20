@@ -2,7 +2,6 @@
 /* NÚCLEO DE AUTENTICAÇÃO E SINCRONIZAÇÃO FIREBASE (V2)      */
 /* ========================================================= */
 
-// Lista de acessos VIP (Sócios + Dev)
 const emailsSocios = [
     'debora.yuan@cadarnconsultoria.com.br',
     'felipe.penido@cadarnconsultoria.com.br',
@@ -33,7 +32,7 @@ async function initFirebase() {
     };
 
     const app = initializeApp(firebaseConfig);
-    db = getFirestore(app, "cadarn-hub");
+    db = getFirestore(app, "cadarn-hub"); 
     auth = getAuth(app);
 
     onAuthStateChanged(auth, (user) => {
@@ -76,7 +75,7 @@ async function loginComGoogle() {
         await firebaseAuth.signInWithPopup(auth, provider);
     } catch (error) {
         console.error("Erro no login:", error);
-        showToast("Falha na autenticação ou popup bloqueado.", "danger");
+        showToast("Falha na autenticação.", "danger");
     }
 }
 
@@ -90,15 +89,11 @@ async function logout() {
 
 function acessarAreaSocio() {
     const emailAtual = localStorage.getItem('cadarn_user_email');
-    
     if (!emailAtual) {
-        showToast("Sessão expirada. Por favor, faça login novamente.", "warning");
-        logout(); 
-        return;
+        showToast("Sessão expirada. Faça login novamente.", "warning");
+        logout(); return;
     }
-
     const emailFormatado = emailAtual.toLowerCase().trim();
-    
     if (emailsSocios.includes(emailFormatado)) {
         window.location.href = 'socios.html';
     } else {
@@ -144,24 +139,6 @@ function iniciarListeners() {
     if(usuarioLogado) checkMorningBriefing(); 
 }
 
-async function syncProjetoNuvem(idProjeto, isDelete = false) {
-    if (!navigator.onLine || !db) return;
-    const { doc, setDoc, deleteDoc } = firestore;
-    try {
-        if (isDelete) { await deleteDoc(doc(db, "projetos", idProjeto)); } 
-        else { await setDoc(doc(db, "projetos", idProjeto), bdProjetos[idProjeto], { merge: true }); }
-    } catch (error) { console.error("Erro ao salvar projeto no Firebase:", error); }
-}
-
-async function syncDeleteLoteNuvem(idsParaExcluir) {
-    if (!navigator.onLine || !db) return;
-    const { doc, deleteDoc } = firestore;
-    idsParaExcluir.forEach(async (id) => {
-        try { await deleteDoc(doc(db, "projetos", id)); } 
-        catch (e) { console.error("Erro na exclusão em lote:", e); }
-    });
-}
-
 async function syncColabsNuvem(nomesAfetados) {
     if (!navigator.onLine || !db) return;
     const { doc, setDoc } = firestore;
@@ -183,16 +160,12 @@ let configColaboradores = JSON.parse(localStorage.getItem('cadarn_colabs')) || {
 function autoDetectGender(name) {
     const first = name.toLowerCase().split(' ')[0];
     if (first.endsWith('a') && !['luca', 'andrea', 'micha'].includes(first)) return 'F';
-    if (['ellen', 'caroline', 'aline', 'viviane', 'raquel', 'iris'].includes(first)) return 'F';
     return 'M';
 }
 
 function getAvatarHtml(nome, size = 40) {
     const conf = configColaboradores[nome] || { foto: '', genero: autoDetectGender(nome), celular: '', email: '' };
-    
-    if (conf.foto) {
-        return `<div style="width:${size}px; height:${size}px; background-image:url('${conf.foto}'); background-size:cover; background-position:center; border-radius:50%; border: 2px solid rgba(255,255,255,0.1); box-shadow: 0 4px 10px rgba(0,0,0,0.3);"></div>`;
-    }
+    if (conf.foto) return `<div style="width:${size}px; height:${size}px; background-image:url('${conf.foto}'); background-size:cover; background-position:center; border-radius:50%; border: 2px solid rgba(255,255,255,0.1); box-shadow: 0 4px 10px rgba(0,0,0,0.3);"></div>`;
     
     const isF = conf.genero === 'F';
     const grad = isF ? 'linear-gradient(135deg, #ff6b9e, #ff8a65)' : 'linear-gradient(135deg, #2e8bc0, #832EFF)';
@@ -245,15 +218,7 @@ function abrirPerfil(nome) {
     let pCount = 0; const MAX_PROJECTS = 5;
 
     for (const [id, proj] of Object.entries(bdProjetos)) {
-        if (proj.arquivado) continue;
-        if (proj.visivelHub === false) continue; // <-- A trava do Rascunho
-        
-        if (filtroAtual !== 'Todos' && !(proj.tags || []).includes(filtroAtual)) continue;
-        if (filtroMembro && !(proj.equipeAtual || []).some(m => m.split('(')[0].trim() === filtroMembro)) continue;
-        
-        temProjetosParaMostrar = true;
-        let statusGeral = 'pendente'; let labelStatus = 'Aguardando'; let slaBadge = '';
-        if (!proj.etapas) proj.etapas = [];
+        if (proj.arquivado || proj.visivelHub === false) continue;
         
         const emEquipe = (proj.equipeAtual || []).some(m => m.split('(')[0].trim() === nome);
         const exEquipe = (proj.equipeAntiga || []).some(m => m.split('(')[0].trim() === nome);
@@ -264,12 +229,7 @@ function abrirPerfil(nome) {
                                 <div><strong>${sanitize(proj.nome)}</strong><br><span style="font-size:11px; color:var(--cadarn-cinza);">${sanitize(proj.cliente)}</span></div>
                                 <div style="font-size:10px; opacity:0.7; padding-top:2px;">${exEquipe && !todasConcluidas ? '(Ex-Membro)' : ''}</div>
                               </div>`;
-            if (todasConcluidas) {
-                concluidos.push(htmlItem);
-            } else if (emEquipe) {
-                ativos.push(htmlItem);
-                pCount++;
-            }
+            if (todasConcluidas) { concluidos.push(htmlItem); } else if (emEquipe) { ativos.push(htmlItem); pCount++; }
         }
     }
 
@@ -284,9 +244,7 @@ function abrirPerfil(nome) {
 }
 
 function fecharPerfil(e) {
-    if(e.target === document.getElementById('profile-modal')) {
-        document.getElementById('profile-modal').classList.remove('active');
-    }
+    if(e.target === document.getElementById('profile-modal')) { document.getElementById('profile-modal').classList.remove('active'); }
 }
 
 function salvarPerfilDado(prop, val) {
@@ -296,49 +254,26 @@ function salvarPerfilDado(prop, val) {
     configColaboradores[perfilAtualNome][prop] = val;
     localStorage.setItem('cadarn_colabs', JSON.stringify(configColaboradores));
     
-    if(navigator.onLine) {
-        syncColabsNuvem([perfilAtualNome]).then(() => {
-            showToast('Informação sincronizada na nuvem.', 'success');
-        });
-    } else {
-        showToast('Salvo localmente (Offline).', 'warning');
-    }
+    if(navigator.onLine) { syncColabsNuvem([perfilAtualNome]).then(() => { showToast('Informação sincronizada na nuvem.', 'success'); }); } 
+    else { showToast('Salvo localmente (Offline).', 'warning'); }
 }
 
-function handleDropFoto(e) {
-    e.preventDefault();
-    e.currentTarget.classList.remove('dragover');
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-        processarFotoPerfil(e.dataTransfer.files[0]);
-    }
-}
-
-function handleFileFoto(e) {
-    if (e.target.files && e.target.files[0]) {
-        processarFotoPerfil(e.target.files[0]);
-    }
-}
+function handleDropFoto(e) { e.preventDefault(); e.currentTarget.classList.remove('dragover'); if (e.dataTransfer.files && e.dataTransfer.files[0]) { processarFotoPerfil(e.dataTransfer.files[0]); } }
+function handleFileFoto(e) { if (e.target.files && e.target.files[0]) { processarFotoPerfil(e.target.files[0]); } }
 
 function processarFotoPerfil(file) {
     if(!file.type.startsWith('image/')) { showToast('Por favor, selecione uma imagem.', 'warning'); return; }
-    
     const reader = new FileReader();
     reader.onload = (e) => {
         const img = new Image();
         img.onload = () => {
-            const canvas = document.createElement('canvas');
-            const size = 150;
-            canvas.width = size; canvas.height = size;
+            const canvas = document.createElement('canvas'); const size = 150; canvas.width = size; canvas.height = size;
             const ctx = canvas.getContext('2d');
-            
             const min = Math.min(img.width, img.height);
             const sx = (img.width - min) / 2; const sy = (img.height - min) / 2;
-            
             ctx.drawImage(img, sx, sy, min, min, 0, 0, size, size);
             const dataUrl = canvas.toDataURL('image/jpeg', 0.7); 
-            
             salvarPerfilDado('foto', dataUrl);
-            
             document.getElementById('profile-avatar-render').innerHTML = getAvatarHtml(perfilAtualNome, 80);
             renderTeamAvailability();
             if(modoVisualizacao === 'equipe') renderMainProjects();
@@ -349,43 +284,22 @@ function processarFotoPerfil(file) {
 }
 
 function abrirModalElogio() {
-    if(!usuarioLogado) {
-        abrirModalLoginReal();
-        showToast('Identifique-se primeiro para mandar um elogio.', 'warning');
-        return;
-    }
-
+    if(!usuarioLogado) { abrirModalLoginReal(); showToast('Identifique-se primeiro para mandar um elogio.', 'warning'); return; }
     const sel = document.getElementById('elogio-para');
     let opts = '<option value="">Escolha um colega...</option>';
-    
     let todosMembros = new Set(Object.keys(configColaboradores));
     Object.values(bdProjetos).forEach(p => {
         (p.equipeAtual || []).forEach(m => todosMembros.add(m.split('(')[0].trim()));
         (p.equipeAntiga || []).forEach(m => todosMembros.add(m.split('(')[0].trim()));
     });
-
-    Array.from(todosMembros).sort().forEach(nome => {
-        if(nome && nome !== usuarioLogado) {
-            opts += `<option value="${sanitize(nome)}">${sanitize(nome)}</option>`;
-        }
-    });
-
-    sel.innerHTML = opts;
-    document.getElementById('elogio-texto').value = '';
-    document.getElementById('elogio-modal').classList.add('active');
+    Array.from(todosMembros).sort().forEach(nome => { if(nome && nome !== usuarioLogado) { opts += `<option value="${sanitize(nome)}">${sanitize(nome)}</option>`; } });
+    sel.innerHTML = opts; document.getElementById('elogio-texto').value = ''; document.getElementById('elogio-modal').classList.add('active');
 }
 
-function fecharModalElogio(e) {
-    if(!e || e.target === document.getElementById('elogio-modal') || e.target.classList.contains('sp-close')) {
-        document.getElementById('elogio-modal').classList.remove('active');
-    }
-}
+function fecharModalElogio(e) { if(!e || e.target === document.getElementById('elogio-modal') || e.target.classList.contains('sp-close')) { document.getElementById('elogio-modal').classList.remove('active'); } }
 
 function enviarElogio() {
-    const de = usuarioLogado;
-    const para = document.getElementById('elogio-para').value;
-    const texto = document.getElementById('elogio-texto').value.trim();
-    
+    const de = usuarioLogado; const para = document.getElementById('elogio-para').value; const texto = document.getElementById('elogio-texto').value.trim();
     if(!para) { showToast("Selecione para quem vai o elogio.", "warning"); return; }
     if(!texto) { showToast("Escreva a mensagem do elogio.", "warning"); return; }
 
@@ -398,28 +312,18 @@ function enviarElogio() {
     configColaboradores[de].elogiosEnviados.push({ para, texto, data: new Date().toISOString() });
 
     localStorage.setItem('cadarn_colabs', JSON.stringify(configColaboradores));
-    
-    if(navigator.onLine) {
-        syncColabsNuvem([de, para]);
-    }
+    if(navigator.onLine) { syncColabsNuvem([de, para]); }
 
     showToast(`⭐ Elogio enviado para ${sanitize(para)}!`, 'success');
-    fecharModalElogio();
-    atualizarColaboradorDoMes();
+    fecharModalElogio(); atualizarColaboradorDoMes();
 }
 
 function atualizarColaboradorDoMes() {
-    let topColab = null;
-    let maxEstrelas = 0;
-    
+    let topColab = null; let maxEstrelas = 0;
     for(let [nome, data] of Object.entries(configColaboradores)) {
         let estrelas = data.elogiosRecebidos ? data.elogiosRecebidos.length : 0;
-        if(estrelas > maxEstrelas) {
-            maxEstrelas = estrelas;
-            topColab = nome;
-        }
+        if(estrelas > maxEstrelas) { maxEstrelas = estrelas; topColab = nome; }
     }
-    
     const container = document.getElementById('colaborador-mes-container');
     if(topColab && maxEstrelas > 0) {
         container.innerHTML = `
@@ -428,52 +332,21 @@ function atualizarColaboradorDoMes() {
             <div style="font-size:13px; font-weight:700; margin-top:8px; color:var(--cadarn-branco); text-align:center;">${sanitize(topColab).split(' ')[0]}</div>
             <div style="font-size:11px; color:#ffc107; font-weight:600; text-align:center;">${maxEstrelas} Estrela(s)</div>
         `;
-    } else {
-        container.innerHTML = `<div style="font-size:10px; color:var(--cadarn-cinza); text-transform:uppercase; text-align:center;">Nenhum destaque ainda</div>`;
-    }
+    } else { container.innerHTML = `<div style="font-size:10px; color:var(--cadarn-cinza); text-transform:uppercase; text-align:center;">Nenhum destaque ainda</div>`; }
 }
 
 function showToast(message, type='info', onUndo=null) {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
-    
     let undoHtml = onUndo ? `<button class="toast-undo">Desfazer</button>` : '';
     toast.innerHTML = `<span>${message}</span> ${undoHtml}`;
     container.appendChild(toast);
-
-    let timeout;
-    if(onUndo) {
-        toast.querySelector('.toast-undo').onclick = () => {
-            onUndo();
-            toast.style.opacity = '0';
-            setTimeout(() => toast.remove(), 300);
-            clearTimeout(timeout);
-        };
-    }
-    
-    timeout = setTimeout(() => {
-        if (document.body.contains(toast)) {
-            toast.style.opacity = '0';
-            setTimeout(() => { if (document.body.contains(toast)) toast.remove(); }, 300);
-        }
-    }, 6000);
+    setTimeout(() => { if (document.body.contains(toast)) { toast.style.opacity = '0'; setTimeout(() => { if (document.body.contains(toast)) toast.remove(); }, 300); } }, 6000);
 }
 
-window.addEventListener('offline', () => {
-    document.getElementById('offline-banner').style.display = 'block';
-    showToast('Conexão perdida. Alterações serão salvas localmente.', 'warning');
-});
-
-window.addEventListener('online', () => {
-    document.getElementById('offline-banner').style.display = 'none';
-    showToast('Conexão restabelecida. Trabalhando em background...', 'success');
-});
-
 function toggleTheme() {
-    const body = document.body;
-    const isLight = body.classList.toggle('light-mode');
-    const btn = document.getElementById('theme-toggle');
+    const body = document.body; const isLight = body.classList.toggle('light-mode'); const btn = document.getElementById('theme-toggle');
     if (isLight) { btn.innerHTML = '🌙'; btn.title = 'Modo Escuro'; localStorage.setItem('cadarn_theme', 'light'); updateIframesTheme('light'); } 
     else { btn.innerHTML = '☀️'; btn.title = 'Modo Claro'; localStorage.setItem('cadarn_theme', 'dark'); updateIframesTheme('dark'); }
     atualizarDashboard(); 
@@ -488,8 +361,7 @@ function updateIframesTheme(theme) {
 }
 
 function loadTheme() {
-    const savedTheme = localStorage.getItem('cadarn_theme');
-    const btn = document.getElementById('theme-toggle');
+    const savedTheme = localStorage.getItem('cadarn_theme'); const btn = document.getElementById('theme-toggle');
     if (savedTheme === 'light') { document.body.classList.add('light-mode'); btn.innerHTML = '🌙'; btn.title = 'Modo Escuro'; updateIframesTheme('light'); }
 }
 
@@ -508,7 +380,6 @@ function diasEntre(dataInicial, dataFinal) {
 
 let bdProjetos = {};
 let projetoAbertoAtual = null;
-let isEditingProjeto = false;
 let modoVisualizacao = 'list'; 
 let filtroAtual = 'Todos';
 let filtroMembro = null; 
@@ -528,8 +399,7 @@ function renderDailyQuote() {
     const today = new Date();
     const index = (today.getFullYear() + today.getMonth() + today.getDate()) % insights.length;
     const quote = insights[index];
-    document.getElementById('quote-text').innerText = `"${quote.text}"`;
-    document.getElementById('quote-author').innerText = `- ${quote.author}`;
+    document.getElementById('quote-text').innerText = `"${quote.text}"`; document.getElementById('quote-author').innerText = `- ${quote.author}`;
 }
 
 function checkMorningBriefing() {
@@ -537,11 +407,10 @@ function checkMorningBriefing() {
     const lastBriefing = localStorage.getItem('cadarn_last_briefing_date');
     
     if (lastBriefing !== todayStr) {
-        let totaisAtivos = 0; let atrasosGlobais = 0;
-        const hojeCompare = new Date(new Date().setHours(0,0,0,0));
+        let totaisAtivos = 0; let atrasosGlobais = 0; const hojeCompare = new Date(new Date().setHours(0,0,0,0));
 
         for (const proj of Object.values(bdProjetos)) {
-            if (proj.arquivado) continue;
+            if (proj.arquivado || proj.visivelHub === false) continue;
             const todasConcluidas = proj.etapas && proj.etapas.length > 0 && proj.etapas.every(e => e.status === 'concluido');
             if (!todasConcluidas) {
                 totaisAtivos++;
@@ -553,17 +422,10 @@ function checkMorningBriefing() {
             }
         }
 
-        document.getElementById('briefing-ativos').innerText = totaisAtivos;
-        document.getElementById('briefing-atrasos').innerText = atrasosGlobais;
-        
+        document.getElementById('briefing-ativos').innerText = totaisAtivos; document.getElementById('briefing-atrasos').innerText = atrasosGlobais;
         const alertBox = document.getElementById('briefing-alert-box');
-        if (atrasosGlobais > 0) { 
-            alertBox.classList.add('briefing-alert'); 
-            document.getElementById('briefing-atrasos').style.color = '#ff8793'; 
-        } else { 
-            alertBox.classList.remove('briefing-alert'); 
-            document.getElementById('briefing-atrasos').style.color = '#47e299'; 
-        }
+        if (atrasosGlobais > 0) { alertBox.classList.add('briefing-alert'); document.getElementById('briefing-atrasos').style.color = '#ff8793'; } 
+        else { alertBox.classList.remove('briefing-alert'); document.getElementById('briefing-atrasos').style.color = '#47e299'; }
         
         document.getElementById('briefing-modal').classList.add('active');
     }
@@ -600,7 +462,6 @@ function toggleSelectModeLixeira() {
 function toggleLixeiraItem(id) {
     if (selectedLixeiraItems.has(id)) selectedLixeiraItems.delete(id);
     else selectedLixeiraItems.add(id);
-    
     const btn = document.getElementById('btn-delete-selected');
     if (btn) { btn.innerText = `🗑️ Apagar Selecionados (${selectedLixeiraItems.size})`; btn.disabled = selectedLixeiraItems.size === 0; btn.style.opacity = selectedLixeiraItems.size === 0 ? '0.5' : '1'; }
 }
@@ -623,7 +484,7 @@ function deleteSelectedLixeira() {
     isSelectModeLixeira = false; selectedLixeiraItems.clear(); renderMainProjects();
 }
 
-// O MOTOR GANTT DO HUB PRINCIPAL //
+// O MOTOR GANTT DO HUB PRINCIPAL
 function renderCronogramaFiltrado(containerId, filterUser) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -687,6 +548,7 @@ function renderCronogramaFiltrado(containerId, filterUser) {
     timelineHtml += `</div>`;
     container.innerHTML = `<div class="gantt-wrapper"><div class="gantt-sidebar">${sidebarHtml}</div><div class="gantt-timeline-container">${timelineHtml}</div></div>`;
 }
+
 function renderMainProjects() {
     const container = document.getElementById('main-projects-container');
     const filterContainer = document.getElementById('tags-filter-container');
@@ -694,7 +556,7 @@ function renderMainProjects() {
     if (Object.keys(bdProjetos).length === 0) { container.innerHTML = '<p style="color: var(--cadarn-cinza); font-size: 13px; text-align: center; padding: 20px;">Nenhum projeto cadastrado.</p>'; atualizarDashboard(); return; }
     
     let todasTags = new Set();
-    Object.values(bdProjetos).forEach(p => { if(!p.arquivado) (p.tags || []).forEach(t => todasTags.add(t)); });
+    Object.values(bdProjetos).forEach(p => { if(!p.arquivado && p.visivelHub) (p.tags || []).forEach(t => todasTags.add(t)); });
     
     let filterHtml = `<button class="tag-filter-btn ${filtroAtual === 'Todos' && !filtroMembro ? 'active' : ''}" onclick="setFiltro('Todos')">Todos</button>`;
     if (filtroMembro) { filterHtml += `<button class="tag-filter-btn active" onclick="limparFiltroMembro()">👤 ${sanitize(filtroMembro)} ✕</button>`; }
@@ -703,7 +565,7 @@ function renderMainProjects() {
     
     let kanbanAguardando = ''; let kanbanAtivos = ''; let kanbanConcluidos = ''; let listaNormal = '';
     const hojeCompare = new Date(new Date().setHours(0,0,0,0));
-    // SE FOR MODO ROADMAP, RENDERIZA O GANTT PESSOAL!
+
     if (modoVisualizacao === 'roadmap') {
         renderCronogramaFiltrado('main-projects-container', usuarioLogado);
         atualizarDashboard(); 
@@ -730,63 +592,29 @@ function renderMainProjects() {
     }
 
     if (modoVisualizacao === 'equipe') {
-        let temProjetosParaMostrar = false;
-
-    for (const [id, proj] of Object.entries(bdProjetos)) {
-        if (proj.arquivado) continue;
-        
-        // TRAVA DO RASCUNHO: Esconde projetos que o sócio não marcou como visíveis
-        if (proj.visivelHub === false) continue;
-        
-        if (filtroAtual !== 'Todos' && !(proj.tags || []).includes(filtroAtual)) continue;
-        if (filtroMembro && !(proj.equipeAtual || []).some(m => m.split('(')[0].trim() === filtroMembro)) continue;
-        
-        temProjetosParaMostrar = true;
-        let statusGeral = 'pendente'; let labelStatus = 'Aguardando'; let slaBadge = '';
-        if (!proj.etapas) proj.etapas = [];
-        const todasConcluidas = proj.etapas.length > 0 && proj.etapas.every(e => e.status === 'concluido');
-        const algumaAtiva = proj.etapas.some(e => e.status === 'ativo');
-        
-        if (todasConcluidas) { statusGeral = 'concluido'; labelStatus = 'Concluído'; } 
-        else {
-            if (algumaAtiva) { statusGeral = 'ativo'; labelStatus = 'Em Execução'; }
-            let temAtraso = false; let venceHoje = false;
-            proj.etapas.forEach(e => {
-                if (e.prazo && e.status !== 'concluido') {
-                    const dPrazo = new Date(e.prazo); dPrazo.setMinutes(dPrazo.getMinutes() + dPrazo.getTimezoneOffset());
-                    if (dPrazo < hojeCompare) temAtraso = true; else if (dPrazo.getTime() === hojeCompare.getTime()) venceHoje = true;
+        let workload = {};
+        for (const proj of Object.values(bdProjetos)) {
+            if (proj.arquivado || proj.visivelHub === false) continue;
+            const todasConcluidas = proj.etapas && proj.etapas.length > 0 && proj.etapas.every(e => e.status === 'concluido');
+            if (todasConcluidas) continue; 
+            (proj.etapas || []).forEach(t => {
+                if(t.responsavel && t.status !== 'concluido') {
+                    let nome = t.responsavel.split('(')[0].trim();
+                    if(nome) {
+                        if(!workload[nome]) workload[nome] = { p: 0, atrasados: 0 };
+                        workload[nome].p++;
+                        if(t.prazo && new Date(t.prazo) < hojeCompare) { workload[nome].atrasados++; }
+                    }
                 }
             });
-            if (temAtraso) slaBadge = '<span class="badge-danger">Atrasado</span>';
-            else if (venceHoje) slaBadge = '<span class="badge-warning">Vence Hoje</span>';
         }
-        
-        const tagsHtml = (proj.tags || []).map(t => `<span class="tag-pill">${sanitize(t)}</span>`).join('');
-        
-        if (modoVisualizacao === 'list' || modoVisualizacao === 'roadmap') {
-            listaNormal += `<div class="project-row" onclick="abrirProjeto('${sanitize(id)}')"><div><div style="font-weight: 500; font-size: 15px; margin-bottom: 5px; display:flex; align-items:center;">${sanitize(proj.nome)} ${slaBadge}</div><div style="display:flex; flex-wrap:wrap; margin-bottom:5px;">${tagsHtml}</div><div style="font-size: 12px; color: var(--cadarn-cinza);">Cliente: ${sanitize(proj.cliente)} • Líder: ${sanitize(proj.lider)}</div></div><div style="font-size: 13px; color: ${statusGeral === 'concluido' ? '#47e299' : (statusGeral === 'ativo' ? '#b68aff' : '#666')}; display: flex; align-items: center; font-weight: 500;"><span class="status-dot dot-${statusGeral}"></span> ${labelStatus}</div></div>`;
-        } else {
-            const cardHtml = `<div class="kanban-card" onclick="abrirProjeto('${sanitize(id)}')"><div style="display:flex; justify-content:space-between; align-items:flex-start;"><div class="kanban-card-title">${sanitize(proj.nome)}</div>${slaBadge}</div><div class="kanban-card-meta">${sanitize(proj.cliente)}</div><div style="margin-top: 10px;">${tagsHtml}</div><div style="margin-top: 10px; border-top: 1px solid rgba(131, 46, 255, 0.1); padding-top: 10px; font-size: 11px; color: var(--cadarn-cinza);">Líder: ${sanitize(proj.lider)}</div></div>`;
-            if(statusGeral === 'pendente') kanbanAguardando += cardHtml; else if(statusGeral === 'ativo') kanbanAtivos += cardHtml; else kanbanConcluidos += cardHtml;
-        }
-    }
         let eqHtml = '<div class="team-matrix-grid">';
         if(Object.keys(workload).length === 0) eqHtml += '<p style="color:var(--cadarn-cinza); font-size: 13px;">Ninguém alocado no momento.</p>';
         for (const [nome, data] of Object.entries(workload)) {
-            let alertHtml = data.atrasados > 0 ? `<div style="margin-top:10px; color:#ff8793; font-size:11px; font-weight:600;">⚠️ ${data.atrasados} projeto(s) com etapas atrasadas</div>` : '';
-            
+            let alertHtml = data.atrasados > 0 ? `<div style="margin-top:10px; color:#ff8793; font-size:11px; font-weight:600;">⚠️ ${data.atrasados} entregas atrasadas</div>` : '';
             eqHtml += `<div class="team-member-card" onclick="abrirPerfil('${sanitize(nome)}')">
-                <div class="tm-header">
-                    ${getAvatarHtml(nome, 46)}
-                    <div>
-                        <div class="tm-info">${sanitize(nome)}</div>
-                        <div class="tm-sub">Consultor(a)</div>
-                    </div>
-                </div>
-                <div class="tm-body">
-                    <div><strong>${data.p}</strong> Projetos Ativos</div>
-                    ${alertHtml}
-                </div>
+                <div class="tm-header">${getAvatarHtml(nome, 46)}<div><div class="tm-info">${sanitize(nome)}</div><div class="tm-sub">Consultor(a)</div></div></div>
+                <div class="tm-body"><div><strong>${data.p}</strong> Tarefas Ativas</div>${alertHtml}</div>
             </div>`;
         }
         eqHtml += '</div>'; container.innerHTML = eqHtml; return; 
@@ -795,7 +623,7 @@ function renderMainProjects() {
     let temProjetosParaMostrar = false;
 
     for (const [id, proj] of Object.entries(bdProjetos)) {
-        if (proj.arquivado) continue;
+        if (proj.arquivado || proj.visivelHub === false) continue;
         
         if (filtroAtual !== 'Todos' && !(proj.tags || []).includes(filtroAtual)) continue;
         if (filtroMembro && !(proj.equipeAtual || []).some(m => m.split('(')[0].trim() === filtroMembro)) continue;
@@ -822,7 +650,7 @@ function renderMainProjects() {
         
         const tagsHtml = (proj.tags || []).map(t => `<span class="tag-pill">${sanitize(t)}</span>`).join('');
         
-        if (modoVisualizacao === 'list' || modoVisualizacao === 'roadmap') {
+        if (modoVisualizacao === 'list') {
             listaNormal += `<div class="project-row" onclick="abrirProjeto('${sanitize(id)}')"><div><div style="font-weight: 500; font-size: 15px; margin-bottom: 5px; display:flex; align-items:center;">${sanitize(proj.nome)} ${slaBadge}</div><div style="display:flex; flex-wrap:wrap; margin-bottom:5px;">${tagsHtml}</div><div style="font-size: 12px; color: var(--cadarn-cinza);">Cliente: ${sanitize(proj.cliente)} • Líder: ${sanitize(proj.lider)}</div></div><div style="font-size: 13px; color: ${statusGeral === 'concluido' ? '#47e299' : (statusGeral === 'ativo' ? '#b68aff' : '#666')}; display: flex; align-items: center; font-weight: 500;"><span class="status-dot dot-${statusGeral}"></span> ${labelStatus}</div></div>`;
         } else {
             const cardHtml = `<div class="kanban-card" onclick="abrirProjeto('${sanitize(id)}')"><div style="display:flex; justify-content:space-between; align-items:flex-start;"><div class="kanban-card-title">${sanitize(proj.nome)}</div>${slaBadge}</div><div class="kanban-card-meta">${sanitize(proj.cliente)}</div><div style="margin-top: 10px;">${tagsHtml}</div><div style="margin-top: 10px; border-top: 1px solid rgba(131, 46, 255, 0.1); padding-top: 10px; font-size: 11px; color: var(--cadarn-cinza);">Líder: ${sanitize(proj.lider)}</div></div>`;
@@ -834,6 +662,7 @@ function renderMainProjects() {
         container.innerHTML = listaNormal || '<p style="color:var(--cadarn-cinza); font-size: 13px; padding: 15px;">Nenhum projeto encontrado.</p>'; 
     } else if (modoVisualizacao === 'kanban') { 
         container.innerHTML = `<div class="kanban-board"><div class="kanban-col"><div class="kanban-col-header">Aguardando <span class="status-dot dot-pendente" style="margin:0;"></span></div>${kanbanAguardando || '<div style="color:var(--cadarn-cinza); font-size:12px;">Vazio</div>'}</div><div class="kanban-col" style="background: rgba(182, 138, 255, 0.05); border-color: rgba(182, 138, 255, 0.2);"><div class="kanban-col-header" style="color: #b68aff;">Em Execução <span class="status-dot dot-ativo" style="margin:0;"></span></div>${kanbanAtivos || '<div style="color:var(--cadarn-cinza); font-size:12px;">Vazio</div>'}</div><div class="kanban-col" style="background: rgba(71, 226, 153, 0.05); border-color: rgba(71, 226, 153, 0.2);"><div class="kanban-col-header" style="color: #47e299;">Concluídos <span class="status-dot dot-concluido" style="margin:0;"></span></div>${kanbanConcluidos || '<div style="color:var(--cadarn-cinza); font-size:12px;">Vazio</div>'}</div></div>`; 
+    }
     
     atualizarDashboard(); 
 }
