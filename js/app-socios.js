@@ -283,30 +283,39 @@ function renderTarefasModalTemporario() {
     let optionsColabs = '<option value="">Responsável...</option>';
     listaColaboradores.forEach(nome => { optionsColabs += `<option value="${nome}">${nome}</option>`; });
 
+    // Estilo mestre padronizado para os inputs do modal
+    const inputStyle = "width: 100%; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 10px 12px; border-radius: 8px; font-size: 12px; outline: none; transition: 0.3s; font-family: 'Inter', sans-serif;";
+    
     etapasTemporarias.forEach((t, idx) => {
         let optionsResps = optionsColabs.replace(`value="${t.responsavel || ''}"`, `value="${t.responsavel || ''}" selected`);
         
         html += `
-            <div class="task-container">
-                <div class="task-row">
-                    <input type="text" value="${t.titulo || ''}" placeholder="Qual a entrega?" onchange="atualizarEtapaMemoria(${idx}, 'titulo', this.value)">
-                    <select onchange="atualizarEtapaMemoria(${idx}, 'responsavel', this.value)">${optionsResps}</select>
-                    <input type="date" value="${t.prazo || ''}" onchange="atualizarEtapaMemoria(${idx}, 'prazo', this.value)">
-                    <select onchange="atualizarEtapaMemoria(${idx}, 'status', this.value)">
+            <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; margin-bottom: 15px; overflow: hidden; transition: 0.3s;" onmouseover="this.style.borderColor='rgba(131, 46, 255, 0.4)'; this.style.boxShadow='0 5px 15px rgba(0,0,0,0.3)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'; this.style.boxShadow='none'">
+                
+                <div style="display: grid; grid-template-columns: 2fr 1.5fr 1fr 1fr auto; gap: 10px; padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.02); align-items: center;">
+                    <input type="text" style="${inputStyle}" value="${t.titulo || ''}" placeholder="Qual a entrega?" onchange="atualizarEtapaMemoria(${idx}, 'titulo', this.value)" onfocus="this.style.borderColor='#832EFF'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
+                    
+                    <select style="${inputStyle}" onchange="atualizarEtapaMemoria(${idx}, 'responsavel', this.value)" onfocus="this.style.borderColor='#832EFF'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">${optionsResps}</select>
+                    
+                    <input type="date" style="${inputStyle}" value="${t.prazo || ''}" onchange="atualizarEtapaMemoria(${idx}, 'prazo', this.value)" onfocus="this.style.borderColor='#832EFF'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
+                    
+                    <select style="${inputStyle}" onchange="atualizarEtapaMemoria(${idx}, 'status', this.value)" onfocus="this.style.borderColor='#832EFF'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
                         <option value="pendente" ${t.status === 'pendente'?'selected':''}>Pendente</option>
                         <option value="ativo" ${t.status === 'ativo'?'selected':''}>Fazendo</option>
                         <option value="concluido" ${t.status === 'concluido'?'selected':''}>Concluída</option>
                     </select>
-                    <button class="sp-btn-edit" style="background: rgba(220,53,69,0.2); color: #ff8793; border-color: transparent; padding: 6px 12px;" onclick="removerEtapaMemoria(${idx})" title="Excluir Etapa">✕</button>
+                    
+                    <button style="background: rgba(220,53,69,0.1); color: #ff8793; border: 1px solid rgba(220,53,69,0.2); padding: 10px; border-radius: 8px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center;" onmouseover="this.style.background='rgba(220,53,69,0.2)'" onmouseout="this.style.background='rgba(220,53,69,0.1)'" onclick="removerEtapaMemoria(${idx})" title="Excluir Etapa">✕</button>
                 </div>
-                <div class="task-kickoff">
-                    <textarea placeholder="🔗 Kick-off: Cole links de pastas, documentos ou instruções..." onchange="atualizarEtapaMemoria(${idx}, 'kickoff', this.value)">${t.kickoff || ''}</textarea>
+
+                <div style="padding: 12px 15px; background: rgba(0,0,0,0.3);">
+                    <textarea style="${inputStyle} min-height: 45px; resize: vertical;" placeholder="🔗 Kick-off: Cole links de pastas, documentos ou instruções..." onchange="atualizarEtapaMemoria(${idx}, 'kickoff', this.value)" onfocus="this.style.borderColor='#832EFF'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">${t.kickoff || ''}</textarea>
                 </div>
             </div>
         `;
     });
 
-    if(etapasTemporarias.length === 0) html = '<div style="color:var(--cadarn-cinza); font-size:13px; padding:15px; text-align:center;">Nenhuma tarefa estruturada.</div>';
+    if(etapasTemporarias.length === 0) html = '<div style="color:var(--cadarn-cinza); font-size:13px; padding:20px; text-align:center; background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px dashed rgba(255,255,255,0.1);">Nenhuma tarefa estruturada neste projeto.</div>';
     document.getElementById('lista-tarefas').innerHTML = html;
 }
 
@@ -380,10 +389,14 @@ function renderWorkload() {
                     let isAtrasada = t.prazo && new Date(t.prazo) < hoje;
                     if(isAtrasada) workload[t.responsavel].atrasadas++;
                     
+                    let corBorda = isAtrasada ? '#ff8793' : '#832EFF';
+                    let corFundo = isAtrasada ? 'rgba(220,53,69,0.05)' : 'rgba(255,255,255,0.02)';
+                    
+                    // Estrutura do Mini-card da tarefa
                     workload[t.responsavel].tarefasRefs.push(`
-                        <div style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; gap:4px;">
-                            <span style="color: ${isAtrasada ? '#ff8793' : 'var(--cadarn-branco)'}; font-size:12px; font-weight:600;">${t.titulo || 'Tarefa sem nome'}</span>
-                            <span style="color:var(--cadarn-roxo-claro); font-size:10px;">${proj.nome} (${proj.cliente})</span>
+                        <div style="background: ${corFundo}; border-left: 3px solid ${corBorda}; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; transition: 0.2s;" onmouseover="this.style.transform='translateX(4px)'" onmouseout="this.style.transform='translateX(0)'">
+                            <div style="color: ${isAtrasada ? '#ff8793' : '#fff'}; font-size: 12px; font-weight: 600; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${sanitize(t.titulo) || 'Tarefa sem nome'}</div>
+                            <div style="color: var(--cadarn-cinza); font-size: 10px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">📁 ${sanitize(proj.nome)} (${sanitize(proj.cliente)})</div>
                         </div>
                     `);
                 }
@@ -401,25 +414,33 @@ function renderWorkload() {
         if (data.ativas >= 5 || data.atrasadas >= 2) { statusClass = 'wl-status-sobrecarga'; statusText = 'Sobrecarga / Risco'; }
 
         html += `
-            <div class="wl-card">
-                <div class="wl-header">
-                    <div style="font-size:16px; font-weight:800; color:white; letter-spacing:-0.5px;">👤 ${nome}</div>
-                    <div class="wl-status-badge ${statusClass}">${statusText}</div>
-                </div>
-                <div class="wl-stats">
-                    <div class="wl-stat-box">
-                        <div style="font-size:10px; color:var(--cadarn-cinza); text-transform:uppercase; font-weight:700;">Tarefas Ativas</div>
-                        <div style="font-size:24px; font-weight:800; color:white;">${data.ativas}</div>
-                    </div>
-                    <div class="wl-stat-box" style="border: 1px solid ${data.atrasadas > 0 ? 'rgba(220,53,69,0.5)' : 'transparent'}; background: ${data.atrasadas > 0 ? 'rgba(220,53,69,0.1)' : 'rgba(255,255,255,0.02)'};">
-                        <div style="font-size:10px; color: ${data.atrasadas > 0 ? '#ff8793' : 'var(--cadarn-cinza)'}; text-transform:uppercase; font-weight:700;">Atrasadas</div>
-                        <div style="font-size:24px; font-weight:800; color:${data.atrasadas > 0 ? '#ff8793' : 'white'};">${data.atrasadas}</div>
+            <div style="background: rgba(255,255,255,0.015); border: 1px solid rgba(255,255,255,0.05); border-radius: 20px; padding: 25px; transition: 0.3s; display: flex; flex-direction: column;" onmouseover="this.style.borderColor='rgba(131,46,255,0.3)'; this.style.boxShadow='0 10px 30px rgba(0,0,0,0.5)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'; this.style.boxShadow='none'">
+                
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 15px; margin-bottom: 15px;">
+                    <div>
+                        <div style="font-size:16px; font-weight:800; color:white; letter-spacing:-0.5px; margin-bottom: 5px;">👤 ${sanitize(nome)}</div>
+                        <div class="wl-status-badge ${statusClass}" style="margin: 0;">${statusText}</div>
                     </div>
                 </div>
-                <div style="margin-top: 5px;">
-                    <div style="font-size:11px; color:var(--cadarn-cinza); margin-bottom:10px; text-transform:uppercase; font-weight:800;">Lista de Foco (A Fazer)</div>
-                    <div class="wl-tasks-list">
-                        ${data.tarefasRefs.length > 0 ? data.tarefasRefs.join('') : '<div style="color:#666; font-style:italic; padding:10px; text-align:center;">Nenhuma entrega mapeada.</div>'}
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                    <div style="background: rgba(0,0,0,0.3); border-radius: 12px; padding: 15px; text-align: center; border: 1px solid rgba(255,255,255,0.02);">
+                        <div style="font-size:10px; color:var(--cadarn-cinza); text-transform:uppercase; font-weight:700; letter-spacing: 0.5px; margin-bottom: 5px;">Ativas</div>
+                        <div style="font-size:28px; font-weight:900; color:white; line-height: 1;">${data.ativas}</div>
+                    </div>
+                    <div style="background: ${data.atrasadas > 0 ? 'rgba(220,53,69,0.05)' : 'rgba(0,0,0,0.3)'}; border-radius: 12px; padding: 15px; text-align: center; border: 1px solid ${data.atrasadas > 0 ? 'rgba(220,53,69,0.2)' : 'rgba(255,255,255,0.02)'};">
+                        <div style="font-size:10px; color:${data.atrasadas > 0 ? '#ff8793' : 'var(--cadarn-cinza)'}; text-transform:uppercase; font-weight:700; letter-spacing: 0.5px; margin-bottom: 5px;">Atrasadas</div>
+                        <div style="font-size:28px; font-weight:900; color:${data.atrasadas > 0 ? '#ff8793' : 'white'}; line-height: 1;">${data.atrasadas}</div>
+                    </div>
+                </div>
+                
+                <div style="flex-grow: 1; display: flex; flex-direction: column;">
+                    <div style="font-size:11px; color:var(--cadarn-cinza); text-transform:uppercase; font-weight:800; letter-spacing: 1px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                        <span>🎯 Foco (A Fazer)</span>
+                        <div style="height: 1px; background: rgba(255,255,255,0.05); flex-grow: 1;"></div>
+                    </div>
+                    <div style="max-height: 250px; overflow-y: auto; padding-right: 5px; flex-grow: 1;">
+                        ${data.tarefasRefs.length > 0 ? data.tarefasRefs.join('') : '<div style="background: rgba(255,255,255,0.01); border: 1px dashed rgba(255,255,255,0.05); padding: 20px; border-radius: 8px; text-align:center; color: var(--cadarn-cinza); font-size: 12px; font-style: italic;">Ocioso. Nenhuma entrega pendente.</div>'}
                     </div>
                 </div>
             </div>
