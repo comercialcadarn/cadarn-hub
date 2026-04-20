@@ -864,3 +864,221 @@ function renderFinancialHealth() {
         elMargem.style.color = margemMedia < 20 ? '#dc3545' : '#47e299';
     }
 }
+// ==========================================
+// MOTOR: MODO REUNIÃO DE SÓCIOS (APRESENTAÇÃO)
+// ==========================================
+let reuniaoSlides = [];
+let reuniaoCurrentSlide = 0;
+
+function abrirModoReuniao() {
+    reuniaoSlides = [];
+    reuniaoCurrentSlide = 0;
+    const hoje = new Date(new Date().setHours(0,0,0,0));
+
+    let ativos = 0, negociacao = 0, concluidos = 0;
+    let todasEntregas = [];
+    let projetosAndamento = [];
+
+    // 1. Mineração de Dados
+    Object.entries(bdProjetos).forEach(([id, proj]) => {
+        if (proj.arquivado) return;
+        
+        if (proj.status_crm === 'negociacao') negociacao++;
+        else if (proj.status_crm === 'andamento') {
+            ativos++;
+            projetosAndamento.push({ id, ...proj });
+        }
+        else if (proj.status_crm === 'concluido') concluidos++;
+
+        // Coleta as entregas para o "Top 3 Crítico" do Slide 0
+        if (proj.status_crm === 'andamento' && proj.etapas) {
+            proj.etapas.forEach(e => {
+                if (e.status !== 'concluido' && e.prazo) {
+                    let d = new Date(e.prazo);
+                    d.setMinutes(d.getMinutes() + d.getTimezoneOffset()); // Ajuste de fuso
+                    todasEntregas.push({ projNome: proj.nome, etapa: e.titulo, prazo: d });
+                }
+            });
+        }
+    });
+
+    // 2. Montagem do Slide 0 (Overview)
+    todasEntregas.sort((a,b) => a.prazo - b.prazo);
+    const top3 = todasEntregas.slice(0, 3);
+
+    reuniaoSlides.push({
+        type: 'overview',
+        ativos, negociacao, concluidos, top3
+    });
+
+    // 3. Montagem dos Slides de Projeto (Apenas os Ativos)
+    // Ordena os projetos alfabeticamente para a apresentação
+    projetosAndamento.sort((a, b) => a.nome.localeCompare(b.nome));
+
+    projetosAndamento.forEach(proj => {
+        let proximaEntrega = null;
+        let isAtrasado = false;
+
+        if (proj.etapas) {
+            let pendentes = proj.etapas.filter(e => e.status !== 'concluido' && e.prazo).map(e => {
+                let d = new Date(e.prazo);
+                d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
+                return {...e, dateObj: d};
+            });
+            
+            pendentes.sort((a,b) => a.dateObj - b.dateObj);
+            
+            if (pendentes.length > 0) {
+                proximaEntrega = pendentes[0];
+                if (proximaEntrega.dateObj < hoje) isAtrasado = true;
+            }
+        }
+
+        reuniaoSlides.push({
+            type: 'project',
+            nome: proj.nome,
+            cliente: proj.cliente,
+            lider: proj.lider,
+            equipe: proj.equipeAtual || [],
+            proximaEntrega,
+            isAtrasado
+        });
+    });
+
+    if (reuniaoSlides.length === 1 && ativos === 0) {
+        showToast("Não há projetos ativos para apresentar.", "warning");
+        return;
+    }
+
+    // 4. Trigger do Fullscreen e Renderização
+    const elem = document.documentElement;
+    if (elem.requestFullscreen) elem.requestFullscreen().catch(err => console.log("Erro de fullscreen:", err));
+
+    document.getElementById('reuniao-modal').style.display = 'flex';
+    renderReuniaoSlide();
+
+    // Liga os controles de teclado
+    document.addEventListener('keydown', reuniaoKeyListener);
+    document.addEventListener('fullscreenchange', checkFullscreenExit);
+}
+
+function fecharModoReuniao() {
+    if (document.fullscreenElement) { document.exitFullscreen(); }
+    document.getElementById('reuniao-modal').style.display = 'none';
+    document.removeEventListener('keydown', reuniaoKeyListener);
+    document.removeEventListener('fullscreenchange', checkFullscreenExit);
+}
+
+function checkFullscreenExit() {
+    // Se o usuário apertou ESC nativamente e saiu do fullscreen, fecha o modal junto
+    if (!document.fullscreenElement) {
+        fecharModoReuniao();
+    }
+}
+
+function reuniaoNextSlide() {
+    if (reuniaoCurrentSlide < reuniaoSlides.length - 1) {
+        reuniaoCurrentSlide++;
+        renderReuniaoSlide();
+    }
+}
+
+function reuniaoPrevSlide() {
+    if (reuniaoCurrentSlide > 0) {
+        reuniaoCurrentSlide--;
+        renderReuniaoSlide();
+    }
+}
+
+function reuniaoKeyListener(e) {
+    if (e.key === 'ArrowRight') reuniaoNextSlide();
+    if (e.key === 'ArrowLeft') reuniaoPrevSlide();
+    if (e.key === 'Escape') fecharModoReuniao();
+}
+
+function renderReuniaoSlide() {
+    const slide = reuniaoSlides[reuniaoCurrentSlide];
+    const content = document.getElementById('reuniao-content');
+    document.getElementById('reuniao-counter').innerText = `Slide ${reuniaoCurrentSlide + 1} de ${reuniaoSlides.length}`;
+
+    if (slide.type === 'overview') {
+        let top3Html = slide.top3.map(t => `
+            <div style="background: rgba(255,255,255,0.03); padding: 20px 25px; border-radius: 12px; margin-bottom: 15px; border-left: 4px solid var(--cadarn-roxo); display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 22px;"><strong>${sanitize(t.projNome)}:</strong> ${sanitize(t.etapa)}</span>
+                <span style="font-size: 20px; color: #ffc107; font-family: 'Outfit', sans-serif; font-weight: 700;">${t.prazo.toLocaleDateString('pt-BR')}</span>
+            </div>
+        `).join('');
+
+        if (!top3Html) top3Html = '<div style="color: var(--cadarn-cinza); font-size: 18px;">Nenhuma entrega com prazo mapeada no portfólio.</div>';
+
+        content.innerHTML = `
+            <div style="width: 100%; max-width: 1200px; padding: 40px; border-radius: 24px; animation: slideUp 0.5s ease-out;">
+                <h1 style="font-size: 54px; margin-bottom: 50px; color: white; font-weight: 900; letter-spacing: -1px;">Visão Geral do Portfólio</h1>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-bottom: 60px;">
+                    <div style="background: rgba(182, 138, 255, 0.1); border: 1px solid rgba(182, 138, 255, 0.3); padding: 50px; border-radius: 20px; text-align: center;">
+                        <div style="font-size: 18px; color: #c5a3ff; text-transform: uppercase; font-weight: 800; letter-spacing: 2px; margin-bottom: 10px;">Em Execução</div>
+                        <div style="font-size: 90px; font-weight: 900; color: white;">${slide.ativos}</div>
+                    </div>
+                    <div style="background: rgba(255, 193, 7, 0.1); border: 1px solid rgba(255, 193, 7, 0.3); padding: 50px; border-radius: 20px; text-align: center;">
+                        <div style="font-size: 18px; color: #ffc107; text-transform: uppercase; font-weight: 800; letter-spacing: 2px; margin-bottom: 10px;">Negociação</div>
+                        <div style="font-size: 90px; font-weight: 900; color: white;">${slide.negociacao}</div>
+                    </div>
+                    <div style="background: rgba(71, 226, 153, 0.1); border: 1px solid rgba(71, 226, 153, 0.3); padding: 50px; border-radius: 20px; text-align: center;">
+                        <div style="font-size: 18px; color: #47e299; text-transform: uppercase; font-weight: 800; letter-spacing: 2px; margin-bottom: 10px;">Concluídos</div>
+                        <div style="font-size: 90px; font-weight: 900; color: white;">${slide.concluidos}</div>
+                    </div>
+                </div>
+                <h2 style="font-size: 20px; color: var(--cadarn-cinza); margin-bottom: 25px; text-transform: uppercase; letter-spacing: 1px; font-weight: 800;">⚡ Próximas Entregas Críticas</h2>
+                ${top3Html}
+            </div>
+        `;
+    } else if (slide.type === 'project') {
+        const borderClass = slide.isAtrasado ? 'border: 2px solid rgba(220,53,69,0.4); box-shadow: 0 0 80px rgba(220,53,69,0.1);' : 'border: 1px solid rgba(255,255,255,0.08);';
+        const statusBadge = slide.isAtrasado 
+            ? '<span style="background: rgba(220,53,69,0.15); color: #ff8793; padding: 10px 20px; border-radius: 8px; font-size: 16px; font-weight: 800; text-transform: uppercase; border: 1px solid rgba(220,53,69,0.5); letter-spacing: 1px;">⚠️ Atrasado</span>'
+            : '<span style="background: rgba(71,226,153,0.1); color: #47e299; padding: 10px 20px; border-radius: 8px; font-size: 16px; font-weight: 800; text-transform: uppercase; border: 1px solid rgba(71,226,153,0.3); letter-spacing: 1px;">✅ Em Dia</span>';
+
+        let entregaHtml = '<div style="font-size: 24px; color: var(--cadarn-cinza);">Nenhuma entrega com prazo pendente.</div>';
+        if (slide.proximaEntrega) {
+            entregaHtml = `
+                <div style="font-size: 14px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 800; letter-spacing: 1.5px; margin-bottom: 15px;">Próxima Entrega Crítica:</div>
+                <div style="font-size: 38px; color: white; font-weight: 600; display: flex; align-items: center; gap: 20px;">
+                    ${sanitize(slide.proximaEntrega.titulo)} 
+                    <span style="font-size: 32px; font-family: 'Outfit', sans-serif; font-weight: 700; color: ${slide.isAtrasado ? '#ff8793' : '#ffc107'};">[${slide.proximaEntrega.dateObj.toLocaleDateString('pt-BR')}]</span>
+                </div>
+                <div style="font-size: 20px; color: var(--cadarn-cinza); margin-top: 15px;">Dono da Entrega: <strong style="color: white;">${sanitize(slide.proximaEntrega.responsavel || 'Não atribuído')}</strong></div>
+            `;
+        }
+
+        const equipeList = slide.equipe.length > 0 ? slide.equipe.join(' • ') : 'Ninguém alocado';
+
+        content.innerHTML = `
+            <div style="width: 100%; max-width: 1300px; padding: 80px; background: rgba(255,255,255,0.02); border-radius: 30px; ${borderClass} animation: slideUp 0.5s ease-out;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px;">
+                    <div style="font-size: 28px; color: #c5a3ff; text-transform: uppercase; font-weight: 800; letter-spacing: 3px;">${sanitize(slide.cliente)}</div>
+                    ${statusBadge}
+                </div>
+                <h1 style="font-size: 72px; font-weight: 900; color: white; line-height: 1.1; margin-bottom: 50px; letter-spacing: -2px;">${sanitize(slide.nome)}</h1>
+                
+                <div style="display: grid; grid-template-columns: 1fr 2.5fr; gap: 50px; margin-bottom: 60px; border-top: 1px solid rgba(255,255,255,0.08); border-bottom: 1px solid rgba(255,255,255,0.08); padding: 40px 0;">
+                    <div>
+                        <div style="font-size: 14px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 800; letter-spacing: 1px; margin-bottom: 15px;">Líder do Projeto</div>
+                        <div style="font-size: 28px; color: white; font-weight: 600;">👤 ${sanitize(slide.lider)}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 14px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 800; letter-spacing: 1px; margin-bottom: 15px;">Equipe Ativa</div>
+                        <div style="font-size: 24px; color: var(--cadarn-cinza); line-height: 1.5;">${sanitize(equipeList)}</div>
+                    </div>
+                </div>
+
+                ${entregaHtml}
+            </div>
+        `;
+    }
+}
+
+// Expõe as funções globalmente para o HTML enxergar
+window.abrirModoReuniao = abrirModoReuniao;
+window.fecharModoReuniao = fecharModoReuniao;
+window.reuniaoNextSlide = reuniaoNextSlide;
+window.reuniaoPrevSlide = reuniaoPrevSlide;
