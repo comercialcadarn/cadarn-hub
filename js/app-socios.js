@@ -30,6 +30,9 @@ let isCriandoNovo = false;
 let etapasTemporarias = [];
 let usuarioLogado = localStorage.getItem('cadarn_user') || 'Sócio';
 
+// Controle do Calendário
+let dataAtualCalendario = new Date();
+
 async function initSegurancaSocios() {
     const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js");
     const { getAuth, onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js");
@@ -86,28 +89,41 @@ function iniciarListeners() {
         });
         renderKanban();
         renderWorkload();
+        renderCalendario(); // Renderiza calendário na atualização
     });
     inicializarDragAndDrop();
 }
 
 function switchTab(tab) {
-    const vProj = document.getElementById('view-projetos');
-    const vPess = document.getElementById('view-pessoas');
-    vProj.style.opacity = '0'; vPess.style.opacity = '0';
+    const views = ['projetos', 'pessoas', 'calendario'];
+    views.forEach(v => {
+        const el = document.getElementById(`view-${v}`);
+        if(el) el.style.opacity = '0';
+    });
 
     setTimeout(() => {
-        vProj.style.display = tab === 'projetos' ? 'block' : 'none';
-        vPess.style.display = tab === 'pessoas' ? 'block' : 'none';
-        setTimeout(() => { vProj.style.opacity = '1'; vPess.style.opacity = '1'; }, 50);
+        views.forEach(v => {
+            const el = document.getElementById(`view-${v}`);
+            if(el) el.style.display = (tab === v) ? 'block' : 'none';
+        });
+        setTimeout(() => { 
+            views.forEach(v => {
+                const el = document.getElementById(`view-${v}`);
+                if(el) el.style.opacity = '1';
+            });
+            if(tab === 'calendario') renderCalendario(); // Força render do calendário ao abrir
+        }, 50);
     }, 150);
 
-    document.getElementById('tab-btn-projetos').classList.toggle('active', tab === 'projetos');
-    document.getElementById('tab-btn-pessoas').classList.toggle('active', tab === 'pessoas');
+    views.forEach(v => {
+        const btn = document.getElementById(`tab-btn-${v}`);
+        if(btn) btn.classList.toggle('active', tab === v);
+    });
 }
 
 function aplicarFiltros() {
     filtroResponsavel = document.getElementById('filtro-responsavel').value;
-    renderKanban(); renderWorkload();
+    renderKanban(); renderWorkload(); renderCalendario();
 }
 
 function showToast(message, type='info') {
@@ -195,12 +211,11 @@ function inicializarDragAndDrop() {
 }
 
 // ==========================================
-// CONTROLE DO MODAL DE PROJETOS E TAREFAS
+// CONTROLE DO MODAL (C/ KICK-OFF EXPANDIDO)
 // ==========================================
 function novoProjetoSocio() {
     isCriandoNovo = true;
     projetoModalAberto = 'proj_' + Date.now();
-    // Instancia a nova estrutura com o campo de kickoff mapeado
     etapasTemporarias = [{ titulo: 'Planejamento Inicial', responsavel: '', prazo: '', status: 'pendente', kickoff: '' }];
     
     const camposParaLimpar = ['modal-proj-nome', 'modal-proj-cliente', 'modal-desc', 'modal-tags', 'modal-equipe', 'modal-licoes'];
@@ -223,7 +238,6 @@ function abrirModalProjeto(id) {
     const proj = bdProjetos[id];
     
     const setVal = (elementId, val) => { const el = document.getElementById(elementId); if(el) el.value = val; };
-    
     setVal('modal-proj-nome', proj.nome || '');
     setVal('modal-proj-cliente', proj.cliente || '');
     setVal('modal-lider', proj.lider || '');
@@ -250,7 +264,6 @@ function fecharModalProjeto(e) {
     }
 }
 
-// A RENDERIZAÇÃO INTELIGENTE COM A ÁREA DE KICK-OFF EXPANDIDA
 function renderTarefasModalTemporario() {
     let html = '';
     let optionsColabs = '<option value="">Responsável...</option>';
@@ -273,7 +286,7 @@ function renderTarefasModalTemporario() {
                     <button class="sp-btn-edit" style="background: rgba(220,53,69,0.2); color: #ff8793; border-color: transparent; padding: 6px 12px;" onclick="removerEtapaMemoria(${idx})" title="Excluir Etapa">✕</button>
                 </div>
                 <div class="task-kickoff">
-                    <textarea placeholder="🔗 Informações de Kick-off: Cole links de pastas do Drive, documentos de referência, ou instruções claras para o colaborador iniciar esta tarefa..." onchange="atualizarEtapaMemoria(${idx}, 'kickoff', this.value)">${t.kickoff || ''}</textarea>
+                    <textarea placeholder="🔗 Informações de Kick-off: Cole links de pastas do Drive, documentos de referência, ou instruções claras para o colaborador..." onchange="atualizarEtapaMemoria(${idx}, 'kickoff', this.value)">${t.kickoff || ''}</textarea>
                 </div>
             </div>
         `;
@@ -284,23 +297,15 @@ function renderTarefasModalTemporario() {
 }
 
 function adicionarNovaTarefaModal() {
-    // Nova etapa inicializada perfeitamente com todas as tags de banco estruturadas
     etapasTemporarias.push({ titulo: '', responsavel: '', prazo: '', status: 'pendente', kickoff: '' });
     renderTarefasModalTemporario();
 }
 
-function atualizarEtapaMemoria(idx, campo, valor) {
-    if(etapasTemporarias[idx]) etapasTemporarias[idx][campo] = valor;
-}
-
-function removerEtapaMemoria(idx) {
-    etapasTemporarias.splice(idx, 1);
-    renderTarefasModalTemporario();
-}
+function atualizarEtapaMemoria(idx, campo, valor) { if(etapasTemporarias[idx]) etapasTemporarias[idx][campo] = valor; }
+function removerEtapaMemoria(idx) { etapasTemporarias.splice(idx, 1); renderTarefasModalTemporario(); }
 
 async function salvarProjetoSocio() {
     if (!projetoModalAberto) return;
-
     const elNome = document.getElementById('modal-proj-nome');
     const elCliente = document.getElementById('modal-proj-cliente');
     const elLider = document.getElementById('modal-lider');
@@ -341,7 +346,7 @@ async function salvarProjetoSocio() {
 }
 
 // ==========================================
-// MOTOR DE ALOCAÇÃO (WORKLOAD)
+// WORKLOAD ALGORITHM
 // ==========================================
 function renderWorkload() {
     const workload = {};
@@ -410,7 +415,102 @@ function renderWorkload() {
 }
 
 // ==========================================
-// ALGORITMO DE AUTOCOMPLETE E MULTIVALOR (VÍRGULAS)
+// CALENDÁRIO MASTER (NATIVO)
+// ==========================================
+function mudarMes(delta) {
+    dataAtualCalendario.setMonth(dataAtualCalendario.getMonth() + delta);
+    renderCalendario();
+}
+
+function irParaHoje() {
+    dataAtualCalendario = new Date();
+    renderCalendario();
+}
+
+function renderCalendario() {
+    const calendarBody = document.getElementById('calendar-body');
+    if (!calendarBody) return;
+
+    const year = dataAtualCalendario.getFullYear();
+    const month = dataAtualCalendario.getMonth();
+    
+    // Nomes dos meses em português
+    const mesesStr = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+    document.getElementById('cal-month-year').innerText = `${mesesStr[month]} ${year}`;
+
+    // Mapeamento de tarefas por data (YYYY-MM-DD)
+    let tarefasPorData = {};
+    for (const [id, proj] of Object.entries(bdProjetos)) {
+        if (proj.arquivado) continue;
+        if (filtroResponsavel) {
+            const temTarefaResponsavel = (proj.etapas || []).some(t => t.responsavel === filtroResponsavel);
+            if (!temTarefaResponsavel && proj.lider !== filtroResponsavel && !(proj.equipeAtual || []).includes(filtroResponsavel)) continue;
+        }
+        
+        (proj.etapas || []).forEach(t => {
+            if (t.prazo && (!filtroResponsavel || t.responsavel === filtroResponsavel)) {
+                if (!tarefasPorData[t.prazo]) tarefasPorData[t.prazo] = [];
+                tarefasPorData[t.prazo].push({ ...t, projId: id, projNome: proj.nome });
+            }
+        });
+    }
+
+    // Lógica do Calendário (Iniciando na Segunda-feira = 1, Domingo = 0 no JS)
+    let primeiroDia = new Date(year, month, 1).getDay();
+    let indexPrimeiroDia = primeiroDia === 0 ? 6 : primeiroDia - 1; // Converte para array SEG a DOM
+    let diasNoMes = new Date(year, month + 1, 0).getDate();
+    
+    let html = '';
+    const hojeStr = new Date().toISOString().split('T')[0];
+    const dataDeHoje = new Date(new Date().setHours(0,0,0,0));
+
+    // Dias do mês anterior para preencher a primeira semana
+    const diasMesAnterior = new Date(year, month, 0).getDate();
+    for (let i = indexPrimeiroDia - 1; i >= 0; i--) {
+        const dia = diasMesAnterior - i;
+        html += `<div class="calendar-day other-month"><div class="calendar-date">${dia}</div></div>`;
+    }
+
+    // Dias do mês atual
+    for (let i = 1; i <= diasNoMes; i++) {
+        // Monta string YYYY-MM-DD perfeita
+        const mesStr = String(month + 1).padStart(2, '0');
+        const diaStr = String(i).padStart(2, '0');
+        const dataKey = `${year}-${mesStr}-${diaStr}`;
+        
+        const isHoje = dataKey === hojeStr ? 'today' : '';
+        
+        let tarefasHtml = '';
+        if (tarefasPorData[dataKey]) {
+            tarefasPorData[dataKey].forEach(t => {
+                let statusClass = t.status; // pendente, ativo, concluido
+                if (statusClass !== 'concluido' && new Date(t.prazo) < dataDeHoje) statusClass = 'atrasado';
+                
+                const emoji = t.responsavel ? `👤 ${t.responsavel.split(' ')[0]}` : '⚠️ Sem Dono';
+                tarefasHtml += `
+                    <div class="cal-task ${statusClass}" onclick="abrirModalProjeto('${t.projId}')" title="${sanitize(t.titulo)} - ${sanitize(t.projNome)}">
+                        <span>${sanitize(t.titulo)}</span>
+                        <span>${emoji}</span>
+                    </div>
+                `;
+            });
+        }
+
+        html += `<div class="calendar-day ${isHoje}"><div class="calendar-date">${i}</div>${tarefasHtml}</div>`;
+    }
+
+    // Dias do próximo mês para completar o grid de 42 blocos (6 semanas)
+    const totalRenderizado = indexPrimeiroDia + diasNoMes;
+    const diasFaltando = 42 - totalRenderizado;
+    for (let i = 1; i <= diasFaltando; i++) {
+        html += `<div class="calendar-day other-month"><div class="calendar-date">${i}</div></div>`;
+    }
+
+    calendarBody.innerHTML = html;
+}
+
+// ==========================================
+// ALGORITMO MULTIVALOR (Autocomplete)
 // ==========================================
 function setupAutocompleteMulti(inputElement, arr) {
     if(!inputElement) return;
@@ -462,21 +562,16 @@ function setupAutocompleteMulti(inputElement, arr) {
         if (currentFocus < 0) currentFocus = (x.length - 1);
         x[currentFocus].classList.add("autocomplete-active");
     }
-    function removeActive(x) {
-        for (let i = 0; i < x.length; i++) { x[i].classList.remove("autocomplete-active"); }
-    }
+    function removeActive(x) { for (let i = 0; i < x.length; i++) { x[i].classList.remove("autocomplete-active"); } }
     function closeAllLists(elmnt) {
         const x = document.getElementsByClassName("autocomplete-items");
-        for (let i = 0; i < x.length; i++) {
-            if (elmnt != x[i] && elmnt != inputElement) { x[i].parentNode.removeChild(x[i]); }
-        }
+        for (let i = 0; i < x.length; i++) { if (elmnt != x[i] && elmnt != inputElement) { x[i].parentNode.removeChild(x[i]); } }
     }
     document.addEventListener("click", function (e) { closeAllLists(e.target); });
 }
 
 initSegurancaSocios();
 
-// Expondo as funções nativas para os controladores do DOM
 window.switchTab = switchTab;
 window.aplicarFiltros = aplicarFiltros;
 window.abrirModalProjeto = abrirModalProjeto;
@@ -486,3 +581,5 @@ window.salvarProjetoSocio = salvarProjetoSocio;
 window.adicionarNovaTarefaModal = adicionarNovaTarefaModal;
 window.atualizarEtapaMemoria = atualizarEtapaMemoria;
 window.removerEtapaMemoria = removerEtapaMemoria;
+window.mudarMes = mudarMes;
+window.irParaHoje = irParaHoje;
