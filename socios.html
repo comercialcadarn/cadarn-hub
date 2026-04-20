@@ -9,7 +9,9 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 
     <style>
+        /* Estilos Premium Exclusivos para Sócios */
         .socio-header-badge { background: linear-gradient(135deg, #FFC107, #FF9800); color: #000; padding: 4px 14px; border-radius: 20px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 0 10px rgba(255, 193, 7, 0.4); }
+        
         .fade-view { transition: opacity 0.3s ease; opacity: 1; }
         
         .kanban-socio-board { display: flex; gap: 20px; overflow-x: auto; padding-bottom: 10px; align-items: flex-start; }
@@ -27,9 +29,17 @@
         .wl-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .wl-stat-box { background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; text-align: center; border: 1px solid rgba(255,255,255,0.02); }
         
-        .task-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 10px; align-items: center; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; margin-bottom: 8px; border: 1px solid var(--border-color); }
+        /* TASK CONTAINER & KICK-OFF STYLES */
+        .task-container { background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; margin-bottom: 12px; display: flex; flex-direction: column; overflow: hidden; transition: 0.2s; }
+        .task-container:hover { border-color: rgba(131, 46, 255, 0.4); box-shadow: 0 0 15px rgba(131,46,255,0.1); }
+        .task-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 10px; align-items: center; padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.02); }
         .task-row input, .task-row select { width: 100%; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 10px; border-radius: 6px; font-size: 13px; font-family: 'Inter'; transition: 0.3s; }
         .task-row input:focus, .task-row select:focus { border-color: var(--cadarn-roxo); box-shadow: 0 0 10px rgba(131,46,255,0.2); outline: none; }
+        
+        .task-kickoff { padding: 12px; background: rgba(0,0,0,0.1); }
+        .task-kickoff textarea { width: 100%; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); color: #e2d3ff; padding: 12px; border-radius: 6px; font-size: 12px; font-family: 'Inter'; transition: 0.3s; min-height: 60px; resize: vertical; line-height: 1.5; }
+        .task-kickoff textarea:focus { border-color: var(--cadarn-roxo); box-shadow: 0 0 10px rgba(131,46,255,0.1); outline: none; color: white; background: rgba(0,0,0,0.5); }
+        .task-kickoff textarea::placeholder { color: rgba(255,255,255,0.3); }
 
         /* Estilos do Autocomplete Inteligente */
         .autocomplete-items { position: absolute; border: 1px solid var(--cadarn-roxo); border-top: none; z-index: 99; top: 100%; left: 0; right: 0; border-radius: 0 0 8px 8px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.8); background-color: rgba(15,15,15,0.98); max-height: 200px; overflow-y: auto; }
@@ -130,7 +140,7 @@
                     </div>
                     
                     <div><label style="font-size: 11px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">📝 Escopo Estratégico</label>
-                    <textarea id="modal-desc" class="edit-textarea" placeholder="Detalhes do projeto..."></textarea></div>
+                    <textarea id="modal-desc" class="edit-textarea" placeholder="Detalhes gerais do projeto..."></textarea></div>
 
                     <div><label style="font-size: 11px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">🏷️ Tags</label>
                     <input type="text" id="modal-tags" class="edit-input" placeholder="Ex: Financeiro, TI (vírgula)"></div>
@@ -143,7 +153,7 @@
 
                 <div>
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 15px;">
-                        <h3 style="font-size: 16px; color: white; font-weight: 700; display: flex; align-items: center; gap: 10px;">📋 Tarefas e Prazos</h3>
+                        <h3 style="font-size: 16px; color: white; font-weight: 700; display: flex; align-items: center; gap: 10px;">📋 Tarefas, Prazos e Kick-off</h3>
                         <button class="sp-btn-edit" style="background: rgba(131,46,255,0.2); color: #c5a3ff; border-color: var(--cadarn-roxo);" onclick="adicionarNovaTarefaModal()">➕ Nova Tarefa</button>
                     </div>
                     
@@ -151,7 +161,7 @@
                         <div>Descrição</div> <div>Responsável</div> <div>Prazo</div> <div>Status</div> <div></div>
                     </div>
                     
-                    <div id="lista-tarefas" style="max-height: 380px; overflow-y: auto; padding-right: 8px; display: flex; flex-direction: column; gap: 10px;"></div>
+                    <div id="lista-tarefas" style="max-height: 480px; overflow-y: auto; padding-right: 8px; display: flex; flex-direction: column; gap: 10px;"></div>
                 </div>
             </div>
 
