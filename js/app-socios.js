@@ -543,10 +543,6 @@ function irParaHoje() {
     renderCronograma('gantt-master-container', filtroResponsavel);
 }
 
-function renderCronograma(containerId, filterUser = null) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-
     const startDate = new Date(); 
     startDate.setDate(startDate.getDate() - 10);
     startDate.setHours(0,0,0,0);
