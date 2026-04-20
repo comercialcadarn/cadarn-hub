@@ -9,11 +9,10 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 
     <style>
-        /* Estilos Premium Exclusivos para Sócios */
         .socio-header-badge { background: linear-gradient(135deg, #FFC107, #FF9800); color: #000; padding: 4px 14px; border-radius: 20px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 0 10px rgba(255, 193, 7, 0.4); }
-        
         .fade-view { transition: opacity 0.3s ease; opacity: 1; }
         
+        /* KANBAN E WORKLOAD BASE CSS */
         .kanban-socio-board { display: flex; gap: 20px; overflow-x: auto; padding-bottom: 10px; align-items: flex-start; }
         .kanban-socio-col { flex: 1; min-width: 300px; background: rgba(0,0,0,0.2); border-radius: 12px; padding: 15px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 10px; min-height: 60vh; }
         .kanban-dropzone { min-height: 100px; display: flex; flex-direction: column; gap: 10px; flex-grow: 1; }
@@ -29,23 +28,45 @@
         .wl-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .wl-stat-box { background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; text-align: center; border: 1px solid rgba(255,255,255,0.02); }
         
-        /* TASK CONTAINER & KICK-OFF STYLES */
         .task-container { background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; margin-bottom: 12px; display: flex; flex-direction: column; overflow: hidden; transition: 0.2s; }
         .task-container:hover { border-color: rgba(131, 46, 255, 0.4); box-shadow: 0 0 15px rgba(131,46,255,0.1); }
         .task-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 10px; align-items: center; padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.02); }
         .task-row input, .task-row select { width: 100%; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 10px; border-radius: 6px; font-size: 13px; font-family: 'Inter'; transition: 0.3s; }
         .task-row input:focus, .task-row select:focus { border-color: var(--cadarn-roxo); box-shadow: 0 0 10px rgba(131,46,255,0.2); outline: none; }
-        
         .task-kickoff { padding: 12px; background: rgba(0,0,0,0.1); }
         .task-kickoff textarea { width: 100%; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); color: #e2d3ff; padding: 12px; border-radius: 6px; font-size: 12px; font-family: 'Inter'; transition: 0.3s; min-height: 60px; resize: vertical; line-height: 1.5; }
         .task-kickoff textarea:focus { border-color: var(--cadarn-roxo); box-shadow: 0 0 10px rgba(131,46,255,0.1); outline: none; color: white; background: rgba(0,0,0,0.5); }
         .task-kickoff textarea::placeholder { color: rgba(255,255,255,0.3); }
 
-        /* Estilos do Autocomplete Inteligente */
         .autocomplete-items { position: absolute; border: 1px solid var(--cadarn-roxo); border-top: none; z-index: 99; top: 100%; left: 0; right: 0; border-radius: 0 0 8px 8px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.8); background-color: rgba(15,15,15,0.98); max-height: 200px; overflow-y: auto; }
         .autocomplete-items div { padding: 12px; cursor: pointer; color: white; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px; font-weight: 500; }
         .autocomplete-items div:hover { background-color: rgba(131, 46, 255, 0.2); color: #c5a3ff; }
         .autocomplete-active { background-color: rgba(131, 46, 255, 0.4) !important; color: #ffffff; }
+
+        /* CALENDÁRIO MASTER CSS */
+        .calendar-wrapper { background: rgba(15,15,15,0.8); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        .calendar-header { display: flex; justify-content: space-between; align-items: center; padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.02); }
+        .calendar-nav { display: flex; gap: 10px; align-items: center; }
+        .calendar-nav button { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--cadarn-branco); padding: 8px 15px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; transition: 0.2s; }
+        .calendar-nav button:hover { background: rgba(131,46,255,0.2); border-color: var(--cadarn-roxo); color: #fff; }
+        .calendar-title { font-size: 18px; font-weight: 800; color: white; letter-spacing: -0.5px; text-transform: capitalize; }
+        
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); background: rgba(255,255,255,0.05); gap: 1px; }
+        .calendar-day-name { text-align: left; padding: 15px 10px; font-size: 11px; font-weight: 800; color: var(--cadarn-cinza); text-transform: uppercase; background: #141414; letter-spacing: 1px; }
+        .calendar-day { background: #1a1a1a; min-height: 140px; padding: 10px; display: flex; flex-direction: column; gap: 6px; transition: background 0.2s; }
+        .calendar-day:hover { background: #1f1f1f; }
+        .calendar-day.other-month { opacity: 0.3; background: #111; }
+        .calendar-day.today { background: rgba(131, 46, 255, 0.05); }
+        .calendar-day.today .calendar-date { color: #c5a3ff; background: rgba(131, 46, 255, 0.2); padding: 2px 8px; border-radius: 12px; display: inline-block; width: max-content; }
+        .calendar-date { font-size: 14px; font-weight: 700; color: white; margin-bottom: 8px; opacity: 0.8; }
+        
+        /* Tarefas dentro do Calendário */
+        .cal-task { font-size: 10px; padding: 6px 10px; border-radius: 6px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; transition: 0.2s; display: flex; align-items: center; justify-content: space-between; gap: 5px; }
+        .cal-task:hover { transform: scale(1.02); z-index: 2; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        .cal-task.pendente { background: rgba(255,255,255,0.08); color: #ccc; border-left: 3px solid #666; }
+        .cal-task.ativo { background: rgba(131,46,255,0.2); color: #c5a3ff; border-left: 3px solid var(--cadarn-roxo); }
+        .cal-task.concluido { background: rgba(71,226,153,0.15); color: #47e299; border-left: 3px solid #47e299; }
+        .cal-task.atrasado { background: rgba(220,53,69,0.2); color: #ff8793; border-left: 3px solid #dc3545; }
     </style>
 </head>
 <body>
@@ -69,8 +90,9 @@
         
         <div class="card anim-1" style="padding: 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
             <div class="view-toggle" style="background: rgba(0,0,0,0.3); padding: 5px;">
-                <button class="view-btn active" id="tab-btn-projetos" onclick="switchTab('projetos')">📊 Pipeline Estratégico</button>
-                <button class="view-btn" id="tab-btn-pessoas" onclick="switchTab('pessoas')">👥 Carga (Workload)</button>
+                <button class="view-btn active" id="tab-btn-projetos" onclick="switchTab('projetos')">📊 Pipeline</button>
+                <button class="view-btn" id="tab-btn-pessoas" onclick="switchTab('pessoas')">👥 Workload</button>
+                <button class="view-btn" id="tab-btn-calendario" onclick="switchTab('calendario')">📅 Calendário</button>
             </div>
 
             <div style="display: flex; gap: 15px; align-items: center;">
@@ -81,7 +103,7 @@
                     </select>
                 </div>
                 <button class="btn-present" onclick="novoProjetoSocio()" style="background: linear-gradient(135deg, #198754, #157347); border-color: #198754; box-shadow: 0 4px 15px rgba(25, 135, 84, 0.3);">
-                    ➕ Criar Projeto Estratégico
+                    ➕ Criar Projeto
                 </button>
             </div>
         </div>
@@ -110,6 +132,29 @@
             </div>
         </div>
 
+        <div id="view-calendario" class="fade-view anim-2" style="display: none;">
+            <div class="calendar-wrapper">
+                <div class="calendar-header">
+                    <div class="calendar-title" id="cal-month-year">Abril 2026</div>
+                    <div class="calendar-nav">
+                        <button onclick="mudarMes(-1)">← Anterior</button>
+                        <button onclick="irParaHoje()">Hoje</button>
+                        <button onclick="mudarMes(1)">Próximo →</button>
+                    </div>
+                </div>
+                <div class="calendar-grid">
+                    <div class="calendar-day-name">Seg</div>
+                    <div class="calendar-day-name">Ter</div>
+                    <div class="calendar-day-name">Qua</div>
+                    <div class="calendar-day-name">Qui</div>
+                    <div class="calendar-day-name">Sex</div>
+                    <div class="calendar-day-name">Sáb</div>
+                    <div class="calendar-day-name">Dom</div>
+                </div>
+                <div class="calendar-grid" id="calendar-body"></div>
+            </div>
+        </div>
+
     </div>
 
     <div id="modal-projeto" class="modal-overlay" onclick="fecharModalProjeto(event)">
@@ -132,19 +177,15 @@
 
             <div style="display: grid; grid-template-columns: 1fr 1.8fr; gap: 35px;">
                 <div style="display: flex; flex-direction: column; gap: 18px; background: rgba(255,255,255,0.02); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
-                    
                     <div>
                         <label style="font-size: 11px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">👤 Líder do Projeto</label>
                         <input type="text" id="modal-lider" class="edit-input" placeholder="Comece a digitar o nome..." list="lista-nomes-datalist" autocomplete="off">
                         <datalist id="lista-nomes-datalist"></datalist>
                     </div>
-                    
                     <div><label style="font-size: 11px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">📝 Escopo Estratégico</label>
                     <textarea id="modal-desc" class="edit-textarea" placeholder="Detalhes gerais do projeto..."></textarea></div>
-
                     <div><label style="font-size: 11px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">🏷️ Tags</label>
                     <input type="text" id="modal-tags" class="edit-input" placeholder="Ex: Financeiro, TI (vírgula)"></div>
-
                     <div style="position: relative;">
                         <label style="font-size: 11px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">👥 Equipe (Separe com vírgula)</label>
                         <input type="text" id="modal-equipe" class="edit-input" placeholder="Digite um nome..." autocomplete="off">
@@ -156,11 +197,9 @@
                         <h3 style="font-size: 16px; color: white; font-weight: 700; display: flex; align-items: center; gap: 10px;">📋 Tarefas, Prazos e Kick-off</h3>
                         <button class="sp-btn-edit" style="background: rgba(131,46,255,0.2); color: #c5a3ff; border-color: var(--cadarn-roxo);" onclick="adicionarNovaTarefaModal()">➕ Nova Tarefa</button>
                     </div>
-                    
                     <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 10px; font-size: 11px; font-weight: 700; color: var(--cadarn-cinza); text-transform: uppercase; padding: 0 10px 10px 10px;">
                         <div>Descrição</div> <div>Responsável</div> <div>Prazo</div> <div>Status</div> <div></div>
                     </div>
-                    
                     <div id="lista-tarefas" style="max-height: 480px; overflow-y: auto; padding-right: 8px; display: flex; flex-direction: column; gap: 10px;"></div>
                 </div>
             </div>
