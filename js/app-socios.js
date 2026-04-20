@@ -2,6 +2,16 @@
 /* LÓGICA DE ENGENHARIA E GESTÃO: ÁREA DO SÓCIO              */
 /* ========================================================= */
 
+// A Fonte da Verdade: Lista Oficial de Colaboradores
+const listaColaboradores = [
+    "Ana Carolina Bittencourt", "Ana Clara Fabris", "Ana Clara Yumi", "Barbara Figueiredo",
+    "Carlos Oliveira", "Debora Yuan", "Eduardo Figueiredo", "Felipe Penido", "João Pedro Soares",
+    "Juliana Deoracki", "Leonardo Assis", "Leonardo Pierangelli", "Louise Varela", "Manuela Pires",
+    "Maria de Macedo", "Maria Eduarda Aguiar", "Maria Emília Velozo", "Matheus Zucon",
+    "Otavio Pimentel", "Rafaela Avila", "Sâmia Franco", "Stefano Miceli", "Susana Vicenti",
+    "Thiago Zamin", "Victor Hugo Mendes"
+].sort();
+
 const emailsSocios = [
     'debora.yuan@cadarnconsultoria.com.br',
     'felipe.penido@cadarnconsultoria.com.br',
@@ -13,7 +23,6 @@ const emailsSocios = [
 let db;
 let firestore = {};
 let bdProjetos = {};
-let bdColabs = {};
 let filtroResponsavel = "";
 
 let projetoModalAberto = null;
@@ -21,12 +30,13 @@ let isCriandoNovo = false;
 let etapasTemporarias = [];
 let usuarioLogado = localStorage.getItem('cadarn_user') || 'Sócio';
 
+// Inicialização segura do Firebase
 async function initSegurancaSocios() {
     const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js");
     const { getAuth, onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js");
-    const { getFirestore, collection, onSnapshot, doc, updateDoc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js");
+    const { getFirestore, collection, onSnapshot, doc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js");
 
-    firestore = { collection, onSnapshot, doc, updateDoc, setDoc };
+    firestore = { collection, onSnapshot, doc, setDoc };
 
     const firebaseConfig = {
         apiKey: "AIzaSyAnClCbOU3JRBehpGvrKj8RrcS86lyl3gg",
@@ -38,7 +48,7 @@ async function initSegurancaSocios() {
     };
 
     const app = initializeApp(firebaseConfig);
-    db = getFirestore(app, "cadarn-hub");
+    db = getFirestore(app, "cadarn-hub"); // Conexão direta com o banco correto
     const auth = getAuth(app);
 
     onAuthStateChanged(auth, (user) => {
@@ -46,9 +56,30 @@ async function initSegurancaSocios() {
             window.location.href = 'index.html'; 
         } else {
             document.getElementById('conteudo-restrito').style.display = 'block';
+            iniciarUI();
             iniciarListeners();
         }
     });
+}
+
+// Inicia as listas suspensas (Datalist, Autocomplete e Filtros)
+function iniciarUI() {
+    // 1. Popula o filtro principal
+    const selectFiltro = document.getElementById('filtro-responsavel');
+    if(selectFiltro) {
+        let options = '<option value="">Todos da Equipe</option>';
+        listaColaboradores.forEach(nome => { options += `<option value="${nome}">${nome}</option>`; });
+        selectFiltro.innerHTML = options;
+    }
+
+    // 2. Popula o Datalist do Líder
+    const datalistLider = document.getElementById('lista-nomes-datalist');
+    if(datalistLider) {
+        datalistLider.innerHTML = listaColaboradores.map(nome => `<option value="${nome}">`).join('');
+    }
+
+    // 3. Ativa o Autocomplete Multivalor (com vírgulas) no campo da Equipe
+    setupAutocompleteMulti(document.getElementById("modal-equipe"), listaColaboradores);
 }
 
 function iniciarListeners() {
@@ -60,24 +91,13 @@ function iniciarListeners() {
         });
         renderKanban();
         renderWorkload();
-        popularSelectFiltro();
     });
-
-    firestore.onSnapshot(firestore.collection(db, "colaboradores"), (snapshot) => {
-        snapshot.docChanges().forEach((change) => {
-            bdColabs[change.doc.id] = change.doc.data();
-        });
-        popularSelectFiltro();
-        renderWorkload();
-    });
-
     inicializarDragAndDrop();
 }
 
 function switchTab(tab) {
     const vProj = document.getElementById('view-projetos');
     const vPess = document.getElementById('view-pessoas');
-    
     vProj.style.opacity = '0'; vPess.style.opacity = '0';
 
     setTimeout(() => {
@@ -88,14 +108,6 @@ function switchTab(tab) {
 
     document.getElementById('tab-btn-projetos').classList.toggle('active', tab === 'projetos');
     document.getElementById('tab-btn-pessoas').classList.toggle('active', tab === 'pessoas');
-}
-
-function popularSelectFiltro() {
-    const select = document.getElementById('filtro-responsavel');
-    const valorAtual = select.value;
-    let options = '<option value="">Todos da Equipe</option>';
-    Object.keys(bdColabs).sort().forEach(nome => { options += `<option value="${nome}">${nome}</option>`; });
-    select.innerHTML = options; select.value = valorAtual;
 }
 
 function aplicarFiltros() {
@@ -119,7 +131,7 @@ function sanitize(str) {
 }
 
 // ==========================================
-// KANBAN E RENDERIZAÇÃO
+// KANBAN
 // ==========================================
 function renderKanban() {
     let htmlNegociacao = ''; let htmlAndamento = ''; let htmlConcluido = '';
@@ -150,9 +162,7 @@ function renderKanban() {
                     ${atrasoBadge}
                 </div>
                 <div style="font-size: 12px; color: var(--cadarn-cinza); margin-bottom: 10px; font-weight: 500;">${sanitize(proj.cliente || 'Sem Cliente')}</div>
-                
                 <div style="display:flex; gap: 5px; flex-wrap: wrap; margin-bottom: 15px;">${tagsHtml}</div>
-                
                 <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px; font-size: 11px;">
                     <div style="color: var(--cadarn-cinza);">📝 ${etapas.filter(t => t.status === 'concluido').length}/${etapas.length} Etapas</div>
                     <div style="font-weight: bold; font-size: 10px;">${isVisivel}</div>
@@ -181,9 +191,7 @@ function inicializarDragAndDrop() {
                 const novoStatus = toList.getAttribute('data-status');
 
                 if(projetoId && novoStatus) {
-                    try { 
-                        await firestore.setDoc(firestore.doc(db, "projetos", projetoId), { status_crm: novoStatus }, { merge: true }); 
-                    } 
+                    try { await firestore.setDoc(firestore.doc(db, "projetos", projetoId), { status_crm: novoStatus }, { merge: true }); } 
                     catch (e) { console.error("Erro ao mover card:", e); }
                 }
             },
@@ -192,32 +200,25 @@ function inicializarDragAndDrop() {
 }
 
 // ==========================================
-// CRIAÇÃO E SALVAMENTO DE PROJETOS (MODAL)
+// MODAL DE PROJETOS E TAREFAS
 // ==========================================
 function novoProjetoSocio() {
     isCriandoNovo = true;
     projetoModalAberto = 'proj_' + Date.now();
     etapasTemporarias = [{ titulo: 'Planejamento Inicial', responsavel: '', prazo: '', status: 'pendente' }];
     
-    // Programação Defensiva: Só tenta limpar o campo se ele existir no HTML
     const camposParaLimpar = ['modal-proj-nome', 'modal-proj-cliente', 'modal-desc', 'modal-tags', 'modal-equipe', 'modal-licoes'];
-    
-    camposParaLimpar.forEach(id => {
-        const elemento = document.getElementById(id);
-        if (elemento) elemento.value = '';
-    });
+    camposParaLimpar.forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
 
     const elLider = document.getElementById('modal-lider');
     if (elLider) elLider.value = usuarioLogado;
-
+    
     const elVisivel = document.getElementById('modal-proj-visivel');
     if (elVisivel) elVisivel.checked = false;
 
     renderTarefasModalTemporario();
-    
     const modal = document.getElementById('modal-projeto');
     if (modal) modal.classList.add('active');
-    else console.error("ERRO UI: O elemento div com id='modal-projeto' não foi encontrado no HTML.");
 }
 
 function abrirModalProjeto(id) {
@@ -225,19 +226,24 @@ function abrirModalProjeto(id) {
     projetoModalAberto = id;
     const proj = bdProjetos[id];
     
-    document.getElementById('modal-proj-nome').value = proj.nome || '';
-    document.getElementById('modal-proj-cliente').value = proj.cliente || '';
-    document.getElementById('modal-lider').value = proj.lider || '';
-    document.getElementById('modal-desc').value = proj.descricao || '';
-    document.getElementById('modal-tags').value = (proj.tags || []).join(', ');
-    document.getElementById('modal-equipe').value = (proj.equipeAtual || []).join(', ');
-    document.getElementById('modal-licoes').value = proj.licoes || '';
-    document.getElementById('modal-proj-visivel').checked = proj.visivelHub === true;
+    const setVal = (elementId, val) => { const el = document.getElementById(elementId); if(el) el.value = val; };
+    
+    setVal('modal-proj-nome', proj.nome || '');
+    setVal('modal-proj-cliente', proj.cliente || '');
+    setVal('modal-lider', proj.lider || '');
+    setVal('modal-desc', proj.descricao || '');
+    setVal('modal-tags', (proj.tags || []).join(', '));
+    setVal('modal-equipe', (proj.equipeAtual || []).join(', '));
+    setVal('modal-licoes', proj.licoes || '');
+
+    const elVisivel = document.getElementById('modal-proj-visivel');
+    if (elVisivel) elVisivel.checked = proj.visivelHub === true;
 
     etapasTemporarias = proj.etapas ? JSON.parse(JSON.stringify(proj.etapas)) : [];
     
     renderTarefasModalTemporario();
-    document.getElementById('modal-projeto').classList.add('active');
+    const modal = document.getElementById('modal-projeto');
+    if (modal) modal.classList.add('active');
 }
 
 function fecharModalProjeto(e) {
@@ -250,8 +256,10 @@ function fecharModalProjeto(e) {
 
 function renderTarefasModalTemporario() {
     let html = '';
-    let optionsColabs = '<option value="">Responsável...</option>';
-    Object.keys(bdColabs).sort().forEach(nome => { optionsColabs += `<option value="${nome}">${nome}</option>`; });
+    
+    // Monta as opções do Select baseadas na FONTE DA VERDADE (listaColaboradores)
+    let optionsColabs = '<option value="">Designar Responsável...</option>';
+    listaColaboradores.forEach(nome => { optionsColabs += `<option value="${nome}">${nome}</option>`; });
 
     etapasTemporarias.forEach((t, idx) => {
         let optionsResps = optionsColabs.replace(`value="${t.responsavel || ''}"`, `value="${t.responsavel || ''}" selected`);
@@ -280,28 +288,12 @@ function adicionarNovaTarefaModal() {
     renderTarefasModalTemporario();
 }
 
-function atualizarEtapaMemoria(idx, campo, valor) {
-    if(etapasTemporarias[idx]) etapasTemporarias[idx][campo] = valor;
-}
-
-function removerEtapaMemoria(idx) {
-    etapasTemporarias.splice(idx, 1);
-    renderTarefasModalTemporario();
-}
-
-// A FUNÇÃO QUE FALTAVA NA EXPORTAÇÃO
-async function toggleVisivelHub(isVisible) {
-    if(!projetoModalAberto || isCriandoNovo) return;
-    try {
-        await firestore.updateDoc(firestore.doc(db, "projetos", projetoModalAberto), { visivelHub: isVisible });
-        showToast(isVisible ? '👁️ Visível no Hub.' : '🙈 Oculto.', 'info');
-    } catch(e) { console.error(e); }
-}
+function atualizarEtapaMemoria(idx, campo, valor) { if(etapasTemporarias[idx]) etapasTemporarias[idx][campo] = valor; }
+function removerEtapaMemoria(idx) { etapasTemporarias.splice(idx, 1); renderTarefasModalTemporario(); }
 
 async function salvarProjetoSocio() {
     if (!projetoModalAberto) return;
 
-    // PROGRAMAÇÃO DEFENSIVA: Captura os elementos com segurança
     const elNome = document.getElementById('modal-proj-nome');
     const elCliente = document.getElementById('modal-proj-cliente');
     const elLider = document.getElementById('modal-lider');
@@ -311,7 +303,6 @@ async function salvarProjetoSocio() {
     const elLicoes = document.getElementById('modal-licoes');
     const elVisivel = document.getElementById('modal-proj-visivel');
 
-    // Monta o objeto verificando se o elemento existe (usando ?.)
     const projData = {
         nome: elNome?.value?.trim() || 'Projeto Estratégico',
         cliente: elCliente?.value?.trim() || 'Cliente Não Informado',
@@ -343,22 +334,22 @@ async function salvarProjetoSocio() {
 }
 
 // ==========================================
-// MOTOR DE ALOCAÇÃO (WORKLOAD)
+// WORKLOAD ALGORITHM (USA A LISTA OFICIAL AGORA)
 // ==========================================
 function renderWorkload() {
     const workload = {};
     const hoje = new Date(new Date().setHours(0,0,0,0));
 
-    Object.keys(bdColabs).forEach(nome => { workload[nome] = { ativas: 0, atrasadas: 0, concluidas: 0, tarefasRefs: [] }; });
+    // Força a exibição de TODOS os colaboradores na tela de Workload
+    listaColaboradores.forEach(nome => { workload[nome] = { ativas: 0, atrasadas: 0, concluidas: 0, tarefasRefs: [] }; });
 
     for (const [pId, proj] of Object.entries(bdProjetos)) {
         if (proj.arquivado || proj.status_crm === 'concluido') continue;
         
         (proj.etapas || []).forEach(t => {
             if (t.responsavel && workload[t.responsavel] !== undefined) {
-                if (t.status === 'concluido') {
-                    workload[t.responsavel].concluidas++;
-                } else {
+                if (t.status === 'concluido') { workload[t.responsavel].concluidas++; } 
+                else {
                     workload[t.responsavel].ativas++;
                     let isAtrasada = t.prazo && new Date(t.prazo) < hoje;
                     if(isAtrasada) workload[t.responsavel].atrasadas++;
@@ -408,13 +399,78 @@ function renderWorkload() {
             </div>
         `;
     });
-
     document.getElementById('workload-container').innerHTML = html;
 }
 
+// ==========================================
+// ALGORITMO INTELIGENTE DE AUTOCOMPLETE (ACEITA VÍRGULAS)
+// ==========================================
+function setupAutocompleteMulti(inputElement, arr) {
+    if(!inputElement) return;
+    let currentFocus;
+    inputElement.addEventListener("input", function(e) {
+        let a, b, i, val = this.value;
+        closeAllLists();
+        if (!val) return false;
+        currentFocus = -1;
+        
+        let segments = val.split(',');
+        let currentSegment = segments[segments.length - 1].trim().toLowerCase();
+        if(!currentSegment) return false;
+
+        a = document.createElement("DIV");
+        a.setAttribute("id", this.id + "autocomplete-list");
+        a.setAttribute("class", "autocomplete-items");
+        this.parentNode.appendChild(a);
+
+        for (i = 0; i < arr.length; i++) {
+            if (arr[i].toLowerCase().includes(currentSegment)) {
+                b = document.createElement("DIV");
+                const matchIndex = arr[i].toLowerCase().indexOf(currentSegment);
+                b.innerHTML = arr[i].substring(0, matchIndex) + "<strong><span style='color: #c5a3ff;'>" + arr[i].substring(matchIndex, matchIndex + currentSegment.length) + "</span></strong>" + arr[i].substring(matchIndex + currentSegment.length);
+                b.innerHTML += "<input type='hidden' value='" + arr[i] + "'>";
+                b.addEventListener("click", function(e) {
+                    segments[segments.length - 1] = " " + this.getElementsByTagName("input")[0].value;
+                    inputElement.value = segments.join(',').trim() + ", "; // Adiciona a vírgula para o próximo
+                    closeAllLists();
+                    inputElement.focus(); // Fica pronto pra digitar o próximo nome
+                });
+                a.appendChild(b);
+            }
+        }
+    });
+
+    inputElement.addEventListener("keydown", function(e) {
+        let x = document.getElementById(this.id + "autocomplete-list");
+        if (x) x = x.getElementsByTagName("div");
+        if (e.keyCode == 40) { currentFocus++; addActive(x); }
+        else if (e.keyCode == 38) { currentFocus--; addActive(x); }
+        else if (e.keyCode == 13) { e.preventDefault(); if (currentFocus > -1) { if (x) x[currentFocus].click(); } }
+    });
+
+    function addActive(x) {
+        if (!x) return false;
+        removeActive(x);
+        if (currentFocus >= x.length) currentFocus = 0;
+        if (currentFocus < 0) currentFocus = (x.length - 1);
+        x[currentFocus].classList.add("autocomplete-active");
+    }
+    function removeActive(x) {
+        for (let i = 0; i < x.length; i++) { x[i].classList.remove("autocomplete-active"); }
+    }
+    function closeAllLists(elmnt) {
+        const x = document.getElementsByClassName("autocomplete-items");
+        for (let i = 0; i < x.length; i++) {
+            if (elmnt != x[i] && elmnt != inputElement) { x[i].parentNode.removeChild(x[i]); }
+        }
+    }
+    document.addEventListener("click", function (e) { closeAllLists(e.target); });
+}
+
+
 initSegurancaSocios();
 
-// Expondo para o HTML
+// Expondo as funções para o HTML
 window.switchTab = switchTab;
 window.aplicarFiltros = aplicarFiltros;
 window.abrirModalProjeto = abrirModalProjeto;
@@ -424,4 +480,3 @@ window.salvarProjetoSocio = salvarProjetoSocio;
 window.adicionarNovaTarefaModal = adicionarNovaTarefaModal;
 window.atualizarEtapaMemoria = atualizarEtapaMemoria;
 window.removerEtapaMemoria = removerEtapaMemoria;
-window.toggleVisivelHub = toggleVisivelHub;
