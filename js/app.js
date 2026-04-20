@@ -1188,6 +1188,10 @@ function renderCmdResults(query) {
 
 function fecharAposBusca() { cmdModal.classList.remove('active'); }
 
+/* ========================================================= */
+/* FUNÇÕES DE RADAR E DISPONIBILIDADE (CORRIGIDAS)           */
+/* ========================================================= */
+
 function renderSLARadar() {
     let upcoming = [];
     const now = new Date();
@@ -1211,6 +1215,8 @@ function renderSLARadar() {
     const top3 = upcoming.slice(0, 3);
     
     const container = document.getElementById('sla-radar-list');
+    if(!container) return; // Segurança caso o elemento não exista na tela
+
     if(top3.length === 0) {
         container.innerHTML = '<div style="color:var(--cadarn-cinza); font-size:12px;">Nenhuma entrega crítica ou vencendo nas próximas 48h para você.</div>';
         return;
@@ -1225,42 +1231,60 @@ function renderSLARadar() {
         </div>`;
     }).join('');
 }
-    
+
+// INÍCIO DA FUNÇÃO DE DISPONIBILIDADE
+function renderTeamAvailability() {
+    const workload = {};
+    const hojeCompare = new Date(new Date().setHours(0,0,0,0));
+
+    // 1. Processamento dos dados de carga de trabalho
+    for (const proj of Object.values(bdProjetos)) {
+        if (proj.arquivado) continue;
+        (proj.etapas || []).forEach(t => {
+            if(t.responsavel && t.status !== 'concluido') {
+                let nome = t.responsavel.split('(')[0].trim();
+                if(nome) {
+                    if(!workload[nome]) workload[nome] = { p: 0 };
+                    workload[nome].p++;
+                }
+            }
+        });
+    }
+
+    // 2. Lógica de renderização
     const MAX_PROJECTS = 5; 
     const members = Object.keys(workload).map(nome => {
         return { nome, p: workload[nome].p, pct: Math.min(Math.round((workload[nome].p / MAX_PROJECTS) * 100), 100) };
     });
     
     members.sort((a, b) => b.pct - a.pct);
-    // Aumentamos o limite para aproveitar a barra de rolagem
     const topMembers = members.slice(0, 15);
 
     const container = document.getElementById('teamAvailabilityContainer');
+    
+    if (!container) return; 
+
     if (topMembers.length === 0) {
         container.innerHTML = '<div style="color:var(--cadarn-cinza); font-size:12px;">Equipe sem alocações ativas no momento.</div>';
         return;
     }
 
-    // CORREÇÃO: Liga a barra de rolagem horizontal!
     container.style.display = 'flex';
     container.style.gap = '18px'; 
-    container.style.overflowX = 'auto'; // Habilita rolagem lateral
-    container.style.paddingBottom = '15px'; // Espaço para a barra de rolagem não cortar os avatares
-    
-    container.innerHTML = topMembers.map(m => {
-        let ringColor = '#47e299';
-        if (m.pct >= 80) ringColor = '#ff8793';
-        else if (m.pct >= 50) ringColor = '#ffc107';
+    container.style.overflowX = 'auto'; 
+    container.style.paddingBottom = '15px'; 
 
+    container.innerHTML = topMembers.map(m => {
+        let ringColor = m.pct >= 80 ? '#ff8793' : (m.pct >= 50 ? '#ffc107' : '#47e299');
         return `
-            <div style="display:flex; flex-direction:column; align-items:center; cursor:pointer; gap:8px; min-width: 65px; flex-shrink: 0; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" onclick="abrirPerfil('${sanitize(m.nome)}')">
-                <div style="width: 50px; height: 50px; border-radius: 50%; background: conic-gradient(${ringColor} ${m.pct}%, rgba(255,255,255,0.05) 0); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 15px ${ringColor}40;">
-                    <div style="width: 44px; height: 44px; border-radius: 50%; background: var(--bg-card, #151515); display: flex; align-items: center; justify-content: center;">
-                        ${getAvatarHtml(m.nome, 40)}
+            <div style="display:flex; flex-direction:column; align-items:center; min-width: 65px; flex-shrink: 0;">
+                <div style="width: 50px; height: 50px; border-radius: 50%; background: conic-gradient(${ringColor} ${m.pct}%, rgba(255,255,255,0.05) 0); display: flex; align-items: center; justify-content: center;">
+                    <div style="width: 44px; height: 44px; border-radius: 50%; background: #151515; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px;">
+                        ${m.nome.charAt(0).toUpperCase()}
                     </div>
                 </div>
-                <div style="text-align:center;">
-                    <div style="font-size:11px; font-weight:600; color:var(--cadarn-branco); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width: 65px;">${sanitize(m.nome).split(' ')[0]}</div>
+                <div style="text-align:center; margin-top: 8px;">
+                    <div style="font-size:11px; color:white; font-weight:600;">${m.nome.split(' ')[0]}</div>
                     <div style="font-size:10px; color:${ringColor}; font-weight:700;">${m.pct}%</div>
                 </div>
             </div>
