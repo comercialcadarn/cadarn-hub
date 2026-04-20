@@ -2,7 +2,6 @@
 /* LÓGICA DE ENGENHARIA E GESTÃO: ÁREA DO SÓCIO              */
 /* ========================================================= */
 
-// A Fonte da Verdade: Lista Oficial de Colaboradores
 const listaColaboradores = [
     "Ana Carolina Bittencourt", "Ana Clara Fabris", "Ana Clara Yumi", "Barbara Figueiredo",
     "Carlos Oliveira", "Debora Yuan", "Eduardo Figueiredo", "Felipe Penido", "João Pedro Soares",
@@ -23,6 +22,7 @@ const emailsSocios = [
 let db;
 let firestore = {};
 let bdProjetos = {};
+let bdColabs = {};
 let filtroResponsavel = "";
 
 let projetoModalAberto = null;
@@ -30,7 +30,6 @@ let isCriandoNovo = false;
 let etapasTemporarias = [];
 let usuarioLogado = localStorage.getItem('cadarn_user') || 'Sócio';
 
-// Inicialização segura do Firebase
 async function initSegurancaSocios() {
     const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js");
     const { getAuth, onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js");
@@ -48,7 +47,7 @@ async function initSegurancaSocios() {
     };
 
     const app = initializeApp(firebaseConfig);
-    db = getFirestore(app, "cadarn-hub"); // Conexão direta com o banco correto
+    db = getFirestore(app, "cadarn-hub"); 
     const auth = getAuth(app);
 
     onAuthStateChanged(auth, (user) => {
@@ -62,9 +61,7 @@ async function initSegurancaSocios() {
     });
 }
 
-// Inicia as listas suspensas (Datalist, Autocomplete e Filtros)
 function iniciarUI() {
-    // 1. Popula o filtro principal
     const selectFiltro = document.getElementById('filtro-responsavel');
     if(selectFiltro) {
         let options = '<option value="">Todos da Equipe</option>';
@@ -72,13 +69,11 @@ function iniciarUI() {
         selectFiltro.innerHTML = options;
     }
 
-    // 2. Popula o Datalist do Líder
     const datalistLider = document.getElementById('lista-nomes-datalist');
     if(datalistLider) {
         datalistLider.innerHTML = listaColaboradores.map(nome => `<option value="${nome}">`).join('');
     }
 
-    // 3. Ativa o Autocomplete Multivalor (com vírgulas) no campo da Equipe
     setupAutocompleteMulti(document.getElementById("modal-equipe"), listaColaboradores);
 }
 
@@ -131,7 +126,7 @@ function sanitize(str) {
 }
 
 // ==========================================
-// KANBAN
+// KANBAN RENDER
 // ==========================================
 function renderKanban() {
     let htmlNegociacao = ''; let htmlAndamento = ''; let htmlConcluido = '';
@@ -200,12 +195,13 @@ function inicializarDragAndDrop() {
 }
 
 // ==========================================
-// MODAL DE PROJETOS E TAREFAS
+// CONTROLE DO MODAL DE PROJETOS E TAREFAS
 // ==========================================
 function novoProjetoSocio() {
     isCriandoNovo = true;
     projetoModalAberto = 'proj_' + Date.now();
-    etapasTemporarias = [{ titulo: 'Planejamento Inicial', responsavel: '', prazo: '', status: 'pendente' }];
+    // Instancia a nova estrutura com o campo de kickoff mapeado
+    etapasTemporarias = [{ titulo: 'Planejamento Inicial', responsavel: '', prazo: '', status: 'pendente', kickoff: '' }];
     
     const camposParaLimpar = ['modal-proj-nome', 'modal-proj-cliente', 'modal-desc', 'modal-tags', 'modal-equipe', 'modal-licoes'];
     camposParaLimpar.forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
@@ -254,27 +250,31 @@ function fecharModalProjeto(e) {
     }
 }
 
+// A RENDERIZAÇÃO INTELIGENTE COM A ÁREA DE KICK-OFF EXPANDIDA
 function renderTarefasModalTemporario() {
     let html = '';
-    
-    // Monta as opções do Select baseadas na FONTE DA VERDADE (listaColaboradores)
-    let optionsColabs = '<option value="">Designar Responsável...</option>';
+    let optionsColabs = '<option value="">Responsável...</option>';
     listaColaboradores.forEach(nome => { optionsColabs += `<option value="${nome}">${nome}</option>`; });
 
     etapasTemporarias.forEach((t, idx) => {
         let optionsResps = optionsColabs.replace(`value="${t.responsavel || ''}"`, `value="${t.responsavel || ''}" selected`);
         
         html += `
-            <div class="task-row">
-                <input type="text" value="${t.titulo || ''}" placeholder="Qual a entrega?" onchange="atualizarEtapaMemoria(${idx}, 'titulo', this.value)">
-                <select onchange="atualizarEtapaMemoria(${idx}, 'responsavel', this.value)">${optionsResps}</select>
-                <input type="date" value="${t.prazo || ''}" onchange="atualizarEtapaMemoria(${idx}, 'prazo', this.value)">
-                <select onchange="atualizarEtapaMemoria(${idx}, 'status', this.value)">
-                    <option value="pendente" ${t.status === 'pendente'?'selected':''}>Pendente</option>
-                    <option value="ativo" ${t.status === 'ativo'?'selected':''}>Fazendo</option>
-                    <option value="concluido" ${t.status === 'concluido'?'selected':''}>Concluída</option>
-                </select>
-                <button class="sp-btn-edit" style="background: rgba(220,53,69,0.2); color: #ff8793; border-color: transparent; padding: 6px 12px;" onclick="removerEtapaMemoria(${idx})" title="Excluir">✕</button>
+            <div class="task-container">
+                <div class="task-row">
+                    <input type="text" value="${t.titulo || ''}" placeholder="Qual a entrega?" onchange="atualizarEtapaMemoria(${idx}, 'titulo', this.value)">
+                    <select onchange="atualizarEtapaMemoria(${idx}, 'responsavel', this.value)">${optionsResps}</select>
+                    <input type="date" value="${t.prazo || ''}" onchange="atualizarEtapaMemoria(${idx}, 'prazo', this.value)">
+                    <select onchange="atualizarEtapaMemoria(${idx}, 'status', this.value)">
+                        <option value="pendente" ${t.status === 'pendente'?'selected':''}>Pendente</option>
+                        <option value="ativo" ${t.status === 'ativo'?'selected':''}>Fazendo</option>
+                        <option value="concluido" ${t.status === 'concluido'?'selected':''}>Concluída</option>
+                    </select>
+                    <button class="sp-btn-edit" style="background: rgba(220,53,69,0.2); color: #ff8793; border-color: transparent; padding: 6px 12px;" onclick="removerEtapaMemoria(${idx})" title="Excluir Etapa">✕</button>
+                </div>
+                <div class="task-kickoff">
+                    <textarea placeholder="🔗 Informações de Kick-off: Cole links de pastas do Drive, documentos de referência, ou instruções claras para o colaborador iniciar esta tarefa..." onchange="atualizarEtapaMemoria(${idx}, 'kickoff', this.value)">${t.kickoff || ''}</textarea>
+                </div>
             </div>
         `;
     });
@@ -284,12 +284,19 @@ function renderTarefasModalTemporario() {
 }
 
 function adicionarNovaTarefaModal() {
-    etapasTemporarias.push({ titulo: '', responsavel: '', prazo: '', status: 'pendente' });
+    // Nova etapa inicializada perfeitamente com todas as tags de banco estruturadas
+    etapasTemporarias.push({ titulo: '', responsavel: '', prazo: '', status: 'pendente', kickoff: '' });
     renderTarefasModalTemporario();
 }
 
-function atualizarEtapaMemoria(idx, campo, valor) { if(etapasTemporarias[idx]) etapasTemporarias[idx][campo] = valor; }
-function removerEtapaMemoria(idx) { etapasTemporarias.splice(idx, 1); renderTarefasModalTemporario(); }
+function atualizarEtapaMemoria(idx, campo, valor) {
+    if(etapasTemporarias[idx]) etapasTemporarias[idx][campo] = valor;
+}
+
+function removerEtapaMemoria(idx) {
+    etapasTemporarias.splice(idx, 1);
+    renderTarefasModalTemporario();
+}
 
 async function salvarProjetoSocio() {
     if (!projetoModalAberto) return;
@@ -334,13 +341,12 @@ async function salvarProjetoSocio() {
 }
 
 // ==========================================
-// WORKLOAD ALGORITHM (USA A LISTA OFICIAL AGORA)
+// MOTOR DE ALOCAÇÃO (WORKLOAD)
 // ==========================================
 function renderWorkload() {
     const workload = {};
     const hoje = new Date(new Date().setHours(0,0,0,0));
 
-    // Força a exibição de TODOS os colaboradores na tela de Workload
     listaColaboradores.forEach(nome => { workload[nome] = { ativas: 0, atrasadas: 0, concluidas: 0, tarefasRefs: [] }; });
 
     for (const [pId, proj] of Object.entries(bdProjetos)) {
@@ -348,8 +354,9 @@ function renderWorkload() {
         
         (proj.etapas || []).forEach(t => {
             if (t.responsavel && workload[t.responsavel] !== undefined) {
-                if (t.status === 'concluido') { workload[t.responsavel].concluidas++; } 
-                else {
+                if (t.status === 'concluido') {
+                    workload[t.responsavel].concluidas++;
+                } else {
                     workload[t.responsavel].ativas++;
                     let isAtrasada = t.prazo && new Date(t.prazo) < hoje;
                     if(isAtrasada) workload[t.responsavel].atrasadas++;
@@ -403,7 +410,7 @@ function renderWorkload() {
 }
 
 // ==========================================
-// ALGORITMO INTELIGENTE DE AUTOCOMPLETE (ACEITA VÍRGULAS)
+// ALGORITMO DE AUTOCOMPLETE E MULTIVALOR (VÍRGULAS)
 // ==========================================
 function setupAutocompleteMulti(inputElement, arr) {
     if(!inputElement) return;
@@ -431,9 +438,9 @@ function setupAutocompleteMulti(inputElement, arr) {
                 b.innerHTML += "<input type='hidden' value='" + arr[i] + "'>";
                 b.addEventListener("click", function(e) {
                     segments[segments.length - 1] = " " + this.getElementsByTagName("input")[0].value;
-                    inputElement.value = segments.join(',').trim() + ", "; // Adiciona a vírgula para o próximo
+                    inputElement.value = segments.join(',').trim() + ", ";
                     closeAllLists();
-                    inputElement.focus(); // Fica pronto pra digitar o próximo nome
+                    inputElement.focus();
                 });
                 a.appendChild(b);
             }
@@ -467,10 +474,9 @@ function setupAutocompleteMulti(inputElement, arr) {
     document.addEventListener("click", function (e) { closeAllLists(e.target); });
 }
 
-
 initSegurancaSocios();
 
-// Expondo as funções para o HTML
+// Expondo as funções nativas para os controladores do DOM
 window.switchTab = switchTab;
 window.aplicarFiltros = aplicarFiltros;
 window.abrirModalProjeto = abrirModalProjeto;
