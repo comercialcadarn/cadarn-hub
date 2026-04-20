@@ -677,15 +677,14 @@ async function importarDados(event, tipo) {
         const rows = text.split('\n');
         
         let processados = 0;
-        // Começamos do 1 para pular o cabeçalho
+        
         for (let i = 1; i < rows.length; i++) {
             const rowData = rows[i].split(',');
             if(!rowData[0] || rowData[0].trim() === "") continue;
-
+            
             const id = 'proj_import_' + Date.now() + i;
             
-            // Lógica para extrair múltiplas etapas da coluna "Tarefas"
-            // Formato esperado na coluna: "Título da Tarefa|Responsável|Prazo" separado por ";"
+            // Fatiador Inteligente de Tarefas
             let etapasBrutas = rowData[5] ? rowData[5].split(';') : [];
             let etapasProcessadas = etapasBrutas.map(etapaStr => {
                 const partes = etapaStr.split('|');
@@ -698,9 +697,9 @@ async function importarDados(event, tipo) {
                 };
             });
 
-            // Se não houver etapas na planilha, cria uma padrão
+            // Se a planilha não tiver tarefas, injeta uma padrão
             if(etapasProcessadas.length === 0) {
-                etapasProcessadas.push({ titulo: 'Kick-off', responsavel: rowData[2], prazo: '', status: 'pendente', kickoff: '' });
+                etapasProcessadas.push({ titulo: 'Kick-off e Alinhamento', responsavel: rowData[2], prazo: '', status: 'pendente', kickoff: rowData[6]?.trim() || '' });
             }
 
             const novoProjeto = {
@@ -710,9 +709,10 @@ async function importarDados(event, tipo) {
                 descricao: rowData[3]?.trim(),
                 tags: rowData[4] ? rowData[4].split(';').map(s=>s.trim()) : [],
                 equipeAtual: rowData[7] ? rowData[7].split(';').map(s=>s.trim()) : [],
+                licoes: rowData[8]?.trim() || "Ainda em andamento.", // Nova coluna Mapeada!
                 etapas: etapasProcessadas,
                 status_crm: tipo === 'pipe' ? 'negociacao' : 'andamento',
-                visivelHub: true, // Já importa visível para facilitar seu teste
+                visivelHub: true, // Já vem visível para você ver os Gantts da equipe
                 arquivado: false,
                 dataCriacao: Date.now()
             };
@@ -721,13 +721,14 @@ async function importarDados(event, tipo) {
                 const { doc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js");
                 await setDoc(doc(db, "projetos", id), novoProjeto);
                 processados++;
-            } catch (err) { console.error("Erro na linha " + i, err); }
+            } catch (err) {
+                console.error("Erro na linha " + i, err);
+            }
         }
-        showToast(`✅ Importação concluída! ${processados} projetos e dezenas de tarefas alocadas.`, 'success');
-        if(typeof renderKanban === 'function') renderKanban();
-        event.target.value = '';
+        showToast(`✅ ${processados} projetos importados! O Dashboard foi atualizado.`, 'success');
+        event.target.value = ''; // Limpa o input
     };
-    
-    // SOLUÇÃO PARA O TIL/ACENTOS:
+    // Força a leitura em UTF-8 para manter os acentos brasileiros intactos
     reader.readAsText(file, 'UTF-8');
 }
+window.importarDados = importarDados;
