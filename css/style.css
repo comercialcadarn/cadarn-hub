@@ -458,12 +458,12 @@
 .gantt-wrapper {
     display: flex;
     width: 100%;
-    /* A MÁGICA 1: Trava a altura para que a barra de rolagem não fuja da tela */
+    min-width: 0;      /* MÁGICA 1: Impede o flex-item de estourar o Grid pai */
+    max-width: 100%;   /* MÁGICA 2: Trava o limite do componente */
     max-height: 520px; 
     background: #121212;
     border: 1px solid rgba(255,255,255,0.08);
     border-radius: 12px;
-    /* A MÁGICA 2: Gera scroll Vertical E Horizontal no mesmo container */
     overflow: auto; 
 }
 
@@ -604,3 +604,7 @@
 #teamAvailabilityContainer::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.02); border-radius: 10px; }
 #teamAvailabilityContainer::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 10px; }
 #teamAvailabilityContainer::-webkit-scrollbar-thumb:hover { background: rgba(131, 46, 255, 0.6); }
+#main-projects-container {
+    min-width: 0;
+    max-width: 100%;
+}
