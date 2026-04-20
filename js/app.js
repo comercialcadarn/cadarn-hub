@@ -130,7 +130,6 @@ function iniciarListeners() {
         });
         if (houveMudanca) {
             localStorage.setItem('cadarn_colabs', JSON.stringify(configColaboradores));
-            renderTeamAvailability();
             atualizarColaboradorDoMes();
         }
     });
@@ -305,7 +304,6 @@ function processarFotoPerfil(file) {
             const dataUrl = canvas.toDataURL('image/jpeg', 0.7); 
             salvarPerfilDado('foto', dataUrl);
             document.getElementById('profile-avatar-render').innerHTML = getAvatarHtml(perfilAtualNome, 80);
-            renderTeamAvailability();
             if(modoVisualizacao === 'equipe') renderMainProjects();
         };
         img.src = e.target.result;
@@ -1227,23 +1225,6 @@ function renderSLARadar() {
         </div>`;
     }).join('');
 }
-
-function renderTeamAvailability() {
-    let workload = {};
-    for (const proj of Object.values(bdProjetos)) {
-        if (proj.arquivado || proj.visivelHub === false) continue;
-        const todasConcluidas = proj.etapas && proj.etapas.length > 0 && proj.etapas.every(e => e.status === 'concluido');
-        if (todasConcluidas) continue; 
-        (proj.etapas || []).forEach(t => {
-            if(t.responsavel && t.status !== 'concluido') {
-                let nome = t.responsavel.split('(')[0].trim();
-                if(nome) {
-                    if(!workload[nome]) workload[nome] = { p: 0, atrasados: 0 };
-                    workload[nome].p++;
-                }
-            }
-        });
-    }
     
     const MAX_PROJECTS = 5; 
     const members = Object.keys(workload).map(nome => {
@@ -1315,7 +1296,6 @@ function atualizarDashboard() {
     }
 
     renderSLARadar();
-    renderTeamAvailability();
 }
 
 function setupAutocomplete(inputElement) {
