@@ -29,6 +29,8 @@ let projetoModalAberto = null;
 let isCriandoNovo = false;
 let etapasTemporarias = [];
 let usuarioLogado = localStorage.getItem('cadarn_user') || 'Sócio';
+// Controle do Calendário
+let dataAtualCalendario = new Date();
 
 async function initSegurancaSocios() {
     const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js");
@@ -85,7 +87,7 @@ function iniciarListeners() {
         });
         renderKanban();
         renderWorkload();
-        renderCronograma('gantt-master-container', filtroResponsavel);
+        renderCronograma('gantt-master-container', filtroResponsavel); // NOVO
     });
     inicializarDragAndDrop();
 }
@@ -119,7 +121,9 @@ function switchTab(tab) {
 
 function aplicarFiltros() {
     filtroResponsavel = document.getElementById('filtro-responsavel').value;
-    renderKanban(); renderWorkload(); renderCronograma('gantt-master-container', filtroResponsavel);
+    renderKanban(); 
+    renderWorkload(); 
+    renderCronograma('gantt-master-container', filtroResponsavel); // NOVO
 }
 
 function showToast(message, type='info') {
@@ -527,6 +531,90 @@ function renderCronograma(containerId, filterUser = null) {
 }
 
 // ==========================================
+// CRONOGRAMA GANTT (NOVO E EXPLOSIVO)
+// ==========================================
+function mudarMes(delta) {
+    dataAtualCalendario.setMonth(dataAtualCalendario.getMonth() + delta);
+    renderCronograma('gantt-master-container', filtroResponsavel);
+}
+
+function irParaHoje() {
+    dataAtualCalendario = new Date();
+    renderCronograma('gantt-master-container', filtroResponsavel);
+}
+
+function renderCronograma(containerId, filterUser = null) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const startDate = new Date(); 
+    startDate.setDate(startDate.getDate() - 10);
+    startDate.setHours(0,0,0,0);
+    const totalDays = 60;
+    const colWidth = 40; 
+
+    let headersHtml = '';
+    const diasSemana = ["D", "S", "T", "Q", "Q", "S", "S"];
+    
+    for(let i=0; i<totalDays; i++) {
+        let d = new Date(startDate); d.setDate(d.getDate() + i);
+        let isHoje = d.getTime() === new Date(new Date().setHours(0,0,0,0)).getTime();
+        headersHtml += `<div class="gantt-day-col ${isHoje ? 'hoje' : ''}"><div class="gantt-day-name">${diasSemana[d.getDay()]}</div><div class="gantt-day-num">${d.getDate()}</div></div>`;
+    }
+
+    let sidebarHtml = `<div class="gantt-sidebar-header">Projetos e Entregas</div>`;
+    let timelineHtml = `<div class="gantt-header-row" style="width: ${totalDays * colWidth}px;">${headersHtml}</div><div class="gantt-body" style="width: ${totalDays * colWidth}px;">`;
+    let temProjetos = false;
+
+    Object.entries(bdProjetos).forEach(([id, proj]) => {
+        if(proj.arquivado) return; 
+        let etapasProj = proj.etapas || [];
+        
+        if(filterUser) {
+            etapasProj = etapasProj.filter(e => e.responsavel === filterUser);
+            if(etapasProj.length === 0 && proj.lider !== filterUser && !(proj.equipeAtual || []).includes(filterUser)) return;
+        }
+
+        temProjetos = true;
+        sidebarHtml += `<div class="gantt-sidebar-item gantt-sidebar-proj" onclick="abrirModalProjeto('${id}')">📁 ${sanitize(proj.nome)}</div>`;
+        timelineHtml += `<div class="gantt-row" style="background: rgba(255,255,255,0.02);"></div>`;
+
+        etapasProj.forEach(t => {
+            if(!t.prazo) return; 
+            
+            let deadline = new Date(t.prazo); deadline.setMinutes(deadline.getMinutes() + deadline.getTimezoneOffset()); deadline.setHours(0,0,0,0);
+            let startTask = new Date(deadline); startTask.setDate(startTask.getDate() - 4);
+
+            let startDiff = Math.floor((startTask - startDate) / (1000 * 60 * 60 * 24));
+            let endDiff = Math.floor((deadline - startDate) / (1000 * 60 * 60 * 24));
+
+            if(endDiff < 0 || startDiff >= totalDays) return; 
+
+            startDiff = Math.max(0, startDiff); endDiff = Math.min(totalDays - 1, endDiff);
+            let widthPx = (endDiff - startDiff + 1) * colWidth; let leftPx = startDiff * colWidth;
+
+            let colorClass = 'gb-pendente';
+            if(t.status === 'concluido') colorClass = 'gb-concluido';
+            else if(t.status === 'ativo') colorClass = 'gb-ativo';
+            else if(deadline < new Date(new Date().setHours(0,0,0,0))) colorClass = 'gb-atrasado';
+
+            const respNome = t.responsavel ? t.responsavel.split(' ')[0] : 'S/ Dono';
+            const respInicial = respNome.charAt(0).toUpperCase();
+
+            sidebarHtml += `<div class="gantt-sidebar-item" style="padding-left: 30px; color: var(--cadarn-cinza);" onclick="abrirModalProjeto('${id}')">↳ ${sanitize(t.titulo)}</div>`;
+            timelineHtml += `<div class="gantt-row"><div class="gantt-bar-wrapper" style="left: ${leftPx}px; width: ${widthPx}px;"><div class="gantt-bar ${colorClass}" title="${sanitize(t.titulo)} - Responsável: ${sanitize(t.responsavel)}" onclick="abrirModalProjeto('${id}')"><div class="gantt-bar-avatar">${respInicial}</div>${sanitize(t.titulo)}</div></div></div>`;
+        });
+    });
+
+    if(!temProjetos) {
+        container.innerHTML = `<div style="padding: 30px; text-align: center; color: var(--cadarn-cinza);">Nenhuma entrega com prazo mapeada no filtro atual.</div>`;
+        return;
+    }
+    timelineHtml += `</div>`;
+    container.innerHTML = `<div class="gantt-wrapper"><div class="gantt-sidebar">${sidebarHtml}</div><div class="gantt-timeline-container">${timelineHtml}</div></div>`;
+}
+
+// ==========================================
 // ALGORITMO MULTIVALOR (Autocomplete)
 // ==========================================
 function setupAutocompleteMulti(inputElement, arr) {
@@ -598,3 +686,5 @@ window.salvarProjetoSocio = salvarProjetoSocio;
 window.adicionarNovaTarefaModal = adicionarNovaTarefaModal;
 window.atualizarEtapaMemoria = atualizarEtapaMemoria;
 window.removerEtapaMemoria = removerEtapaMemoria;
+window.mudarMes = mudarMes;
+window.irParaHoje = irParaHoje;
