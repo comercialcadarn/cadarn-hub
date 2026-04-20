@@ -593,17 +593,18 @@ function setupAutocompleteMulti(inputElement, arr) {
 // ==========================================
 // MOTOR DO CALENDÁRIO MENSAL (GRID)
 // ==========================================
-// Unificamos a variável para 'window.dataAtualCalendario'
+
+// 1. Declaramos uma ÚNICA variável global para o calendário
 window.dataAtualCalendario = new Date();
 
 window.mudarMes = function(direcao) {
-    // Agora o botão atualiza a variável correta
+    // Atualiza a variável correta
     window.dataAtualCalendario.setMonth(window.dataAtualCalendario.getMonth() + direcao);
     renderCalendario();
 };
 
 window.irParaHoje = function() {
-    // Retorna para o mês atual
+    // Restaura a variável correta para hoje
     window.dataAtualCalendario = new Date();
     renderCalendario();
 };
@@ -612,7 +613,7 @@ function renderCalendario() {
     const calendarBody = document.getElementById('calendar-body');
     if (!calendarBody) return;
 
-    // Lendo as datas da mesma variável que os botões modificam!
+    // 2. Puxa o ano e mês EXATAMENTE da mesma variável que os botões alteram!
     const year = window.dataAtualCalendario.getFullYear();
     const month = window.dataAtualCalendario.getMonth();
     
