@@ -38,7 +38,7 @@ async function initSegurancaSocios() {
     };
 
     const app = initializeApp(firebaseConfig);
-    db = getFirestore(app);
+    db = getFirestore(app, "cadarn-hub");
     const auth = getAuth(app);
 
     onAuthStateChanged(auth, (user) => {
