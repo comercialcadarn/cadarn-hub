@@ -623,6 +623,70 @@ function deleteSelectedLixeira() {
     isSelectModeLixeira = false; selectedLixeiraItems.clear(); renderMainProjects();
 }
 
+// O MOTOR GANTT DO HUB PRINCIPAL //
+function renderCronogramaFiltrado(containerId, filterUser) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const startDate = new Date(); startDate.setDate(startDate.getDate() - 5); startDate.setHours(0,0,0,0);
+    const totalDays = 45; const colWidth = 40; 
+    let headersHtml = '';
+    const diasSemana = ["D", "S", "T", "Q", "Q", "S", "S"];
+    
+    for(let i=0; i<totalDays; i++) {
+        let d = new Date(startDate); d.setDate(d.getDate() + i);
+        let isHoje = d.getTime() === new Date(new Date().setHours(0,0,0,0)).getTime();
+        headersHtml += `<div class="gantt-day-col ${isHoje ? 'hoje' : ''}"><div class="gantt-day-name">${diasSemana[d.getDay()]}</div><div class="gantt-day-num">${d.getDate()}</div></div>`;
+    }
+
+    let sidebarHtml = `<div class="gantt-sidebar-header">Minhas Entregas (${sanitize(filterUser.split(' ')[0])})</div>`;
+    let timelineHtml = `<div class="gantt-header-row" style="width: ${totalDays * colWidth}px;">${headersHtml}</div><div class="gantt-body" style="width: ${totalDays * colWidth}px;">`;
+    let temProjetos = false;
+
+    Object.entries(bdProjetos).forEach(([id, proj]) => {
+        if(proj.arquivado || proj.visivelHub === false) return;
+        
+        let etapasProj = (proj.etapas || []).filter(e => e.responsavel === filterUser);
+        if(etapasProj.length === 0) return;
+
+        temProjetos = true;
+        sidebarHtml += `<div class="gantt-sidebar-item gantt-sidebar-proj" onclick="abrirProjeto('${id}')">📁 ${sanitize(proj.nome)}</div>`;
+        timelineHtml += `<div class="gantt-row" style="background: rgba(255,255,255,0.02);"></div>`;
+
+        etapasProj.forEach(t => {
+            if(!t.prazo) return; 
+            
+            let deadline = new Date(t.prazo); deadline.setMinutes(deadline.getMinutes() + deadline.getTimezoneOffset()); deadline.setHours(0,0,0,0);
+            let startTask = new Date(deadline); startTask.setDate(startTask.getDate() - 4);
+
+            let startDiff = Math.floor((startTask - startDate) / (1000 * 60 * 60 * 24));
+            let endDiff = Math.floor((deadline - startDate) / (1000 * 60 * 60 * 24));
+
+            if(endDiff < 0 || startDiff >= totalDays) return; 
+
+            startDiff = Math.max(0, startDiff); endDiff = Math.min(totalDays - 1, endDiff);
+            let widthPx = (endDiff - startDiff + 1) * colWidth; let leftPx = startDiff * colWidth;
+
+            let colorClass = 'gb-pendente';
+            if(t.status === 'concluido') colorClass = 'gb-concluido';
+            else if(t.status === 'ativo') colorClass = 'gb-ativo';
+            else if(deadline < new Date(new Date().setHours(0,0,0,0))) colorClass = 'gb-atrasado';
+
+            const respInicial = t.responsavel.charAt(0).toUpperCase();
+
+            sidebarHtml += `<div class="gantt-sidebar-item" style="padding-left: 30px; color: var(--cadarn-cinza);" onclick="abrirProjeto('${id}')">↳ ${sanitize(t.titulo)}</div>`;
+            timelineHtml += `<div class="gantt-row"><div class="gantt-bar-wrapper" style="left: ${leftPx}px; width: ${widthPx}px;"><div class="gantt-bar ${colorClass}" title="${sanitize(t.titulo)}" onclick="abrirProjeto('${id}')"><div class="gantt-bar-avatar">${respInicial}</div>${sanitize(t.titulo)}</div></div></div>`;
+        });
+    });
+
+    if(!temProjetos) {
+        container.innerHTML = `<div style="padding: 30px; text-align: center; color: var(--cadarn-cinza);">Nenhuma entrega com prazo atribuída a você no momento.</div>`;
+        return;
+    }
+
+    timelineHtml += `</div>`;
+    container.innerHTML = `<div class="gantt-wrapper"><div class="gantt-sidebar">${sidebarHtml}</div><div class="gantt-timeline-container">${timelineHtml}</div></div>`;
+}
 function renderMainProjects() {
     const container = document.getElementById('main-projects-container');
     const filterContainer = document.getElementById('tags-filter-container');
@@ -639,6 +703,12 @@ function renderMainProjects() {
     
     let kanbanAguardando = ''; let kanbanAtivos = ''; let kanbanConcluidos = ''; let listaNormal = '';
     const hojeCompare = new Date(new Date().setHours(0,0,0,0));
+    // SE FOR MODO ROADMAP, RENDERIZA O GANTT PESSOAL!
+    if (modoVisualizacao === 'roadmap') {
+        renderCronogramaFiltrado('main-projects-container', usuarioLogado);
+        atualizarDashboard(); 
+        return; 
+    }
     
     if (modoVisualizacao === 'lixeira') {
         let lixeiraHtml = `
@@ -764,43 +834,7 @@ function renderMainProjects() {
         container.innerHTML = listaNormal || '<p style="color:var(--cadarn-cinza); font-size: 13px; padding: 15px;">Nenhum projeto encontrado.</p>'; 
     } else if (modoVisualizacao === 'kanban') { 
         container.innerHTML = `<div class="kanban-board"><div class="kanban-col"><div class="kanban-col-header">Aguardando <span class="status-dot dot-pendente" style="margin:0;"></span></div>${kanbanAguardando || '<div style="color:var(--cadarn-cinza); font-size:12px;">Vazio</div>'}</div><div class="kanban-col" style="background: rgba(182, 138, 255, 0.05); border-color: rgba(182, 138, 255, 0.2);"><div class="kanban-col-header" style="color: #b68aff;">Em Execução <span class="status-dot dot-ativo" style="margin:0;"></span></div>${kanbanAtivos || '<div style="color:var(--cadarn-cinza); font-size:12px;">Vazio</div>'}</div><div class="kanban-col" style="background: rgba(71, 226, 153, 0.05); border-color: rgba(71, 226, 153, 0.2);"><div class="kanban-col-header" style="color: #47e299;">Concluídos <span class="status-dot dot-concluido" style="margin:0;"></span></div>${kanbanConcluidos || '<div style="color:var(--cadarn-cinza); font-size:12px;">Vazio</div>'}</div></div>`; 
-    } else if (modoVisualizacao === 'roadmap') {
-        if (!temProjetosParaMostrar) {
-            container.innerHTML = '<p style="color:var(--cadarn-cinza); font-size: 13px; padding: 15px;">Vazio.</p>';
-        } else {
-            let minDate = Infinity; let maxDate = Date.now() + (7 * 86400000); 
-            const projArray = Object.values(bdProjetos).filter(p => !p.arquivado && (filtroAtual === 'Todos' || (p.tags || []).includes(filtroAtual)) && (!filtroMembro || (p.equipeAtual || []).some(m => m.split('(')[0].trim() === filtroMembro)));
-            projArray.forEach(p => { if(p.dataCriacao < minDate) minDate = p.dataCriacao; if(p.dataConclusao && p.dataConclusao > maxDate) maxDate = p.dataConclusao; });
-            if(minDate === Infinity) minDate = Date.now() - (30 * 86400000);
-            const totalDuration = maxDate - minDate;
-
-            let roadmapHtml = `<div style="padding:15px; overflow-x:auto;"><div style="min-width: 500px;">`;
-            projArray.forEach((proj, idx) => {
-                const start = proj.dataCriacao; const end = proj.dataConclusao || Date.now();
-                const leftPct = Math.max(0, ((start - minDate) / totalDuration) * 100);
-                let widthPct = Math.max(2, ((end - start) / totalDuration) * 100);
-                if(leftPct + widthPct > 100) widthPct = 100 - leftPct;
-
-                let color = '#666'; 
-                if (!proj.etapas) proj.etapas = [];
-                const todasConcluidas = proj.etapas.length > 0 && proj.etapas.every(e => e.status === 'concluido');
-                const algumaAtiva = proj.etapas.some(e => e.status === 'ativo');
-                if(todasConcluidas) color = '#47e299'; else if(algumaAtiva) color = '#b68aff';
-                const originalId = Object.keys(bdProjetos).find(key => bdProjetos[key] === proj);
-
-                roadmapHtml += `
-                    <div style="display:flex; align-items:center; margin-bottom: 15px; cursor: pointer;" onclick="abrirProjeto('${originalId}')">
-                        <div style="width: 30%; font-size:13px; font-weight: 500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-right:10px; color:var(--cadarn-branco);">${sanitize(proj.nome)}</div>
-                        <div style="width: 70%; background: rgba(131,46,255,0.05); height: 12px; border-radius: 6px; position: relative;">
-                            <div style="position:absolute; left: ${leftPct}%; width: ${widthPct}%; height: 100%; background: ${color}; border-radius: 6px; box-shadow: 0 0 10px ${color}80;"></div>
-                        </div>
-                    </div>
-                `;
-            });
-            roadmapHtml += `</div></div>`;
-            container.innerHTML = roadmapHtml;
-        }
-    }
+    
     atualizarDashboard(); 
 }
 
