@@ -552,6 +552,50 @@
 .gb-concluido { background: linear-gradient(90deg, #47e299, #20c997); color: #000; }
 .gb-concluido .gantt-bar-avatar { border-color: rgba(0,0,0,0.2); color: #000; }
 .gb-atrasado { background: linear-gradient(90deg, #ff8793, #dc3545); }
+/* --- Cabeçalhos Fixos no Topo --- */
+.gantt-sidebar-header {
+    position: sticky;
+    top: 0; 
+    left: 0;
+    z-index: 30; 
+    height: 50px;
+    min-height: 50px; /* Impede esmagamento vertical */
+    flex-shrink: 0;   /* Proíbe o navegador de encolher a div */
+    /* ... resto do seu código ... */
+    padding: 15px 20px;
+    font-size: 11px;
+    font-weight: 800;
+    color: #a1a1aa;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    background: #0a0a0a;
+    display: flex;
+    align-items: center;
+}
+
+.gantt-header-row {
+    position: sticky;
+    top: 0; 
+    z-index: 10;
+    display: flex;
+    height: 50px;
+    min-height: 50px; /* Impede esmagamento vertical */
+    flex-shrink: 0;   /* Proíbe o navegador de encolher a div */
+    background: #0a0a0a;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+/* --- Corpo e Linhas --- */
+.gantt-row, .gantt-sidebar-item { 
+    height: 46px; 
+    min-height: 46px; /* Altura mínima garantida */
+    flex-shrink: 0;   /* A mágica que resolve o seu print: PROÍBE O ESMAGAMENTO */
+}
+
+.gantt-row { border-bottom: 1px solid rgba(255,255,255,0.03); position: relative; display: flex; align-items: center; transition: background 0.2s; width: 100%; }
+.gantt-sidebar-item { border-bottom: 1px solid rgba(255,255,255,0.03); display: flex; align-items: center; padding: 0 15px; font-size: 12px; font-weight: 500; color: #ddd; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; transition: 0.2s; }
+
 /* ========================================================= */
 /* SCROLLBAR PARA OS COLABORADORES ALOCADOS          */
 /* ========================================================= */
