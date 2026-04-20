@@ -467,24 +467,15 @@ function setVisualizacao(modo) {
     document.getElementById('btn-view-equipe').classList.toggle('active', modo === 'equipe');
     document.getElementById('btn-view-lixeira').classList.toggle('active', modo === 'lixeira');
     
-    // ==========================================
-    // 2. EXPANSÃO (Roadmap Tela Cheia)
-    // ==========================================
-    const heroGrid = document.querySelector('.hero-grid');
-    if (heroGrid) {
-        if (modo === 'roadmap') {
-            heroGrid.style.gridTemplateColumns = '1fr'; // Força 1 coluna (tela cheia)
-        } else {
-            heroGrid.style.gridTemplateColumns = ''; // Devolve a proporção original dividida
-        }
-    }
-    
-    // 3. Lógica de lixeira e tags
+    // Removemos totalmente a alteração do 'heroGrid' daqui!
+    // Ele vai respeitar o CSS e ficar ao lado dos outros blocos.
+
+    // 2. Lógica original de lixeira e tags
     isSelectModeLixeira = false; 
     selectedLixeiraItems.clear();
     document.getElementById('tags-filter-container').style.display = (modo === 'equipe' || modo === 'lixeira') ? 'none' : 'flex';
     
-    // 4. Renderiza o conteúdo central
+    // 3. Renderiza o conteúdo central
     renderMainProjects();
 }
 
