@@ -199,17 +199,25 @@ function novoProjetoSocio() {
     projetoModalAberto = 'proj_' + Date.now();
     etapasTemporarias = [{ titulo: 'Planejamento Inicial', responsavel: '', prazo: '', status: 'pendente' }];
     
-    document.getElementById('modal-proj-nome').value = '';
-    document.getElementById('modal-proj-cliente').value = '';
-    document.getElementById('modal-lider').value = usuarioLogado;
-    document.getElementById('modal-desc').value = '';
-    document.getElementById('modal-tags').value = '';
-    document.getElementById('modal-equipe').value = '';
-    document.getElementById('modal-licoes').value = '';
-    document.getElementById('modal-proj-visivel').checked = false;
+    // Programação Defensiva: Só tenta limpar o campo se ele existir no HTML
+    const camposParaLimpar = ['modal-proj-nome', 'modal-proj-cliente', 'modal-desc', 'modal-tags', 'modal-equipe', 'modal-licoes'];
+    
+    camposParaLimpar.forEach(id => {
+        const elemento = document.getElementById(id);
+        if (elemento) elemento.value = '';
+    });
+
+    const elLider = document.getElementById('modal-lider');
+    if (elLider) elLider.value = usuarioLogado;
+
+    const elVisivel = document.getElementById('modal-proj-visivel');
+    if (elVisivel) elVisivel.checked = false;
 
     renderTarefasModalTemporario();
-    document.getElementById('modal-projeto').classList.add('active');
+    
+    const modal = document.getElementById('modal-projeto');
+    if (modal) modal.classList.add('active');
+    else console.error("ERRO UI: O elemento div com id='modal-projeto' não foi encontrado no HTML.");
 }
 
 function abrirModalProjeto(id) {
