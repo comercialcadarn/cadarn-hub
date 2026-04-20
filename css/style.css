@@ -617,6 +617,17 @@
 #teamAvailabilityContainer::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.02); border-radius: 10px; }
 #teamAvailabilityContainer::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 10px; }
 #teamAvailabilityContainer::-webkit-scrollbar-thumb:hover { background: rgba(131, 46, 255, 0.6); }
+
+/* ==================================================== */
+/* PREVINE O GRID BLOWOUT DO ROADMAP                    */
+/* ==================================================== */
+
+/* Força as colunas principais a respeitarem a proporção e não expandirem */
+.hero-grid > * {
+    min-width: 0;
+}
+
+/* Garante que o container de injeção respeite a placa do Card */
 #main-projects-container {
     min-width: 0;
     max-width: 100%;
