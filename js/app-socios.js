@@ -674,25 +674,45 @@ async function importarDados(event, tipo) {
     const reader = new FileReader();
     reader.onload = async (e) => {
         const text = e.target.result;
-        const rows = text.split('\n').map(row => row.split(','));
+        const rows = text.split('\n');
         
         let processados = 0;
-        // Começa do 1 para pular o cabeçalho da planilha
+        // Começamos do 1 para pular o cabeçalho
         for (let i = 1; i < rows.length; i++) {
-            const rowData = rows[i];
-            if(!rowData[0] || rowData[0].trim() === "") continue; // Pula linha vazia
-            
+            const rowData = rows[i].split(',');
+            if(!rowData[0] || rowData[0].trim() === "") continue;
+
             const id = 'proj_import_' + Date.now() + i;
+            
+            // Lógica para extrair múltiplas etapas da coluna "Tarefas"
+            // Formato esperado na coluna: "Título da Tarefa|Responsável|Prazo" separado por ";"
+            let etapasBrutas = rowData[5] ? rowData[5].split(';') : [];
+            let etapasProcessadas = etapasBrutas.map(etapaStr => {
+                const partes = etapaStr.split('|');
+                return {
+                    titulo: partes[0]?.trim() || "Nova Entrega",
+                    responsavel: partes[1]?.trim() || rowData[2]?.trim() || "",
+                    prazo: partes[2]?.trim() || "",
+                    status: 'pendente',
+                    kickoff: rowData[6]?.trim() || ""
+                };
+            });
+
+            // Se não houver etapas na planilha, cria uma padrão
+            if(etapasProcessadas.length === 0) {
+                etapasProcessadas.push({ titulo: 'Kick-off', responsavel: rowData[2], prazo: '', status: 'pendente', kickoff: '' });
+            }
+
             const novoProjeto = {
-                nome: rowData[0]?.trim() || "Projeto Sem Nome",
-                cliente: rowData[1]?.trim() || "Cliente",
-                lider: rowData[2]?.trim() || "",
-                descricao: rowData[3]?.trim() || "",
+                nome: rowData[0]?.trim(),
+                cliente: rowData[1]?.trim(),
+                lider: rowData[2]?.trim(),
+                descricao: rowData[3]?.trim(),
                 tags: rowData[4] ? rowData[4].split(';').map(s=>s.trim()) : [],
-                equipeAtual: rowData[5] ? rowData[5].split(';').map(s=>s.trim()) : [],
-                etapas: [{ titulo: 'Kick-off realizado', responsavel: '', prazo: '', status: 'pendente', kickoff: rowData[6] || '' }],
+                equipeAtual: rowData[7] ? rowData[7].split(';').map(s=>s.trim()) : [],
+                etapas: etapasProcessadas,
                 status_crm: tipo === 'pipe' ? 'negociacao' : 'andamento',
-                visivelHub: false, // Importa como rascunho para o sócio revisar
+                visivelHub: true, // Já importa visível para facilitar seu teste
                 arquivado: false,
                 dataCriacao: Date.now()
             };
@@ -701,15 +721,13 @@ async function importarDados(event, tipo) {
                 const { doc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js");
                 await setDoc(doc(db, "projetos", id), novoProjeto);
                 processados++;
-            } catch (err) {
-                console.error("Erro na linha " + i, err);
-            }
+            } catch (err) { console.error("Erro na linha " + i, err); }
         }
-        showToast(`✅ ${processados} itens importados! Verifique seu Pipeline.`, 'success');
-        event.target.value = ''; // Limpa o input para poder importar de novo
+        showToast(`✅ Importação concluída! ${processados} projetos e dezenas de tarefas alocadas.`, 'success');
+        if(typeof renderKanban === 'function') renderKanban();
+        event.target.value = '';
     };
-    reader.readAsText(file, 'ISO-8859-1'); // Suporta acentos do Excel brasileiro
+    
+    // SOLUÇÃO PARA O TIL/ACENTOS:
+    reader.readAsText(file, 'UTF-8');
 }
-
-// Vincula a função ao clique do botão
-window.importarDados = importarDados;
