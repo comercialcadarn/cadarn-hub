@@ -27,7 +27,6 @@
         pointer-events: none; z-index: -1;
     }
 
-    /* Header Superior Luxo */
     header {
         padding: 20px 40px;
         display: flex; justify-content: space-between; align-items: center;
@@ -42,17 +41,46 @@
         letter-spacing: 1.5px; box-shadow: 0 0 20px rgba(255, 193, 7, 0.2);
     }
 
+    /* === NOVA SEÇÃO PREMIUM: CENTRAL DE CAPACIDADE === */
+    .capacity-center {
+        margin: 25px 40px 0 40px;
+        padding: 20px;
+        background: linear-gradient(135deg, rgba(255,255,255,0.03), rgba(131, 46, 255, 0.02));
+        border: 1px solid var(--glass-border);
+        border-radius: 20px;
+        backdrop-filter: blur(15px);
+    }
+
+    .capacity-header {
+        font-size: 10px;
+        color: var(--cadarn-cinza);
+        text-transform: uppercase;
+        font-weight: 800;
+        letter-spacing: 1.5px;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .capacity-header::after {
+        content: ''; flex-grow: 1; height: 1px; background: var(--glass-border);
+    }
+
+    /* Estilo para a barra de rolagem horizontal dos colaboradores */
+    #teamAvailabilityContainer::-webkit-scrollbar { height: 4px; }
+    #teamAvailabilityContainer::-webkit-scrollbar-thumb { background: rgba(131, 46, 255, 0.3); border-radius: 10px; }
+
     /* Barra de Comando (Dashboard Header) */
     .dashboard-ctrl {
         background: var(--glass);
         border: 1px solid var(--glass-border);
         border-radius: 16px; padding: 15px 25px;
-        margin: 30px 40px; display: flex; align-items: center;
+        margin: 20px 40px 30px 40px; display: flex; align-items: center;
         justify-content: space-between; gap: 20px;
         backdrop-filter: blur(20px);
     }
 
-    /* Botões de Navegação (Tabs) Estilo Apple */
     .nav-tabs {
         display: flex; background: rgba(0,0,0,0.4);
         padding: 5px; border-radius: 12px; border: 1px solid var(--glass-border);
@@ -69,7 +97,6 @@
         box-shadow: 0 4px 15px rgba(0,0,0,0.3);
     }
 
-    /* Botões de Ação */
     .action-group { display: flex; gap: 10px; align-items: center; }
 
     .btn-import {
@@ -90,7 +117,6 @@
 
     .btn-create:hover { transform: translateY(-2px); box-shadow: 0 15px 30px rgba(255,255,255,0.2); }
 
-    /* Kanban Premium */
     .kanban-socio-board { padding: 0 40px 40px 40px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px; }
 
     .kanban-socio-col {
@@ -111,7 +137,6 @@
         border-radius: 20px; font-size: 10px; color: #666;
     }
 
-    /* Cards no Kanban */
     .kanban-card {
         background: rgba(255, 255, 255, 0.03);
         border: 1px solid rgba(255, 255, 255, 0.05);
@@ -125,40 +150,26 @@
         transform: scale(1.02);
     }
 
-    /* Estilo para inputs de filtros */
     .premium-select {
         background: rgba(0,0,0,0.4); border: 1px solid var(--glass-border);
         color: #fff; padding: 10px 15px; border-radius: 10px;
         font-size: 13px; outline: none; cursor: pointer;
     }
 
-    /* --- CORREÇÃO DO WORKLOAD (GRID) --- */
     .workload-grid { 
         display: grid; 
         grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); 
         gap: 25px; 
     }
-    .wl-card { 
-        background: rgba(255,255,255,0.02); 
-        border: 1px solid var(--glass-border); 
-        border-radius: 20px; padding: 25px; transition: 0.3s;
-    }
-    .wl-status-badge { padding: 4px 12px; border-radius: 20px; font-size: 10px; font-weight: 800; text-transform: uppercase; margin-top: 5px; display: inline-block; }
-    .wl-status-ocioso { background: rgba(71, 226, 153, 0.1); color: #47e299; }
-    .wl-status-ideal { background: rgba(131, 46, 255, 0.1); color: #c5a3ff; }
-    .wl-status-sobrecarga { background: rgba(220, 53, 69, 0.1); color: #ff8793; }
-
-    /* --- CORREÇÃO DO CALENDÁRIO (GRID) --- */
     .calendar-wrapper { background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); border-radius: 20px; overflow: hidden; }
     .calendar-header { display: flex; justify-content: space-between; align-items: center; padding: 20px; border-bottom: 1px solid var(--glass-border); }
     .calendar-grid { 
         display: grid; 
-        grid-template-columns: repeat(7, 1fr); /* Força as 7 colunas */
+        grid-template-columns: repeat(7, 1fr);
         background: var(--glass-border); gap: 1px; 
     }
     .calendar-day-name { background: #0a0a0a; padding: 15px; font-size: 11px; font-weight: 800; color: #666; text-transform: uppercase; text-align: center; }
     .calendar-day { background: #0f0f0f; min-height: 120px; padding: 10px; transition: 0.2s; }
-    .calendar-day.today { background: rgba(131, 46, 255, 0.05); }
     .calendar-date { font-size: 14px; font-weight: 700; margin-bottom: 10px; display: block; }
     .cal-task { background: rgba(131, 46, 255, 0.2); color: #c5a3ff; font-size: 10px; padding: 5px 8px; border-radius: 6px; margin-bottom: 4px; border-left: 3px solid var(--premium-roxo); }
     </style>
@@ -178,6 +189,12 @@
                 <a href="index.html" class="btn-create" style="text-decoration: none; background: rgba(255,255,255,0.05); color: #fff; border: 1px solid var(--glass-border);">← Voltar ao Hub</a>
             </div>
         </header>
+
+        <div class="capacity-center">
+            <div class="capacity-header">⚡ Central de Capacidade & Disponibilidade em Tempo Real</div>
+            <div id="teamAvailabilityContainer" style="display: flex; gap: 18px; overflow-x: auto; padding-bottom: 10px;">
+                </div>
+        </div>
 
         <div class="dashboard-ctrl">
             <div class="nav-tabs">
@@ -256,58 +273,7 @@
         </div>
 
         <div id="modal-projeto" class="modal-overlay" onclick="fecharModalProjeto(event)">
-            <div class="modal-content" style="max-width: 1100px; width: 95%; text-align: left; max-height: 90vh; overflow-y: auto; background: rgba(15,15,15,0.98); border: 1px solid rgba(255,193,7,0.3); box-shadow: 0 30px 80px rgba(0,0,0,0.9);" onclick="event.stopPropagation()">
-                <button class="sp-close" onclick="fecharModalProjeto(event)" style="position:absolute; top:20px; right:20px;">✕</button>
-                
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 20px; margin-bottom: 25px;">
-                    <div style="flex-grow: 1; padding-right: 20px;">
-                        <input type="text" id="modal-proj-cliente" class="edit-input" style="font-size: 14px; color: #FFC107; font-weight: 800; text-transform: uppercase; margin-bottom: 5px; background: transparent; border: none; padding: 0; box-shadow: none;" placeholder="NOME DO CLIENTE">
-                        <input type="text" id="modal-proj-nome" class="edit-input" style="font-size: 32px; color: white; font-weight: 800; background: transparent; border: none; padding: 0; box-shadow: none; letter-spacing: -1px;" placeholder="Nome do Projeto Estratégico">
-                    </div>
-                    
-                    <div style="display: flex; align-items: center; background: rgba(255,193,7,0.1); padding: 12px 18px; border-radius: 8px; border: 1px solid rgba(255,193,7,0.3);">
-                        <label style="font-size: 14px; color: #FFC107; cursor: pointer; display: flex; align-items: center; gap: 10px; font-weight: 700;">
-                            <input type="checkbox" id="modal-proj-visivel" style="accent-color: #FFC107; width: 18px; height: 18px; cursor: pointer;">
-                            👁️ Exibir no Hub da Equipe
-                        </label>
-                    </div>
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1.8fr; gap: 35px;">
-                    <div style="display: flex; flex-direction: column; gap: 18px; background: rgba(255,255,255,0.02); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
-                        <div>
-                            <label style="font-size: 11px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">👤 Líder do Projeto</label>
-                            <input type="text" id="modal-lider" class="edit-input" placeholder="Comece a digitar o nome..." list="lista-nomes-datalist" autocomplete="off">
-                            <datalist id="lista-nomes-datalist"></datalist>
-                        </div>
-                        <div><label style="font-size: 11px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">📝 Escopo Estratégico</label>
-                        <textarea id="modal-desc" class="edit-textarea" placeholder="Detalhes gerais do projeto..."></textarea></div>
-                        <div><label style="font-size: 11px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">🏷️ Tags</label>
-                        <input type="text" id="modal-tags" class="edit-input" placeholder="Ex: Financeiro, TI (vírgula)"></div>
-                        <div style="position: relative;">
-                            <label style="font-size: 11px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">👥 Equipe (Separe com vírgula)</label>
-                            <input type="text" id="modal-equipe" class="edit-input" placeholder="Digite um nome..." autocomplete="off">
-                        </div>
-                    </div>
-
-                    <div>
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 15px;">
-                            <h3 style="font-size: 16px; color: white; font-weight: 700; display: flex; align-items: center; gap: 10px;">📋 Tarefas, Prazos e Kick-off</h3>
-                            <button class="sp-btn-edit" style="background: rgba(131,46,255,0.2); color: #c5a3ff; border-color: var(--cadarn-roxo);" onclick="adicionarNovaTarefaModal()">➕ Nova Tarefa</button>
-                        </div>
-                        <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 10px; font-size: 11px; font-weight: 700; color: var(--cadarn-cinza); text-transform: uppercase; padding: 0 10px 10px 10px;">
-                            <div>Descrição</div> <div>Responsável</div> <div>Prazo</div> <div>Status</div> <div></div>
-                        </div>
-                        <div id="lista-tarefas" style="max-height: 480px; overflow-y: auto; padding-right: 8px; display: flex; flex-direction: column; gap: 10px;"></div>
-                    </div>
-                </div>
-
-                <div style="margin-top: 35px; padding-top: 25px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: flex-end; gap: 15px;">
-                    <button class="sp-btn-edit" style="background: transparent; color: var(--cadarn-cinza); border: 1px solid rgba(255,255,255,0.1); padding: 12px 24px;" onclick="fecharModalProjeto()">Cancelar Rascunho</button>
-                    <button class="btn-present" style="background: linear-gradient(135deg, #198754, #157347); border: none; font-size: 15px; padding: 12px 30px; box-shadow: 0 5px 20px rgba(25,135,84,0.4);" onclick="salvarProjetoSocio()">💾 Salvar Projeto Definitivo</button>
-                </div>
             </div>
-        </div>
 
     </div>
 
