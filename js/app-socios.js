@@ -664,3 +664,52 @@ window.mudarMes = mudarMes;
 window.irParaHoje = irParaHoje;
 window.renderCalendario = renderCalendario;
 window.renderCronograma = renderCronograma;
+// =========================================================
+// MOTOR DE IMPORTAÇÃO DE PLANILHAS (CSV)
+// =========================================================
+async function importarDados(event, tipo) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        const text = e.target.result;
+        const rows = text.split('\n').map(row => row.split(','));
+        
+        let processados = 0;
+        // Começa do 1 para pular o cabeçalho da planilha
+        for (let i = 1; i < rows.length; i++) {
+            const rowData = rows[i];
+            if(!rowData[0] || rowData[0].trim() === "") continue; // Pula linha vazia
+            
+            const id = 'proj_import_' + Date.now() + i;
+            const novoProjeto = {
+                nome: rowData[0]?.trim() || "Projeto Sem Nome",
+                cliente: rowData[1]?.trim() || "Cliente",
+                lider: rowData[2]?.trim() || "",
+                descricao: rowData[3]?.trim() || "",
+                tags: rowData[4] ? rowData[4].split(';').map(s=>s.trim()) : [],
+                equipeAtual: rowData[5] ? rowData[5].split(';').map(s=>s.trim()) : [],
+                etapas: [{ titulo: 'Kick-off realizado', responsavel: '', prazo: '', status: 'pendente', kickoff: rowData[6] || '' }],
+                status_crm: tipo === 'pipe' ? 'negociacao' : 'andamento',
+                visivelHub: false, // Importa como rascunho para o sócio revisar
+                arquivado: false,
+                dataCriacao: Date.now()
+            };
+
+            try {
+                const { doc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js");
+                await setDoc(doc(db, "projetos", id), novoProjeto);
+                processados++;
+            } catch (err) {
+                console.error("Erro na linha " + i, err);
+            }
+        }
+        showToast(`✅ ${processados} itens importados! Verifique seu Pipeline.`, 'success');
+        event.target.value = ''; // Limpa o input para poder importar de novo
+    };
+    reader.readAsText(file, 'ISO-8859-1'); // Suporta acentos do Excel brasileiro
+}
+
+// Vincula a função ao clique do botão
+window.importarDados = importarDados;
