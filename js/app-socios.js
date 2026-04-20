@@ -593,6 +593,18 @@ function setupAutocompleteMulti(inputElement, arr) {
 // ==========================================
 // MOTOR DO CALENDÁRIO MENSAL (GRID)
 // ==========================================
+// Variável global para controlar o mês atual do calendário
+window.dataCalendarioSocio = new Date();
+
+window.mudarMes = function(direcao) {
+    window.dataCalendarioSocio.setMonth(window.dataCalendarioSocio.getMonth() + direcao);
+    renderCalendario();
+};
+
+window.irParaHoje = function() {
+    window.dataCalendarioSocio = new Date();
+    renderCalendario();
+};
 function renderCalendario() {
     const calendarBody = document.getElementById('calendar-body');
     if (!calendarBody) return;
