@@ -80,17 +80,24 @@ function iniciarUI() {
 }
 
 function iniciarListeners() {
+    // Monitora a coleção de projetos no Firebase
     firestore.onSnapshot(firestore.collection(db, "projetos"), (snapshot) => {
         snapshot.docChanges().forEach((change) => {
             const id = change.doc.id;
             if (change.type === "removed") delete bdProjetos[id];
             else bdProjetos[id] = change.doc.data();
         });
-        renderKanban();
+
+        // Atualiza todos os componentes visuais do sócio em tempo real
+        renderKanban(); 
         renderWorkload();
         renderCronograma('gantt-master-container', filtroResponsavel);
-        renderCalendario(); // <--- NOVO
+        renderCalendario();
+        
+        // NOVA CHAMADA: Atualiza os círculos de alocação no topo
+        renderTeamAvailability(); 
     });
+    
     inicializarDragAndDrop();
 }
 
