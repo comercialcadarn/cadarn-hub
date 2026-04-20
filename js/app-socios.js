@@ -89,12 +89,13 @@ function iniciarListeners() {
         renderKanban();
         renderWorkload();
         renderCronograma('gantt-master-container', filtroResponsavel);
+        renderCalendario(); // <--- NOVO
     });
     inicializarDragAndDrop();
 }
 
 function switchTab(tab) {
-    const views = ['projetos', 'pessoas', 'cronograma'];
+    const views = ['projetos', 'pessoas', 'cronograma', 'calendario']; // <--- ADICIONADO
     views.forEach(v => {
         const el = document.getElementById(`view-${v}`);
         if(el) el.style.opacity = '0';
@@ -110,7 +111,9 @@ function switchTab(tab) {
                 const el = document.getElementById(`view-${v}`);
                 if(el) el.style.opacity = '1';
             });
+            // Dispara a renderização correta dependendo da aba
             if(tab === 'cronograma') renderCronograma('gantt-master-container', filtroResponsavel);
+            if(tab === 'calendario') renderCalendario(); // <--- NOVO
         }, 50);
     }, 150);
 
@@ -559,6 +562,79 @@ function setupAutocompleteMulti(inputElement, arr) {
     }
     document.addEventListener("click", function (e) { closeAllLists(e.target); });
 }
+// ==========================================
+// MOTOR DO CALENDÁRIO MENSAL (GRID)
+// ==========================================
+function renderCalendario() {
+    const calendarBody = document.getElementById('calendar-body');
+    if (!calendarBody) return;
+
+    const year = dataAtualCalendario.getFullYear();
+    const month = dataAtualCalendario.getMonth();
+    
+    const mesesStr = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+    const elTitulo = document.getElementById('cal-month-year');
+    if(elTitulo) elTitulo.innerText = `${mesesStr[month]} ${year}`;
+
+    let tarefasPorData = {};
+    for (const [id, proj] of Object.entries(bdProjetos)) {
+        if (proj.arquivado) continue;
+        (proj.etapas || []).forEach(t => {
+            if (t.prazo && (!filtroResponsavel || t.responsavel === filtroResponsavel)) {
+                if (!tarefasPorData[t.prazo]) tarefasPorData[t.prazo] = [];
+                tarefasPorData[t.prazo].push({ ...t, projId: id, projNome: proj.nome });
+            }
+        });
+    }
+
+    let primeiroDia = new Date(year, month, 1).getDay();
+    let indexPrimeiroDia = primeiroDia === 0 ? 6 : primeiroDia - 1; 
+    let diasNoMes = new Date(year, month + 1, 0).getDate();
+    
+    let html = '';
+    const hojeStr = new Date().toISOString().split('T')[0];
+    const dataDeHoje = new Date(new Date().setHours(0,0,0,0));
+
+    const diasMesAnterior = new Date(year, month, 0).getDate();
+    for (let i = indexPrimeiroDia - 1; i >= 0; i--) {
+        html += `<div class="calendar-day other-month"><div class="calendar-date">${diasMesAnterior - i}</div></div>`;
+    }
+
+    for (let i = 1; i <= diasNoMes; i++) {
+        const dataKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+        const isHoje = dataKey === hojeStr ? 'today' : '';
+        
+        let tarefasHtml = '';
+        if (tarefasPorData[dataKey]) {
+            tarefasPorData[dataKey].forEach(t => {
+                let statusClass = t.status;
+                if (statusClass !== 'concluido' && new Date(t.prazo) < dataDeHoje) statusClass = 'atrasado';
+                tarefasHtml += `
+                    <div class="cal-task ${statusClass}" onclick="abrirModalProjeto('${t.projId}')">
+                        <span>${sanitize(t.titulo)}</span>
+                    </div>
+                `;
+            });
+        }
+        html += `<div class="calendar-day ${isHoje}"><div class="calendar-date">${i}</div>${tarefasHtml}</div>`;
+    }
+
+    const diasFaltando = 42 - (indexPrimeiroDia + diasNoMes);
+    for (let i = 1; i <= diasFaltando; i++) {
+        html += `<div class="calendar-day other-month"><div class="calendar-date">${i}</div></div>`;
+    }
+    calendarBody.innerHTML = html;
+}
+
+// Funções de navegação do calendário
+window.mudarMes = (delta) => {
+    dataAtualCalendario.setMonth(dataAtualCalendario.getMonth() + delta);
+    renderCalendario();
+};
+window.irParaHoje = () => {
+    dataAtualCalendario = new Date();
+    renderCalendario();
+};
 
 initSegurancaSocios();
 
