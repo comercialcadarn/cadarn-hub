@@ -452,23 +452,24 @@
             font-weight: 500 !important;
         }    
 /* ========================================================= */
-/* CRONOGRAMA GANTT (UNIFICADO E BLINDADO)                   */
+/* CRONOGRAMA GANTT (FORÇA BRUTA CONTRA ESTICAMENTO)         */
 /* ========================================================= */
 .gantt-wrapper { 
     display: flex; 
+    flex-wrap: nowrap; /* Garante que não quebre a linha */
     width: 100%;
     max-width: 100%;
     border: 1px solid rgba(255,255,255,0.08); 
     border-radius: 12px; 
-    overflow: hidden; 
     background: #121212; 
-    position: relative; 
+    position: relative;
+    overflow: hidden; /* Muro de contenção primário */
 }
 
 .gantt-sidebar { 
     width: 260px; 
     min-width: 260px; 
-    flex-shrink: 0; /* Impede a barra de nomes de ser esmagada */
+    max-width: 260px; /* Trava absoluta */
     background: rgba(15,15,15,0.95); 
     border-right: 1px solid rgba(255,255,255,0.08); 
     z-index: 10; 
@@ -478,13 +479,14 @@
 }
 
 .gantt-timeline-container { 
-    flex-grow: 1; 
-    min-width: 0; /* A MÁGICA! Força o container a não esticar a tela */
-    overflow-x: auto; 
-    display: flex; 
-    flex-direction: column; 
+    /* A MÁGICA: Força o navegador a usar exatamente o espaço que sobra na tela */
+    width: calc(100% - 260px); 
+    max-width: calc(100% - 260px); 
+    overflow-x: auto; /* Rolagem apenas aqui dentro */
+    overflow-y: hidden;
+    display: block; /* Remove o flexbox que estava causando o bug */
     background: repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,255,255,0.02) 39px, rgba(255,255,255,0.02) 40px); 
-    padding-bottom: 8px; /* Dá espaço para a barra de rolagem */
+    padding-bottom: 8px;
 }
 
 /* Deixando a barra de rolagem do Roadmap premium */
@@ -523,7 +525,6 @@
 .gb-concluido { background: linear-gradient(90deg, #47e299, #20c997); color: #000; }
 .gb-concluido .gantt-bar-avatar { border-color: rgba(0,0,0,0.2); color: #000; }
 .gb-atrasado { background: linear-gradient(90deg, #ff8793, #dc3545); }
-
 /* ========================================================= */
 /* SCROLLBAR PARA OS COLABORADORES ALOCADOS          */
 /* ========================================================= */
