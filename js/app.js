@@ -1441,66 +1441,8 @@ window.onload = () => {
     initFirebase(); 
 };
 
-// ==========================================
-// ASSISTENTE DE IA (GEMINI 2.0 FLASH)
-// ==========================================
-const GEMINI_API_KEY = "AIzaSyBmj5I9bfNGZJ8vV57kdXV2IJ2oLu8FzDU"; 
-
-function toggleGeminiChat() {
-    const panel = document.getElementById('gemini-chat-panel');
-    if(panel) panel.style.display = (panel.style.display === 'none' || panel.style.display === '') ? 'flex' : 'none';
-}
-
-async function sendGeminiMessage() {
-    const inputEl = document.getElementById('gemini-chat-input');
-    const historyEl = document.getElementById('gemini-chat-history');
-    const message = inputEl.value.trim();
-    if (!message) return;
-
-    // 1. Renderiza a pergunta do utilizador
-    historyEl.innerHTML += `<div style="background: rgba(255,255,255,0.05); padding: 12px 16px; border-radius: 16px 16px 4px 16px; color: #e0e0e0; align-self: flex-end; max-width: 85%; border: 1px solid rgba(255,255,255,0.05);">${sanitize(message)}</div>`;
-    inputEl.value = '';
-    
-    const loadingId = 'loading-' + Date.now();
-    historyEl.innerHTML += `<div id="${loadingId}" style="color: var(--cadarn-cinza); font-size: 11px; align-self: flex-start; margin-left: 5px;">✨ A processar...</div>`;
-    historyEl.scrollTop = historyEl.scrollHeight;
-
-    // 2. Prepara o contexto dos projetos ativos (visíveis no Hub)
-    const contextoProjetos = Object.values(bdProjetos)
-        .filter(p => !p.arquivado && p.visivelHub) 
-        .map(p => `[Projeto: ${p.nome} | Cliente: ${p.cliente} | Líder: ${p.lider} | Status: ${p.status_crm}]`)
-        .join('\n');
-
-    const systemPrompt = `É a IA oficial do CADARN HUB. Responda APENAS com base nos dados abaixo. Seja direto e profissional. Use negrito para nomes de projetos.\n\nPROJETOS ATIVOS:\n${contextoProjetos}`;
-
-    try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                systemInstruction: { parts: [{ text: systemPrompt }] },
-                contents: [{ parts: [{ text: message }] }],
-                generationConfig: { temperature: 0.2 }
-            })
-        });
-
-        const data = await response.json();
-        const aiResponse = data.candidates[0].content.parts[0].text
-            .replace(/\n/g, '<br>')
-            .replace(/\*\*(.*?)\*\*/g, '<strong style="color: white;">$1</strong>');
-
-        document.getElementById(loadingId).remove();
-        historyEl.innerHTML += `<div style="background: rgba(131, 46, 255, 0.1); border: 1px solid rgba(131, 46, 255, 0.3); padding: 12px 16px; border-radius: 16px 16px 16px 4px; color: #f4f4f5; align-self: flex-start; max-width: 85%;">${aiResponse}</div>`;
-        historyEl.scrollTop = historyEl.scrollHeight;
-
-    } catch (error) {
-        document.getElementById(loadingId)?.remove();
-        historyEl.innerHTML += `<div style="color: #ff8793; font-size: 12px;">Erro ao ligar ao cérebro da IA.</div>`;
-    }
-}
-
 // =========================================================
-// EXPORTANDO FUNÇÕES PARA O HTML ENXERGAR (Muito Importante!)
+// EXPORTANDO FUNÇÕES PARA O HTML ENXERGAR
 // =========================================================
 window.loginComGoogle = loginComGoogle;
 window.logout = logout;
