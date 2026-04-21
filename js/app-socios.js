@@ -1077,74 +1077,8 @@ function renderReuniaoSlide() {
     }
 }
 
-// ==========================================
-// ASSISTENTE DE IA (GEMINI 2.0 FLASH REST API)
-// ==========================================
-const GEMINI_API_KEY = "AIzaSyBmj5I9bfNGZJ8vV57kdXV2IJ2oLu8FzDU"; 
-
-function toggleGeminiChat() {
-    const panel = document.getElementById('gemini-chat-panel');
-    panel.style.display = panel.style.display === 'none' || panel.style.display === '' ? 'flex' : 'none';
-}
-
-async function sendGeminiMessage() {
-    const inputEl = document.getElementById('gemini-chat-input');
-    const historyEl = document.getElementById('gemini-chat-history');
-    const message = inputEl.value.trim();
-    if (!message) return;
-
-    // 1. Renderiza a pergunta do sócio
-    historyEl.innerHTML += `<div style="background: rgba(255,255,255,0.05); padding: 12px 16px; border-radius: 16px 16px 4px 16px; color: #e0e0e0; align-self: flex-end; max-width: 85%; border: 1px solid rgba(255,255,255,0.05);">${sanitize(message)}</div>`;
-    inputEl.value = '';
-    
-    // 2. Animação de carregamento
-    const loadingId = 'loading-' + Date.now();
-    historyEl.innerHTML += `<div id="${loadingId}" style="color: var(--cadarn-cinza); font-size: 11px; align-self: flex-start; margin-left: 5px;">✨ Analisando portfólio...</div>`;
-    historyEl.scrollTop = historyEl.scrollHeight;
-
-    // 3. O Segredo: Compilar bdProjetos em texto leve (sem sobrecarregar o limite de tokens)
-    const contextoProjetos = Object.values(bdProjetos)
-        .filter(p => !p.arquivado) // Ignora lixeira
-        .map(p => `[Projeto: ${p.nome} | Cliente: ${p.cliente} | Líder: ${p.lider} | Status: ${p.status_crm} | Contrato: R$${p.valorContrato || 0} | Hrs Reais/Orcadas: ${p.horasReais || 0}/${p.horasOrcadas || 0} | Tags: ${(p.tags||[]).join(', ')}]`)
-        .join('\n');
-
-    // 4. Engenharia de Prompt (Grounding)
-    const systemPrompt = `Você é a IA executiva da Cadarn Consultoria. Responda a pergunta do sócio APENAS utilizando o banco de dados de projetos atual abaixo. Seja analítico, profissional e muito direto (evite textos longos). Use formatação amigável (negrito para nomes e dinheiro). Se a informação não estiver no contexto, diga que não encontrou.\n\nBANCO DE DADOS ATUAL:\n${contextoProjetos}`;
-
-    try {
-        // 5. Chamada nativa ao Gemini 2.0 Flash
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                systemInstruction: { parts: [{ text: systemPrompt }] },
-                contents: [{ parts: [{ text: message }] }],
-                generationConfig: { temperature: 0.2 } // Baixa temperatura para manter precisão cirúrgica
-            })
-        });
-
-        const data = await response.json();
-        
-        if(data.error) throw new Error(data.error.message);
-        
-        // Trata a resposta (Garante que quebras de linha Markdown funcionem no HTML)
-        let aiResponse = data.candidates[0].content.parts[0].text;
-        aiResponse = aiResponse.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong style="color: white;">$1</strong>');
-
-        document.getElementById(loadingId).remove();
-        historyEl.innerHTML += `<div style="background: rgba(131, 46, 255, 0.1); border: 1px solid rgba(131, 46, 255, 0.3); padding: 12px 16px; border-radius: 16px 16px 16px 4px; color: #f4f4f5; align-self: flex-start; max-width: 85%;">${aiResponse}</div>`;
-        historyEl.scrollTop = historyEl.scrollHeight;
-
-    } catch (error) {
-        console.error("Erro no Gemini:", error);
-        document.getElementById(loadingId).remove();
-        historyEl.innerHTML += `<div style="background: rgba(220,53,69,0.1); border: 1px solid rgba(220,53,69,0.3); color: #ff8793; padding: 12px; border-radius: 8px; font-size: 12px; align-self: flex-start;">Erro de conexão com o cérebro da IA. Verifique a chave de API no console.</div>`;
-    }
-}
 // Expõe as funções globalmente para o HTML enxergar
 window.abrirModoReuniao = abrirModoReuniao;
 window.fecharModoReuniao = fecharModoReuniao;
 window.reuniaoNextSlide = reuniaoNextSlide;
 window.reuniaoPrevSlide = reuniaoPrevSlide;
-window.toggleGeminiChat = toggleGeminiChat;
-window.sendGeminiMessage = sendGeminiMessage;
