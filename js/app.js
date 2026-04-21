@@ -1474,7 +1474,7 @@ async function sendGeminiMessage() {
     const systemPrompt = `É a IA oficial do CADARN HUB. Responda APENAS com base nos dados abaixo. Seja direto e profissional. Use negrito para nomes de projetos.\n\nPROJETOS ATIVOS:\n${contextoProjetos}`;
 
     try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${"AIzaSyBmj5I9bfNGZJ8vV57kdXV2IJ2oLu8FzDU"}`, {
+        const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyBmj5I9bfNGZJ8vV57kdXV2IJ2oLu8FzDU", {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
