@@ -1223,12 +1223,32 @@ async function forceFetchNews() {
     if(btn) btn.classList.remove('loading');
 }
 
-function renderNews(newsArray, containerNode) { 
+function tempoRelativo(dataStr) {
+    const agora = new Date();
+    const data = new Date(dataStr);
+    if (isNaN(data)) return 'Hoje';
+    const diff = Math.floor((agora - data) / 1000);
+    if (diff < 60)   return 'agora mesmo';
+    if (diff < 3600) return `há ${Math.floor(diff / 60)} min`;
+    if (diff < 86400) return `há ${Math.floor(diff / 3600)}h`;
+    if (diff < 172800) return 'ontem';
+    return data.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+}
+
+function renderNews(newsArray, containerNode) {
     containerNode.innerHTML = newsArray.map(item => {
-        const dateObj = new Date(item.pubDate);
-        const time = !isNaN(dateObj) ? dateObj.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : 'Hoje';
-        return `<a href="${sanitize(item.link)}" target="_blank" class="news-card"><h4>${sanitize(item.title)}</h4><div class="news-meta"><span class="portal-flag">${sanitize(item.portal)}</span><span class="time-flag">às ${time}</span></div></a>`;
-    }).join(''); 
+        const tempo = tempoRelativo(item.pubDate);
+        return `
+            <a href="${sanitize(item.link)}" target="_blank" class="news-card" 
+               data-visited="false"
+               onclick="this.dataset.visited='true'; this.style.opacity='0.55'">
+                <h4>${sanitize(item.title)}</h4>
+                <div class="news-meta">
+                    <span class="portal-flag">${sanitize(item.portal)}</span>
+                    <span class="time-flag">${tempo}</span>
+                </div>
+            </a>`;
+    }).join('');
 }
 
 fetchNews(); setInterval(fetchNews, 600000); 
@@ -1274,23 +1294,44 @@ cmdInput.addEventListener('input', (e) => { renderCmdResults(e.target.value.toLo
 
 function renderCmdResults(query) {
     let results = [];
+
     if (typeof window.LINKS_DIRETORIO !== 'undefined') {
-        LINKS_DIRETORIO.forEach(link => { 
-            if (link.nome.toLowerCase().includes(query)) results.push({ tipo: 'Link', nome: link.nome, action: `window.open('${link.link}', '_blank')` }); 
+        LINKS_DIRETORIO.forEach(link => {
+            if (link.nome.toLowerCase().includes(query))
+                results.push({ tipo: 'Link', nome: link.nome, action: `window.open('${link.link}', '_blank')` });
         });
     }
-    
-    Object.entries(bdProjetos).forEach(([id, proj]) => { 
+
+    Object.entries(bdProjetos).forEach(([id, proj]) => {
         if (!proj.arquivado && proj.visivelHub) {
             const searchStr = `${proj.nome} ${proj.cliente} ${proj.descricao || ''} ${proj.licoes || ''}`.toLowerCase();
             if (searchStr.includes(query)) {
-                results.push({ tipo: 'Projeto', nome: `${proj.nome} (${proj.cliente})`, action: `fecharAposBusca(); abrirProjeto('${id}')` }); 
+                results.push({ tipo: 'Projeto', nome: `${proj.nome} (${proj.cliente})`, action: `fecharAposBusca(); abrirProjeto('${id}')` });
             }
         }
     });
-    
-    if (results.length === 0) { cmdResults.innerHTML = `<p style="padding: 15px; color: var(--cadarn-cinza); font-size: 13px;">Sem resultados.</p>`; return; }
-    cmdResults.innerHTML = results.map(r => `<div class="cmd-item" onclick="${r.action}"><span>${r.nome}</span><span class="cmd-item-type">${r.tipo}</span></div>`).join('');
+
+    // Contador ao vivo
+    const contador = document.getElementById('cmd-contador');
+    if (contador) {
+        contador.textContent = query
+            ? `${results.length} resultado${results.length !== 1 ? 's' : ''}`
+            : `${Object.values(bdProjetos).filter(p => !p.arquivado && p.visivelHub).length} projetos ativos`;
+    }
+
+    if (results.length === 0) {
+        cmdResults.innerHTML = `
+            <div style="padding: 30px; text-align: center; color: var(--cadarn-cinza);">
+                <div style="font-size: 32px; margin-bottom: 10px;">🔍</div>
+                <div style="font-size: 13px;">Nada encontrado para "<strong style="color:white;">${query}</strong>"</div>
+            </div>`;
+        return;
+    }
+    cmdResults.innerHTML = results.map(r => `
+        <div class="cmd-item" onclick="${r.action}">
+            <span>${r.nome}</span>
+            <span class="cmd-item-type">${r.tipo}</span>
+        </div>`).join('');
 }
 
 function fecharAposBusca() { cmdModal.classList.remove('active'); }
