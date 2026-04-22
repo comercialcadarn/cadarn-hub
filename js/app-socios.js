@@ -1100,3 +1100,4 @@ window.abrirModoReuniao = abrirModoReuniao;
 window.fecharModoReuniao = fecharModoReuniao;
 window.reuniaoNextSlide = reuniaoNextSlide;
 window.reuniaoPrevSlide = reuniaoPrevSlide;
+}
