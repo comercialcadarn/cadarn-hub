@@ -14,7 +14,16 @@
             --glow-roxo: rgba(131, 46, 255, 0.25);
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+button, a, .card, .project-row, .kanban-card,
+.dir-button, .news-card, .tag-filter-btn,
+.user-menu, .btn-presenca, .modal-content,
+.side-panel, .modal-overlay, .fab-btn, .step,
+.team-member-card, .sla-item, .prof-list-item {
+    transition: background-color 0.3s ease, border-color 0.2s ease,
+                box-shadow 0.3s ease, transform 0.2s ease, opacity 0.3s ease;
+}
 
         body { font-family: 'Inter', sans-serif; background-color: var(--bg-body); color: var(--cadarn-branco); padding-bottom: 70px; overflow-x: hidden; -webkit-font-smoothing: antialiased; position: relative; transition: color 0.3s ease, background-color 0.3s ease; margin-top: 0;}
         
