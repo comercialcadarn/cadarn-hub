@@ -35,25 +35,27 @@ async function initFirebase() {
     db = getFirestore(app, "cadarn-hub"); 
     auth = getAuth(app);
 
-    onAuthStateChanged(auth, (user) => {
-        if (user) {
-            if (user.email.endsWith('@cadarnconsultoria.com.br')) {
-                usuarioLogado = user.displayName;
-                localStorage.setItem('cadarn_user', usuarioLogado);
-                localStorage.setItem('cadarn_user_email', user.email); 
-                
-                document.getElementById('login-modal').classList.remove('active');
-                aplicarNome(usuarioLogado);
-                iniciarListeners(); 
+    return new Promise((resolve) => {
+        onAuthStateChanged(auth, (user) => {
+            resolve(); // <- barra de progresso conclui aqui
+            if (user) {
+                if (user.email.endsWith('@cadarnconsultoria.com.br')) {
+                    usuarioLogado = user.displayName;
+                    localStorage.setItem('cadarn_user', usuarioLogado);
+                    localStorage.setItem('cadarn_user_email', user.email); 
+                    document.getElementById('login-modal').classList.remove('active');
+                    aplicarNome(usuarioLogado);
+                    iniciarListeners(); 
+                } else {
+                    showToast("Acesso restrito ao domínio @cadarnconsultoria.com.br", "danger");
+                    logout();
+                }
             } else {
-                showToast("Acesso restrito ao domínio @cadarnconsultoria.com.br", "danger");
-                logout();
+                usuarioLogado = '';
+                localStorage.removeItem('cadarn_user_email'); 
+                abrirModalLoginReal();
             }
-        } else {
-            usuarioLogado = '';
-            localStorage.removeItem('cadarn_user_email'); 
-            abrirModalLoginReal();
-        }
+        });
     });
 }
 
@@ -1014,7 +1016,12 @@ async function salvarEdicao() {
     proj.etapas = estado.etapas;
 
     const todasConcluidas = proj.etapas.length > 0 && proj.etapas.every(e => e.status === 'concluido');
-    if (todasConcluidas && !proj.dataConclusao) { proj.dataConclusao = Date.now(); } else if (!todasConcluidas && proj.dataConclusao) { proj.dataConclusao = null; }
+    const eraConcluidoAntes = !!proj.dataConclusao;
+    if (todasConcluidas && !proj.dataConclusao) {
+        proj.dataConclusao = Date.now();
+        // Dispara confete ao concluir pela primeira vez!
+        if (!eraConcluidoAntes) dispararConfete();
+    } else if (!todasConcluidas && proj.dataConclusao) { proj.dataConclusao = null; }
     
     localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos));
     localStorage.removeItem('cadarn_draft_' + projetoAbertoAtual); 
@@ -1202,6 +1209,18 @@ function renderNews(newsArray, containerNode) {
 
 fetchNews(); setInterval(fetchNews, 600000); 
 
+/* ========================================================= */
+/* EFEITO SPOTLIGHT NOS CARDS (SEGUE O MOUSE)                */
+/* ========================================================= */
+document.addEventListener('mousemove', (e) => {
+    document.querySelectorAll('.card').forEach(card => {
+        const rect = card.getBoundingClientRect();
+        const x = ((e.clientX - rect.left) / rect.width) * 100;
+        const y = ((e.clientY - rect.top) / rect.height) * 100;
+        card.style.setProperty('--mouse-x', x + '%');
+        card.style.setProperty('--mouse-y', y + '%');
+    });
+});
 function toggleFullScreen() { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
 const scratchTextArea = document.getElementById('scratch-text');
 function loadScratchpad() { const saved = localStorage.getItem('cadarn_notes'); if(saved) scratchTextArea.value = saved; }
@@ -1368,6 +1387,18 @@ function atualizarDashboard() {
     }
     document.getElementById('kpi-total').innerText = totais; document.getElementById('kpi-ativos').innerText = ativos; document.getElementById('kpi-concluidos').innerText = concluidos;
     
+    // Título dinâmico da aba com alertas
+    const hojeCompare2 = new Date(new Date().setHours(0,0,0,0));
+    let totalAtrasados = 0;
+    for (const proj of Object.values(bdProjetos)) {
+        if (proj.arquivado || proj.visivelHub === false) continue;
+        (proj.etapas || []).forEach(e => {
+            if (e.prazo && e.status !== 'concluido' && new Date(e.prazo) < hojeCompare2) totalAtrasados++;
+        });
+    }
+    document.title = totalAtrasados > 0
+        ? `(${totalAtrasados} ⚠️) CADARN | Hub Estratégico`
+        : 'CADARN | Hub Estratégico';
     const ctx = document.getElementById('kpiChart').getContext('2d');
     const fontColor = document.body.classList.contains('light-mode') ? '#64748b' : '#a1a1aa';
 
@@ -1495,21 +1526,80 @@ function aplicarNome(nome) {
     document.getElementById('briefing-name').innerText = firstName; 
     document.getElementById('display-avatar').innerText = firstName.charAt(0).toUpperCase(); 
 }
+/* ========================================================= */
+/* BARRA DE PROGRESSO DE CARREGAMENTO                        */
+/* ========================================================= */
+function criarProgressBar() {
+    const bar = document.createElement('div');
+    bar.id = 'progress-bar';
+    document.body.prepend(bar);
+    return bar;
+}
 
+function avancarProgressBar(bar, pct) {
+    if (bar) bar.style.width = pct + '%';
+}
+
+function concluirProgressBar(bar) {
+    if (!bar) return;
+    bar.classList.add('done');
+    setTimeout(() => bar.remove(), 900);
+}
+/* ========================================================= */
+/* CONFETE DE CONCLUSÃO DE PROJETO                           */
+/* ========================================================= */
+function dispararConfete() {
+    const cores = ['#832EFF', '#c5a3ff', '#47e299', '#ffc107', '#ff8793', '#ffffff'];
+    const total = 80;
+    
+    for (let i = 0; i < total; i++) {
+        setTimeout(() => {
+            const confete = document.createElement('div');
+            const cor = cores[Math.floor(Math.random() * cores.length)];
+            const tamanho = Math.random() * 8 + 4;
+            const startX = Math.random() * window.innerWidth;
+            
+            confete.style.cssText = `
+                position: fixed;
+                left: ${startX}px;
+                top: -10px;
+                width: ${tamanho}px;
+                height: ${tamanho}px;
+                background: ${cor};
+                border-radius: ${Math.random() > 0.5 ? '50%' : '2px'};
+                z-index: 999999;
+                pointer-events: none;
+                animation: confeteCair ${1.5 + Math.random() * 2}s ease-in forwards;
+                transform: rotate(${Math.random() * 360}deg);
+            `;
+            document.body.appendChild(confete);
+            setTimeout(() => confete.remove(), 4000);
+        }, i * 30);
+    }
+}
 window.onload = () => {
+    const progressBar = criarProgressBar();
+    avancarProgressBar(progressBar, 20);
+
     loadTheme();
     loadScratchpad();
     renderDailyQuote();
+
+    avancarProgressBar(progressBar, 50);
+
     const editEquipeEl = document.getElementById("edit-equipe");
     if (editEquipeEl) setupAutocomplete(editEquipeEl);
 
-    // Se tiver dados em cache, mostra imediatamente (sem esperar o Firebase)
     if (Object.keys(bdProjetos).length > 0) {
         renderMainProjects();
         atualizarDashboard();
+        avancarProgressBar(progressBar, 80);
     }
 
-    initFirebase();
+    initFirebase().then(() => {
+        avancarProgressBar(progressBar, 100);
+        setTimeout(() => concluirProgressBar(progressBar), 400);
+    }).catch(() => concluirProgressBar(progressBar));
 };
 
 // =========================================================
