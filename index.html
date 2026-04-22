@@ -46,7 +46,10 @@
 
 <div id="cmd-modal" class="modal-overlay" onclick="fecharCmd(event)">
     <div class="cmd-modal" onclick="event.stopPropagation()">
-        <input type="text" id="cmd-input" class="cmd-search" placeholder="Buscar projetos, lições ou descrições..." autocomplete="off">
+        <div style="position: relative;">
+            <input type="text" id="cmd-input" class="cmd-search" placeholder="Buscar projetos, lições ou descrições..." autocomplete="off">
+            <span id="cmd-contador" style="position:absolute; right:15px; top:50%; transform:translateY(-50%); font-size:11px; color:var(--cadarn-cinza); font-weight:600; pointer-events:none;"></span>
+        </div>
         <div class="cmd-results" id="cmd-results"></div>
     </div>
 </div>
