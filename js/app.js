@@ -1268,7 +1268,22 @@ document.addEventListener('mousemove', (e) => {
 function toggleFullScreen() { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
 const scratchTextArea = document.getElementById('scratch-text');
 function loadScratchpad() { const saved = localStorage.getItem('cadarn_notes'); if(saved) scratchTextArea.value = saved; }
-scratchTextArea.addEventListener('input', () => { localStorage.setItem('cadarn_notes', scratchTextArea.value); }); 
+scratchTextArea.addEventListener('input', () => {
+    localStorage.setItem('cadarn_notes', scratchTextArea.value);
+
+    // Mostra feedback de salvamento com hora
+    const indicador = document.getElementById('notes-save-indicator');
+    if (indicador) {
+        const hora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        indicador.textContent = `Salvo às ${hora} ✓`;
+        indicador.style.color = '#47e299';
+        clearTimeout(window._notesSaveTimer);
+        window._notesSaveTimer = setTimeout(() => {
+            indicador.textContent = 'Auto-save ativo';
+            indicador.style.color = 'var(--cadarn-cinza)';
+        }, 3000);
+    }
+});
 
 const cmdModal = document.getElementById('cmd-modal');
 const cmdInput = document.getElementById('cmd-input');
