@@ -659,25 +659,166 @@ button, a, .card, .project-row, .kanban-card,
 }
 
 /* ==================================================== */
-/* TIPOGRAFIA: TÍTULOS E NÚMEROS    */
+/* SISTEMA TIPOGRÁFICO PREMIUM — CADARN HUB             */
+/* Outfit = Títulos, display, números, destaque         */
+/* Inter  = Corpo de texto, labels, dados, UI           */
 /* ==================================================== */
-h1, h2, h3, h4, 
-.logo-text, 
-.section-header-title, 
-.kanban-col-header, 
-.quote-text,
-.visao-stats strong,
-.tm-info,
-.project-row div[style*="font-size: 15px"] {
-    font-family: 'Outfit', sans-serif;
-    letter-spacing: -0.5px;
+
+/* --- Variáveis de fonte --- */
+:root {
+    --font-display: 'Outfit', sans-serif;
+    --font-body:    'Inter', sans-serif;
 }
 
-/* Deixa os grandes números dos KPIs super elegantes */
-.kpi-number, #kpi-total, #kpi-ativos, #kpi-concluidos {
-    font-family: 'Outfit', sans-serif;
-    font-weight: 800;
+/* --- Força corpo como Inter (base) --- */
+body {
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.6;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11"; /* Liga variantes elegantes da Inter */
+}
+
+/* --- Outfit em TODOS os títulos e display --- */
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    letter-spacing: -0.5px;
+    line-height: 1.2;
+}
+
+/* --- Logo: Outfit pesado --- */
+.logo-text {
+    font-family: var(--font-display);
+    font-weight: 900;
     letter-spacing: -1px;
+    font-size: 22px;
+}
+
+/* --- Cabeçalhos de seção --- */
+.section-header-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 17px;
+    letter-spacing: -0.3px;
+}
+
+/* --- KPI números grandes: Outfit 800 com tracking negativo --- */
+#kpi-total, #kpi-ativos, #kpi-concluidos,
+.kpi-number {
+    font-family: var(--font-display);
+    font-weight: 800;
+    letter-spacing: -2px;
+    line-height: 1;
+}
+
+/* --- Títulos de cards e projetos --- */
+.kanban-card-title,
+.sp-title,
+.profile-name,
+.tm-info {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.3px;
+}
+
+/* --- Cabeçalho de colunas Kanban --- */
+.kanban-col-header {
+    font-family: var(--font-display);
+    font-weight: 800;
+    letter-spacing: 1px;  /* uppercase fica melhor com tracking positivo */
+    font-size: 11px;
+}
+
+/* --- Citação do dia: Outfit italic elegante --- */
+.quote-text {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-style: italic;
+    font-size: 17px;
+    line-height: 1.5;
+    letter-spacing: -0.2px;
+}
+.quote-author {
+    font-family: var(--font-body);
+    font-weight: 500;
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+/* --- Labels micro (UPPERCASE tiny) sempre Inter --- */
+.sp-section-title,
+.prof-section-title,
+.gantt-sidebar-header,
+.kanban-col-header,
+.capacity-header,
+.pres-box-title {
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--cadarn-cinza);
+}
+
+/* --- Dados e texto de painel lateral: Inter legível --- */
+.sp-desc,
+.team-item,
+.project-row,
+.news-card h4,
+.sla-text {
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+/* --- Relógio: Outfit porque é display --- */
+.clock-widget strong {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: 0.5px;
+}
+
+/* --- Nome do usuário no header: gradiente Outfit --- */
+.nome-gradiente {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: -0.2px;
+}
+
+/* --- Botões: Inter semi-bold (mais legível em botão) --- */
+button, .btn-presenca, .sp-btn-edit, .view-btn,
+.tag-filter-btn, .pres-btn, .fab-btn {
+    font-family: var(--font-body);
+    font-weight: 600;
+}
+
+/* --- Inputs e textareas: Inter regular --- */
+input, textarea, select,
+.edit-input, .edit-textarea, .modal-input,
+.cmd-search, .widget-area {
+    font-family: var(--font-body);
+    font-size: 14px;
+}
+
+/* --- Números grandes dos KPIs com Outfit 800 --- */
+.visao-stats strong {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 26px;
+    letter-spacing: -1px;
+    display: block;
+    line-height: 1.1;
+}
+
+/* --- Badge de contrato (Área do Sócio) --- */
+.badge-contract {
+    font-family: var(--font-display);
+    letter-spacing: 0.5px;
+    font-weight: 900;
+    box-shadow: 0 4px 10px rgba(255, 193, 7, 0.2);
+    text-transform: uppercase;
 }
 /* ==================================================== */
 /* WIDGETS FINANCEIROS (ÁREA DO SÓCIO)                  */
