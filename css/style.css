@@ -1008,3 +1008,11 @@ input[type=number]::-webkit-outer-spin-button {
 input[type=number] {
     -moz-appearance: textfield; /* Para Firefox */
 }
+.logo-sub {
+    font-family: var(--font-display);
+    font-weight: 500;
+    color: var(--cadarn-roxo-claro);
+    text-shadow: 0 0 20px var(--glow-roxo);
+    font-size: 0.9em;
+    letter-spacing: 2px;
+}
