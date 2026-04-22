@@ -340,8 +340,6 @@ function removerEtapaMemoria(idx) { etapasTemporarias.splice(idx, 1); renderTare
 
 async function salvarProjetoSocio() {
     if (!projetoModalAberto) return;
-    async function salvarProjetoSocio() {
-    if (!projetoModalAberto) return;
 
     // Desabilita o botão para evitar cliques duplos
     const botaoSalvar = document.querySelector('[onclick="salvarProjetoSocio()"]');
@@ -374,8 +372,8 @@ async function salvarProjetoSocio() {
         cliente: elCliente?.value?.trim() || 'Cliente Não Informado',
         lider: elLider?.value?.trim() || usuarioLogado,
         descricao: elDesc?.value || '',
-        tags: elTags?.value ? elTags.value.split(',').map(s=>s.trim()).filter(Boolean) : [],
-        equipeAtual: elEquipe?.value ? elEquipe.value.split(',').map(s=>s.trim()).filter(Boolean) : [],
+        tags: elTags?.value ? elTags.value.split(',').map(s => s.trim()).filter(Boolean) : [],
+        equipeAtual: elEquipe?.value ? elEquipe.value.split(',').map(s => s.trim()).filter(Boolean) : [],
         licoes: elLicoes?.value || '',
         visivelHub: elVisivel?.checked || false,
         etapas: etapasTemporarias,
