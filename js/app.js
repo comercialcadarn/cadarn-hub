@@ -249,7 +249,28 @@ function abrirPerfil(nome) {
     
     document.getElementById('profile-phone').value = conf.celular || '';
     document.getElementById('profile-email').value = conf.email || '';
-    document.getElementById('profile-birthday').value = conf.nascimento || ''; 
+    document.getElementById('profile-birthday').value = conf.nascimento || '';
+    
+    // Calcula e mostra dias até o aniversário
+    const birthdayEl = document.getElementById('profile-birthday-countdown');
+    if (birthdayEl && conf.nascimento) {
+        const hoje = new Date();
+        const nasc = new Date(conf.nascimento);
+        const proxAniv = new Date(hoje.getFullYear(), nasc.getMonth(), nasc.getDate());
+        if (proxAniv < hoje) proxAniv.setFullYear(hoje.getFullYear() + 1);
+        const diasAte = Math.ceil((proxAniv - hoje) / (1000 * 60 * 60 * 24));
+        
+        if (diasAte === 0) {
+            birthdayEl.innerHTML = '🎂 <strong style="color:#ffc107;">Hoje é seu aniversário! 🎉</strong>';
+        } else if (diasAte <= 7) {
+            birthdayEl.innerHTML = `🎂 <strong style="color:#ffc107;">Aniversário em ${diasAte} dia${diasAte > 1 ? 's' : ''}!</strong>`;
+        } else {
+            birthdayEl.innerHTML = `🎂 Aniversário em <strong>${diasAte} dias</strong>`;
+        }
+        birthdayEl.style.display = 'block';
+    } else if (birthdayEl) {
+        birthdayEl.style.display = 'none';
+    }
 
     const elogiosSection = document.getElementById('profile-elogios-section');
     const privateStars = document.getElementById('profile-private-stars');
@@ -549,6 +570,33 @@ function setVisualizacao(modo) {
 }
 
 function setFiltro(tag) { filtroAtual = tag; filtroMembro = null; renderMainProjects(); }
+function filtrarPorStatus(status) {
+    // Adiciona filtro visual de status temporário
+    const mapa = { 'ativo': 'Em Execução', 'concluido': 'Concluídos', 'pendente': 'Aguardando' };
+    showToast(`Filtrando: ${mapa[status] || status}`, 'info');
+    
+    // Aplica filtragem direta no container
+    document.querySelectorAll('.project-row').forEach(row => {
+        const dot = row.querySelector(`.dot-${status}`);
+        row.style.display = dot ? '' : 'none';
+    });
+
+    // Botão para limpar
+    const container = document.getElementById('tags-filter-container');
+    const limpar = document.createElement('button');
+    limpar.className = 'tag-filter-btn active';
+    limpar.textContent = `✕ Limpar filtro de status`;
+    limpar.onclick = () => {
+        document.querySelectorAll('.project-row').forEach(r => r.style.display = '');
+        limpar.remove();
+    };
+    // Remove botão anterior se existir
+    const anterior = container.querySelector('[data-status-filter]');
+    if (anterior) anterior.remove();
+    limpar.setAttribute('data-status-filter', 'true');
+    container.appendChild(limpar);
+}
+window.filtrarPorStatus = filtrarPorStatus;
 function limparFiltroMembro() { filtroMembro = null; renderMainProjects(); }
 
 function toggleSelectModeLixeira() {
@@ -659,6 +707,24 @@ function renderMainProjects() {
     let filterHtml = `<button class="tag-filter-btn ${filtroAtual === 'Todos' && !filtroMembro ? 'active' : ''}" onclick="setFiltro('Todos')">Todos</button>`;
     if (filtroMembro) { filterHtml += `<button class="tag-filter-btn active" onclick="limparFiltroMembro()">👤 ${sanitize(filtroMembro)} ✕</button>`; }
     Array.from(todasTags).sort().forEach(tag => { filterHtml += `<button class="tag-filter-btn ${filtroAtual === tag && !filtroMembro ? 'active' : ''}" onclick="setFiltro('${sanitize(tag)}')">${sanitize(tag)}</button>`; });
+    // Conta projetos visíveis com o filtro atual
+    let projetosVisiveis = 0;
+    let projetosTotal = 0;
+    for (const proj of Object.values(bdProjetos)) {
+        if (proj.arquivado || proj.visivelHub === false) continue;
+        projetosTotal++;
+        const passaTag = filtroAtual === 'Todos' || (proj.tags || []).includes(filtroAtual);
+        const passaMembro = !filtroMembro || (proj.equipeAtual || []).some(m => m.split('(')[0].trim() === filtroMembro);
+        if (passaTag && passaMembro) projetosVisiveis++;
+    }
+
+    const temFiltro = filtroAtual !== 'Todos' || filtroMembro;
+    if (temFiltro && modoVisualizacao === 'list') {
+        filterHtml += `<span style="font-size:11px; color:var(--cadarn-cinza); margin-left:auto; align-self:center; padding: 4px 10px; background: rgba(255,255,255,0.03); border-radius:20px; border: 1px solid var(--border-color);">
+            ${projetosVisiveis} de ${projetosTotal} projetos
+        </span>`;
+    }
+
     filterContainer.innerHTML = filterHtml;
     
     let kanbanAguardando = ''; let kanbanAtivos = ''; let kanbanConcluidos = ''; let listaNormal = '';
@@ -749,7 +815,12 @@ function renderMainProjects() {
         const tagsHtml = (proj.tags || []).map(t => `<span class="tag-pill">${sanitize(t)}</span>`).join('');
         
         if (modoVisualizacao === 'list') {
-            listaNormal += `<div class="project-row" onclick="abrirProjeto('${sanitize(id)}')"><div><div style="font-weight: 500; font-size: 15px; margin-bottom: 5px; display:flex; align-items:center;">${sanitize(proj.nome)} ${slaBadge}</div><div style="display:flex; flex-wrap:wrap; margin-bottom:5px;">${tagsHtml}</div><div style="font-size: 12px; color: var(--cadarn-cinza);">Cliente: ${sanitize(proj.cliente)} • Líder: ${sanitize(proj.lider)}</div></div><div style="font-size: 13px; color: ${statusGeral === 'concluido' ? '#47e299' : (statusGeral === 'ativo' ? '#b68aff' : '#666')}; display: flex; align-items: center; font-weight: 500;"><span class="status-dot dot-${statusGeral}"></span> ${labelStatus}</div></div>`;
+            listaNormal += `<div class="project-row" onclick="abrirProjeto('${sanitize(id)}')"><div><div style="font-weight: 500; font-size: 15px; margin-bottom: 5px; display:flex; align-items:center;">${sanitize(proj.nome)} ${slaBadge}</div><div style="display:flex; flex-wrap:wrap; margin-bottom:5px;">${tagsHtml}</div><div style="font-size: 12px; color: var(--cadarn-cinza);">Cliente: ${sanitize(proj.cliente)} • Líder: ${sanitize(proj.lider)}</div></div>
+            `<div style="font-size: 13px; color: ${statusGeral === 'concluido' ? '#47e299' : (statusGeral === 'ativo' ? '#b68aff' : '#666')}; display: flex; align-items: center; font-weight: 500; cursor:pointer;" 
+      onclick="event.stopPropagation(); filtrarPorStatus('${statusGeral}')" 
+      title="Filtrar por: ${labelStatus}">
+    <span class="status-dot dot-${statusGeral}"></span> ${labelStatus}
+</div>`;
         } else {
             const cardHtml = `<div class="kanban-card" onclick="abrirProjeto('${sanitize(id)}')"><div style="display:flex; justify-content:space-between; align-items:flex-start;"><div class="kanban-card-title">${sanitize(proj.nome)}</div>${slaBadge}</div><div class="kanban-card-meta">${sanitize(proj.cliente)}</div><div style="margin-top: 10px;">${tagsHtml}</div><div style="margin-top: 10px; border-top: 1px solid rgba(131, 46, 255, 0.1); padding-top: 10px; font-size: 11px; color: var(--cadarn-cinza);">Líder: ${sanitize(proj.lider)}</div></div>`;
             if(statusGeral === 'pendente') kanbanAguardando += cardHtml; else if(statusGeral === 'ativo') kanbanAtivos += cardHtml; else kanbanConcluidos += cardHtml;
