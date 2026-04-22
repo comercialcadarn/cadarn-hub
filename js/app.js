@@ -815,12 +815,18 @@ function renderMainProjects() {
         const tagsHtml = (proj.tags || []).map(t => `<span class="tag-pill">${sanitize(t)}</span>`).join('');
         
         if (modoVisualizacao === 'list') {
-            listaNormal += `<div class="project-row" onclick="abrirProjeto('${sanitize(id)}')"><div><div style="font-weight: 500; font-size: 15px; margin-bottom: 5px; display:flex; align-items:center;">${sanitize(proj.nome)} ${slaBadge}</div><div style="display:flex; flex-wrap:wrap; margin-bottom:5px;">${tagsHtml}</div><div style="font-size: 12px; color: var(--cadarn-cinza);">Cliente: ${sanitize(proj.cliente)} • Líder: ${sanitize(proj.lider)}</div></div>
-            `<div style="font-size: 13px; color: ${statusGeral === 'concluido' ? '#47e299' : (statusGeral === 'ativo' ? '#b68aff' : '#666')}; display: flex; align-items: center; font-weight: 500; cursor:pointer;" 
-      onclick="event.stopPropagation(); filtrarPorStatus('${statusGeral}')" 
-      title="Filtrar por: ${labelStatus}">
-    <span class="status-dot dot-${statusGeral}"></span> ${labelStatus}
-</div>`;
+            listaNormal += `<div class="project-row" onclick="abrirProjeto('${sanitize(id)}')">
+                <div>
+                    <div style="font-weight: 500; font-size: 15px; margin-bottom: 5px; display:flex; align-items:center;">${sanitize(proj.nome)} ${slaBadge}</div>
+                    <div style="display:flex; flex-wrap:wrap; margin-bottom:5px;">${tagsHtml}</div>
+                    <div style="font-size: 12px; color: var(--cadarn-cinza);">Cliente: ${sanitize(proj.cliente)} • Líder: ${sanitize(proj.lider)}</div>
+                </div>
+                <div style="font-size: 13px; color: ${statusGeral === 'concluido' ? '#47e299' : (statusGeral === 'ativo' ? '#b68aff' : '#666')}; display: flex; align-items: center; font-weight: 500; cursor:pointer;" 
+                     onclick="event.stopPropagation(); filtrarPorStatus('${statusGeral}')" 
+                     title="Filtrar por: ${labelStatus}">
+                    <span class="status-dot dot-${statusGeral}"></span> ${labelStatus}
+                </div>
+            </div>`;
         } else {
             const cardHtml = `<div class="kanban-card" onclick="abrirProjeto('${sanitize(id)}')"><div style="display:flex; justify-content:space-between; align-items:flex-start;"><div class="kanban-card-title">${sanitize(proj.nome)}</div>${slaBadge}</div><div class="kanban-card-meta">${sanitize(proj.cliente)}</div><div style="margin-top: 10px;">${tagsHtml}</div><div style="margin-top: 10px; border-top: 1px solid rgba(131, 46, 255, 0.1); padding-top: 10px; font-size: 11px; color: var(--cadarn-cinza);">Líder: ${sanitize(proj.lider)}</div></div>`;
             if(statusGeral === 'pendente') kanbanAguardando += cardHtml; else if(statusGeral === 'ativo') kanbanAtivos += cardHtml; else kanbanConcluidos += cardHtml;
