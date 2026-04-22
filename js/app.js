@@ -114,9 +114,16 @@ function iniciarListeners() {
                 delete bdProjetos[id];
             }
         });
-        localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos));
+       localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos));
         renderMainProjects();
         atualizarDashboard();
+
+        // Mostra o briefing uma vez, após os dados reais carregarem
+        if (!window._briefingMostrado && usuarioLogado) {
+            window._briefingMostrado = true;
+            if (navigator.onLine) document.getElementById('offline-banner').style.display = 'none';
+            checkMorningBriefing();
+        }
     });
 
     onSnapshot(collection(db, "colaboradores"), (snapshot) => {
@@ -134,8 +141,6 @@ function iniciarListeners() {
         }
     });
     
-    if(navigator.onLine) document.getElementById('offline-banner').style.display = 'none';
-    if(usuarioLogado) checkMorningBriefing(); 
 }
 
 async function syncProjetoNuvem(idProjeto, isDelete = false) {
@@ -150,21 +155,27 @@ async function syncProjetoNuvem(idProjeto, isDelete = false) {
 async function syncDeleteLoteNuvem(idsParaExcluir) {
     if (!navigator.onLine || !db) return;
     const { doc, deleteDoc } = firestore;
-    idsParaExcluir.forEach(async (id) => {
-        try { await deleteDoc(doc(db, "projetos", id)); } 
-        catch (e) { console.error("Erro na exclusão em lote:", e); }
-    });
+
+    const resultados = await Promise.allSettled(
+        idsParaExcluir.map(id => deleteDoc(doc(db, "projetos", id)))
+    );
+
+    const falhas = resultados.filter(r => r.status === 'rejected');
+    if (falhas.length > 0) {
+        console.error(`${falhas.length} exclusões falharam na nuvem.`);
+        showToast(`Atenção: ${falhas.length} projeto(s) não foram excluídos da nuvem.`, 'warning');
+    }
 }
 
 async function syncColabsNuvem(nomesAfetados) {
     if (!navigator.onLine || !db) return;
     const { doc, setDoc } = firestore;
-    nomesAfetados.forEach(async (nome) => {
-        if(configColaboradores[nome]) {
-            try { await setDoc(doc(db, "colaboradores", nome), configColaboradores[nome], { merge: true }); }
-            catch(e) { console.error("Erro ao sincronizar colaborador:", e); }
-        }
-    });
+
+    await Promise.allSettled(
+        nomesAfetados
+            .filter(nome => configColaboradores[nome])
+            .map(nome => setDoc(doc(db, "colaboradores", nome), configColaboradores[nome], { merge: true }))
+    );
 }
 
 /* ========================================== */
@@ -175,7 +186,14 @@ let usuarioLogado = localStorage.getItem('cadarn_user') || '';
 let configColaboradores = JSON.parse(localStorage.getItem('cadarn_colabs')) || {};
 
 // Variáveis globais essenciais (Se faltar uma, o site inteiro trava)
-let bdProjetos = {};
+let bdProjetos = (() => {
+    try {
+        const cache = localStorage.getItem('cadarn_projetos_db');
+        return cache ? JSON.parse(cache) : {};
+    } catch {
+        return {};
+    }
+})();
 let projetoAbertoAtual = null;
 let isEditingProjeto = false;
 let modoVisualizacao = 'list'; 
@@ -363,14 +381,38 @@ function atualizarColaboradorDoMes() {
     } else { container.innerHTML = `<div style="font-size:10px; color:var(--cadarn-cinza); text-transform:uppercase; text-align:center;">Nenhum destaque ainda</div>`; }
 }
 
-function showToast(message, type='info', onUndo=null) {
+function showToast(message, type = 'info', onUndo = null) {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
-    let undoHtml = onUndo ? `<button class="toast-undo">Desfazer</button>` : '';
-    toast.innerHTML = `<span>${message}</span> ${undoHtml}`;
+
+    const msgSpan = document.createElement('span');
+    msgSpan.textContent = message;
+    toast.appendChild(msgSpan);
+
+    let undoClicado = false;
+
+    if (onUndo) {
+        const btn = document.createElement('button');
+        btn.className = 'toast-undo';
+        btn.textContent = 'Desfazer';
+        btn.addEventListener('click', () => {
+            undoClicado = true;
+            onUndo();
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 300);
+        });
+        toast.appendChild(btn);
+    }
+
     container.appendChild(toast);
-    setTimeout(() => { if (document.body.contains(toast)) { toast.style.opacity = '0'; setTimeout(() => { if (document.body.contains(toast)) toast.remove(); }, 300); } }, 6000);
+
+    setTimeout(() => {
+        if (!undoClicado && document.body.contains(toast)) {
+            toast.style.opacity = '0';
+            setTimeout(() => { if (document.body.contains(toast)) toast.remove(); }, 300);
+        }
+    }, 6000);
 }
 
 function toggleTheme() {
@@ -730,17 +772,30 @@ function restaurarProjetoDireto(id) {
 function excluirPermanente() {
     const id = projetoAbertoAtual;
     const backup = JSON.parse(JSON.stringify(bdProjetos[id]));
-    delete bdProjetos[id]; 
+    delete bdProjetos[id];
     localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos));
 
-    fecharProjeto(); renderMainProjects();
+    fecharProjeto();
+    renderMainProjects();
+
+    let desfezAcao = false;
+
+    // Aguarda 6 segundos antes de deletar do Firebase,
+    // dando tempo para o usuário clicar em "Desfazer"
+    const timerFirebase = setTimeout(() => {
+        if (!desfezAcao && navigator.onLine) {
+            syncProjetoNuvem(id, true);
+        }
+    }, 6200);
 
     showToast('Projeto excluído definitivamente.', 'danger', () => {
+        desfezAcao = true;
+        clearTimeout(timerFirebase);
         bdProjetos[id] = backup;
         localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos));
+        if (navigator.onLine) syncProjetoNuvem(id);
         renderMainProjects();
     });
-    if(navigator.onLine) { syncProjetoNuvem(id, true); }
 }
 
 function capturarEstadoAtualDoPainel() {
@@ -1047,52 +1102,58 @@ document.addEventListener('click', function(event) {
 
 /* --- REQUISIÇÃO DE NOTÍCIAS --- */
 async function fetchNews() {
-    const container = document.getElementById('noticias-container'); 
-    const CACHE_KEY = 'cadarn_news_cache'; 
-    const CACHE_TIME = 10 * 60 * 1000; 
-    
-    const cached = localStorage.getItem(CACHE_KEY); 
-    if (cached) { 
-        const parsedCache = JSON.parse(cached); 
-        if (Date.now() - parsedCache.timestamp < CACHE_TIME && parsedCache.data.length > 0) { 
-            renderNews(parsedCache.data, container); 
-            renderBriefingNews(parsedCache.data);
-            return; 
-        } 
-    }
-    
+    const container = document.getElementById('noticias-container');
+    const CACHE_KEY = 'cadarn_news_cache';
+    const CACHE_TIME = 10 * 60 * 1000;
+
+    // Tenta usar o cache primeiro
+    try {
+        const cached = localStorage.getItem(CACHE_KEY);
+        if (cached) {
+            const parsedCache = JSON.parse(cached);
+            if (Date.now() - parsedCache.timestamp < CACHE_TIME && parsedCache.data.length > 0) {
+                renderNews(parsedCache.data, container);
+                renderBriefingNews(parsedCache.data);
+                return;
+            }
+        }
+    } catch { localStorage.removeItem(CACHE_KEY); }
+
     const feeds = [
-        { name: 'Exame', url: 'https://exame.com/feed/' }, 
-        { name: 'CNN Brasil', url: 'https://www.cnnbrasil.com.br/economia/feed/' }, 
-        { name: 'BBC News', url: 'https://feeds.bbci.co.uk/portuguese/rss.xml' }, 
+        { name: 'Exame', url: 'https://exame.com/feed/' },
+        { name: 'CNN Brasil', url: 'https://www.cnnbrasil.com.br/economia/feed/' },
+        { name: 'BBC News', url: 'https://feeds.bbci.co.uk/portuguese/rss.xml' },
         { name: 'Estadão', url: 'https://www.estadao.com.br/rss/economia.xml' }
     ];
 
-    let allItems = [];
-    for (const f of feeds) {
-        try {
-            const dynamicUrl = f.url + (f.url.includes('?') ? '&' : '?') + 'nocache=' + Date.now();
-            const r = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(dynamicUrl)}`, { cache: 'no-store' });
-            if (!r.ok) continue; 
+    // Busca TODOS os feeds ao mesmo tempo (paralelo = muito mais rápido)
+    const resultados = await Promise.allSettled(
+        feeds.map(async (f) => {
+            const url = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(f.url)}&nocache=${Date.now()}`;
+            const r = await fetch(url, { cache: 'no-store' });
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
             const d = await r.json();
-            if (d.items) allItems.push(...d.items.map(i => {
+            return (d.items || []).map(i => {
                 let pd = i.pubDate;
-                if(pd && pd.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/)) pd = pd.replace(' ', 'T') + 'Z';
-                return {title: i.title, link: i.link, pubDate: pd, portal: f.name};
-            }));
-        } catch (e) { console.log(`Falha ao ler feed ${f.name}`); }
-    }
+                if (pd && pd.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/)) pd = pd.replace(' ', 'T') + 'Z';
+                return { title: i.title, link: i.link, pubDate: pd, portal: f.name };
+            });
+        })
+    );
+
+    const allItems = resultados
+        .filter(r => r.status === 'fulfilled')
+        .flatMap(r => r.value);
 
     if (allItems.length === 0) {
-        container.innerHTML = `<p style="text-align:center; color:var(--cadarn-cinza); font-size:13px; margin-top:30px;">⏳ Carregando notícias do mercado...</p>`;
+        container.innerHTML = `<p style="text-align:center; color:var(--cadarn-cinza); font-size:13px; margin-top:30px;">Sem notícias disponíveis no momento.</p>`;
         return;
     }
-    
+
     allItems.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
-    const uniqueNews = allItems.filter((v, i, a) => a.findIndex(t => (t.title === v.title)) === i);
-    const finalNews = uniqueNews.slice(0, 12);
-    
-    localStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data: finalNews })); 
+    const finalNews = allItems.filter((v, i, a) => a.findIndex(t => t.title === v.title) === i).slice(0, 12);
+
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data: finalNews }));
     renderNews(finalNews, container);
     renderBriefingNews(finalNews);
 }
@@ -1432,13 +1493,20 @@ function aplicarNome(nome) {
     document.getElementById('display-avatar').innerText = firstName.charAt(0).toUpperCase(); 
 }
 
-window.onload = () => { 
+window.onload = () => {
     loadTheme();
-    loadScratchpad(); 
-    renderDailyQuote(); 
+    loadScratchpad();
+    renderDailyQuote();
     const editEquipeEl = document.getElementById("edit-equipe");
-    if(editEquipeEl) setupAutocomplete(editEquipeEl);
-    initFirebase(); 
+    if (editEquipeEl) setupAutocomplete(editEquipeEl);
+
+    // Se tiver dados em cache, mostra imediatamente (sem esperar o Firebase)
+    if (Object.keys(bdProjetos).length > 0) {
+        renderMainProjects();
+        atualizarDashboard();
+    }
+
+    initFirebase();
 };
 
 // =========================================================
