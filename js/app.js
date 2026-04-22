@@ -457,7 +457,31 @@ const insights = [
     { text: "A inovação distingue um líder de um seguidor.", author: "Steve Jobs" },
     { text: "O maior risco é não correr nenhum risco.", author: "Mark Zuckerberg" },
     { text: "Sua marca pessoal é o que dizem sobre você quando você não está na sala.", author: "Jeff Bezos" },
-    { text: "A excelência não é um ato, mas um hábito.", author: "Aristóteles" }
+    { text: "A excelência não é um ato, mas um hábito.", author: "Aristóteles" },
+    { text: "Clientes não compram produtos. Compram versões melhores de si mesmos.", author: "Peter Drucker" },
+    { text: "Não gerencie tempo. Gerencie energia.", author: "Tony Schwartz" },
+    { text: "Uma estratégia sem execução é uma alucinação.", author: "Thomas Edison" },
+    { text: "A cultura come a estratégia no café da manhã.", author: "Peter Drucker" },
+    { text: "O segredo do sucesso de longo prazo é fazer perguntas estúpidas.", author: "Elon Musk" },
+    { text: "Velocidade é uma vantagem competitiva. Rapidez de decisão é estratégia.", author: "Reid Hoffman" },
+    { text: "Se você não está envergonhado da primeira versão do seu produto, lançou tarde demais.", author: "Reid Hoffman" },
+    { text: "Empresas que prosperam não vendem produtos. Criam categorias.", author: "Al Ries" },
+    { text: "Dados são o novo petróleo. Mas petróleo bruto tem pouco valor — é o refino que importa.", author: "Clive Humby" },
+    { text: "Líderes não criam seguidores. Criam mais líderes.", author: "Tom Peters" },
+    { text: "Um bom plano executado agora é melhor que um plano perfeito executado amanhã.", author: "George Patton" },
+    { text: "Errar rápido, aprender rápido, melhorar rápido.", author: "Tom Peters" },
+    { text: "A visão sem ação é um sonho. Ação sem visão é um pesadelo.", author: "Provérbio Japonês" },
+    { text: "Contrate caráter. Treine habilidade.", author: "Peter Schutz" },
+    { text: "O maior perigo em tempos de turbulência não é a turbulência — é agir com a lógica de ontem.", author: "Peter Drucker" },
+    { text: "Simplicidade é a sofisticação máxima.", author: "Leonardo da Vinci" },
+    { text: "Resultados são obtidos aproveitando oportunidades, não resolvendo problemas.", author: "Peter Drucker" },
+    { text: "O que é medido, é gerenciado.", author: "Peter Drucker" },
+    { text: "Uma marca é a promessa de uma experiência.", author: "Shelly Lazarus" },
+    { text: "Receita resolve todos os problemas conhecidos do negócio.", author: "Mark Cuban" },
+    { text: "Crescimento nunca ocorre por acidente. É o resultado de forças trabalhando juntas.", author: "James Cash Penney" },
+    { text: "A melhor publicidade é um cliente satisfeito.", author: "Bill Gates" },
+    { text: "Sonhe grande. Comece pequeno. Aja agora.", author: "Robin Sharma" },
+    { text: "Toda empresa é uma empresa de software — ou será.", author: "Satya Nadella" }
 ];
 
 function renderDailyQuote() {
