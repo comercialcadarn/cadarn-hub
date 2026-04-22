@@ -1132,3 +1132,7 @@ input[type=number] {
     0%, 100% { box-shadow: 0 0 0 0 rgba(131, 46, 255, 0.6); }
     50%       { box-shadow: 0 0 0 6px rgba(131, 46, 255, 0); }
 }
+@keyframes confeteCair {
+    0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
