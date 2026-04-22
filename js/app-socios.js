@@ -93,7 +93,6 @@ function iniciarListeners() {
         renderWorkload();
         renderCronograma('gantt-master-container', filtroResponsavel);
         renderCalendario();
-        renderCalendario(); 
         renderTeamAvailability();
         renderFinancialHealth();
     });
@@ -341,6 +340,25 @@ function removerEtapaMemoria(idx) { etapasTemporarias.splice(idx, 1); renderTare
 
 async function salvarProjetoSocio() {
     if (!projetoModalAberto) return;
+    async function salvarProjetoSocio() {
+    if (!projetoModalAberto) return;
+
+    // Desabilita o botão para evitar cliques duplos
+    const botaoSalvar = document.querySelector('[onclick="salvarProjetoSocio()"]');
+    const textoOriginal = botaoSalvar ? botaoSalvar.innerHTML : '';
+    if (botaoSalvar) {
+        botaoSalvar.disabled = true;
+        botaoSalvar.innerHTML = '⏳ Salvando...';
+        botaoSalvar.style.opacity = '0.7';
+    }
+
+    const restaurarBotao = () => {
+        if (botaoSalvar) {
+            botaoSalvar.disabled = false;
+            botaoSalvar.innerHTML = textoOriginal;
+            botaoSalvar.style.opacity = '1';
+        }
+    };
 
     const elNome = document.getElementById('modal-proj-nome');
     const elCliente = document.getElementById('modal-proj-cliente');
@@ -377,10 +395,11 @@ async function salvarProjetoSocio() {
     try {
         await firestore.setDoc(firestore.doc(db, "projetos", projetoModalAberto), projData, { merge: true });
         showToast('✅ Projeto salvo e sincronizado na nuvem!', 'success');
-        fecharModalProjeto(); 
+        fecharModalProjeto();
     } catch (e) {
         console.error("Erro ao salvar projeto:", e);
-        alert("ALERTA DE SEGURANÇA: O Firebase rejeitou a gravação.\nMotivo: " + e.message); 
+        showToast(`Erro ao salvar: ${e.message}`, 'danger');
+        restaurarBotao();
     }
 }
 
@@ -700,6 +719,8 @@ async function importarDados(event, tipo) {
     const file = event.target.files[0];
     if (!file) return;
 
+    const { doc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js");
+
     const reader = new FileReader();
     reader.onload = async (e) => {
         const text = e.target.result;
@@ -747,7 +768,6 @@ async function importarDados(event, tipo) {
             };
 
             try {
-                const { doc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js");
                 await setDoc(doc(db, "projetos", id), novoProjeto);
                 processados++;
             } catch (err) {
