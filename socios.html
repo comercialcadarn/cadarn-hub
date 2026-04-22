@@ -32,7 +32,6 @@
         backdrop-filter: blur(10px); background: rgba(0,0,0,0.4);
     }
 
-    /* 1. Animação de Ouro Metálico no Selo VIP */
 .socio-badge {
     background: linear-gradient(90deg, #FFC107 0%, #FFF3E0 50%, #FF9800 100%);
     background-size: 200% auto;
@@ -51,10 +50,37 @@
     to { background-position: 200% center; }
 }
 
-/* 2. Aplicando a fonte Premium nos Títulos do Sócio */
-.capacity-header, .kanban-col-header, .sp-title, #modal-proj-nome, #modal-proj-cliente {
+/* Títulos display na área do sócio */
+.capacity-header,
+.kanban-col-header,
+.sp-title,
+#modal-proj-nome,
+#modal-proj-cliente,
+.workload-nome,
+#reuniao-content h1,
+#reuniao-content h2 {
     font-family: 'Outfit', sans-serif;
-    letter-spacing: -0.5px;
+    letter-spacing: -0.3px;
+}
+
+/* Inputs do modal sempre Inter para legibilidade */
+#modal-proj-nome,
+#modal-proj-cliente,
+#modal-lider,
+#modal-desc,
+#modal-equipe,
+#modal-tags {
+    font-family: 'Inter', sans-serif;
+    letter-spacing: 0;
+}
+
+/* Números financeiros com Outfit */
+#fin-fee-total,
+#fin-margem-media,
+#fin-alertas-escopo {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    letter-spacing: -1px;
 }
 
 /* 3. Efeito de Vidro Jateado (Inner Shadow) nos Cards do Kanban */
