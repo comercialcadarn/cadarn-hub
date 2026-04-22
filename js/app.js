@@ -61,10 +61,13 @@ function abrirModalLoginReal() {
     const modal = document.getElementById('login-modal');
     modal.classList.add('active');
     modal.querySelector('.modal-content').innerHTML = `
-        <h3 style="font-weight: 700; margin-bottom: 8px; font-size: 24px;">Área Restrita</h3>
-        <p style="color: var(--cadarn-cinza); font-size: 14px; margin-bottom: 25px;">Use seu e-mail corporativo da Cadarn.</p>
-        <button onclick="loginComGoogle()" style="width:100%; padding:16px; border:none; background: #ffffff; color:#000; border-radius:12px; cursor:pointer; font-weight:700; font-size: 14px; display:flex; align-items:center; justify-content:center; gap:10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); transition: 0.2s;">
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18"> ENTRAR COM GOOGLE
+       <div style="text-align:center; margin-bottom: 30px;">
+            <div style="font-size: 11px; font-family: 'Outfit', sans-serif; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--cadarn-roxo-claro); margin-bottom: 12px;">Área Restrita</div>
+            <h3 style="font-family: 'Outfit', sans-serif; font-weight: 900; font-size: 32px; letter-spacing: -1px; color: white; margin-bottom: 8px;">Bem-vindo de volta</h3>
+            <p style="color: var(--cadarn-cinza); font-size: 13px; line-height: 1.6;">Use seu e-mail <strong style="color: white;">@cadarnconsultoria.com.br</strong><br>para acessar o Hub.</p>
+        </div>
+        <button onclick="loginComGoogle()" style="width:100%; padding:16px; border:none; background: #ffffff; color:#111; border-radius:12px; cursor:pointer; font-family: 'Inter', sans-serif; font-weight:700; font-size: 14px; letter-spacing: 0.3px; display:flex; align-items:center; justify-content:center; gap:12px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); transition: all 0.2s;">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20"> Entrar com Google
         </button>
     `;
 }
