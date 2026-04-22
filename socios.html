@@ -17,8 +17,6 @@
         --premium-roxo: #832EFF;
     }
 
-    body { background-color: #050505; color: #e0e0e0; font-family: 'Inter', sans-serif; overflow-x: hidden; margin: 0; }
-
     /* Efeito de Iluminação de Fundo */
     .ambient-glow {
         position: fixed; top: -10%; left: 50%; transform: translateX(-50%);
@@ -32,13 +30,6 @@
         display: flex; justify-content: space-between; align-items: center;
         border-bottom: 1px solid var(--glass-border);
         backdrop-filter: blur(10px); background: rgba(0,0,0,0.4);
-    }
-
-    .socio-badge {
-        background: var(--premium-gold); color: #000;
-        padding: 5px 15px; border-radius: 30px;
-        font-size: 10px; font-weight: 900; text-transform: uppercase;
-        letter-spacing: 1.5px; box-shadow: 0 0 20px rgba(255, 193, 7, 0.2);
     }
 
     /* 1. Animação de Ouro Metálico no Selo VIP */
@@ -122,10 +113,6 @@
         content: ''; flex-grow: 1; height: 1px; background: var(--glass-border);
     }
 
-    /* Estilo para a barra de rolagem horizontal dos colaboradores */
-    #teamAvailabilityContainer::-webkit-scrollbar { height: 4px; }
-    #teamAvailabilityContainer::-webkit-scrollbar-thumb { background: rgba(131, 46, 255, 0.3); border-radius: 10px; }
-
     /* Barra de Comando (Dashboard Header) */
     .dashboard-ctrl {
         background: var(--glass);
@@ -139,17 +126,6 @@
     .nav-tabs {
         display: flex; background: rgba(0,0,0,0.4);
         padding: 5px; border-radius: 12px; border: 1px solid var(--glass-border);
-    }
-
-    .view-btn {
-        background: transparent; border: none; color: #888;
-        padding: 10px 20px; border-radius: 8px; cursor: pointer;
-        font-size: 13px; font-weight: 600; transition: 0.3s;
-    }
-
-    .view-btn.active {
-        background: rgba(255,255,255,0.07); color: #fff;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
     }
 
     .action-group { display: flex; gap: 10px; align-items: center; }
@@ -179,12 +155,6 @@
         border: 1px solid var(--glass-border);
         border-radius: 24px; padding: 25px;
         min-height: 70vh; display: flex; flex-direction: column;
-    }
-
-    .kanban-col-header {
-        font-size: 12px; font-weight: 800; text-transform: uppercase;
-        letter-spacing: 2px; margin-bottom: 25px; display: flex;
-        align-items: center; justify-content: space-between;
     }
 
     .status-badge-count {
