@@ -32,6 +32,15 @@ let usuarioLogado = localStorage.getItem('cadarn_user') || 'Sócio';
 
 // Controle do Calendário
 let dataAtualCalendario = new Date();
+function tempoRelativoSocio(timestamp) {
+    if (!timestamp) return '';
+    const diff = Math.floor((Date.now() - timestamp) / 1000);
+    if (diff < 60)    return 'agora mesmo';
+    if (diff < 3600)  return `há ${Math.floor(diff / 60)}min`;
+    if (diff < 86400) return `há ${Math.floor(diff / 3600)}h`;
+    if (diff < 604800) return `há ${Math.floor(diff / 86400)}d`;
+    return new Date(timestamp).toLocaleDateString('pt-BR', { day:'2-digit', month:'short' });
+}
 
 async function initSegurancaSocios() {
     const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js");
@@ -97,6 +106,7 @@ function iniciarListeners() {
         renderFinancialHealth();
     });
     inicializarDragAndDrop();
+    verificarAlertasDoDia();
 }
 
 function switchTab(tab) {
@@ -198,9 +208,11 @@ function renderKanban() {
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px; font-size: 11px;">
                     <div style="color: var(--cadarn-cinza);">📝 ${etapas.filter(t => t.status === 'concluido').length}/${etapas.length} Etapas</div>
-                    <div style="font-weight: bold; font-size: 10px;">${isVisivel}</div>
+                    <div style="display:flex; flex-direction:column; align-items:flex-end; gap:3px;">
+                        <div style="font-weight: bold; font-size: 10px;">${isVisivel}</div>
+                        ${proj.ultimaEdicao ? `<div style="font-size:9px; color:rgba(255,255,255,0.25);">✏️ ${tempoRelativoSocio(proj.ultimaEdicao)}</div>` : ''}
+                    </div>
                 </div>
-            </div>
         `;
 
         if (statusCrm === 'negociacao') htmlNegociacao += card;
@@ -369,6 +381,7 @@ async function salvarProjetoSocio() {
 
     const projData = {
         nome: elNome?.value?.trim() || 'Projeto Estratégico',
+        ultimaEdicao: Date.now(),
         cliente: elCliente?.value?.trim() || 'Cliente Não Informado',
         lider: elLider?.value?.trim() || usuarioLogado,
         descricao: elDesc?.value || '',
@@ -436,9 +449,13 @@ function renderWorkload() {
         });
     }
 
+    // Busca rápida salva no estado
+    const termoBusca = (window._workloadBusca || '').toLowerCase();
+
     let html = '';
     Object.keys(workload).sort().forEach(nome => {
         if (filtroResponsavel && nome !== filtroResponsavel) return;
+        if (termoBusca && !nome.toLowerCase().includes(termoBusca)) return;
 
         const data = workload[nome];
         let statusClass = 'wl-status-ideal'; let statusText = 'Equilibrado';
@@ -478,7 +495,41 @@ function renderWorkload() {
             </div>
         `;
     });
-    document.getElementById('workload-container').innerHTML = html;
+    // Barra de busca persistente acima do grid
+    const barraHtml = `
+        <div style="margin-bottom: 20px; position: relative;">
+            <input 
+                type="text" 
+                id="workload-search"
+                placeholder="🔍  Buscar colaborador..."
+                value="${window._workloadBusca || ''}"
+                oninput="window._workloadBusca = this.value; renderWorkload();"
+                style="width:100%; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.08);
+                       color:white; padding:12px 16px; border-radius:12px; font-size:14px;
+                       font-family:'Inter',sans-serif; outline:none; transition:0.2s;"
+                onfocus="this.style.borderColor='#832EFF'"
+                onblur="this.style.borderColor='rgba(255,255,255,0.08)'"
+            >
+            ${termoBusca ? `<button onclick="window._workloadBusca=''; renderWorkload();" 
+                style="position:absolute;right:12px;top:50%;transform:translateY(-50%);
+                background:none;border:none;color:var(--cadarn-cinza);cursor:pointer;font-size:16px;">✕</button>` : ''}
+        </div>
+    `;
+
+    const wContainer = document.getElementById('workload-container');
+    wContainer.innerHTML = barraHtml + (html || `
+        <div style="padding:40px;text-align:center;color:var(--cadarn-cinza);">
+            Nenhum colaborador encontrado para "<strong style="color:white;">${termoBusca}</strong>".
+        </div>
+    `);
+
+    // Foca o campo de busca sem perder a posição do cursor
+    const searchEl = document.getElementById('workload-search');
+    if (searchEl && document.activeElement?.id === 'workload-search') {
+        const pos = searchEl.value.length;
+        searchEl.focus();
+        searchEl.setSelectionRange(pos, pos);
+    }
 }
 
 // ==========================================
@@ -691,6 +742,110 @@ function irParaHoje() {
     dataAtualCalendario = new Date();
     renderCalendario();
 }
+/* ========================================================= */
+/* BANNER DE ALERTA DO DIA                                   */
+/* ========================================================= */
+function verificarAlertasDoDia() {
+    const hoje = new Date().toISOString().split('T')[0];
+    let vencendoHoje = [];
+    let atrasados = [];
+
+    for (const [id, proj] of Object.entries(bdProjetos)) {
+        if (proj.arquivado) continue;
+        (proj.etapas || []).forEach(t => {
+            if (t.status === 'concluido' || !t.prazo) return;
+            if (t.prazo === hoje) vencendoHoje.push({ proj: proj.nome, etapa: t.titulo, id });
+            if (t.prazo < hoje) atrasados.push({ proj: proj.nome, etapa: t.titulo, id });
+        });
+    }
+
+    let banner = document.getElementById('alerta-dia-banner');
+    if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'alerta-dia-banner';
+        const conteudo = document.getElementById('conteudo-restrito');
+        if (conteudo) conteudo.prepend(banner);
+    }
+
+    if (vencendoHoje.length === 0 && atrasados.length === 0) {
+        banner.style.display = 'none';
+        return;
+    }
+
+    const partes = [];
+    if (atrasados.length > 0)
+        partes.push(`<strong>⚠️ ${atrasados.length} entrega${atrasados.length > 1 ? 's' : ''} atrasada${atrasados.length > 1 ? 's' : ''}</strong>`);
+    if (vencendoHoje.length > 0)
+        partes.push(`<strong>🔥 ${vencendoHoje.length} entrega${vencendoHoje.length > 1 ? 's' : ''} vence${vencendoHoje.length > 1 ? 'm' : ''} hoje</strong>`);
+
+    const cor = atrasados.length > 0 ? 'rgba(220,53,69,0.15)' : 'rgba(255,193,7,0.1)';
+    const borda = atrasados.length > 0 ? 'rgba(220,53,69,0.4)' : 'rgba(255,193,7,0.4)';
+
+    banner.style.cssText = `
+        display:flex; align-items:center; justify-content:space-between;
+        padding: 12px 40px; background:${cor};
+        border-bottom: 1px solid ${borda};
+        font-size: 13px; color: white; gap: 15px;
+    `;
+    banner.innerHTML = `
+        <div style="display:flex; align-items:center; gap:15px; flex-wrap:wrap;">
+            ${partes.join(' &nbsp;·&nbsp; ')}
+            <span style="color:var(--cadarn-cinza); font-size:12px;">— verifique o Kanban e o Cronograma</span>
+        </div>
+        <button onclick="this.parentElement.style.display='none'" 
+            style="background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer;font-size:18px;flex-shrink:0;">✕</button>
+    `;
+}
+window.verificarAlertasDoDia = verificarAlertasDoDia;
+
+/* ========================================================= */
+/* EXPORTAÇÃO DE PROJETOS COMO CSV                           */
+/* ========================================================= */
+function exportarProjetosCSV() {
+    const linhas = [
+        ['Nome', 'Cliente', 'Líder', 'Status CRM', 'Visível no Hub', 'Etapas Totais', 'Etapas Concluídas', 'Atrasadas', 'Valor Contrato (R$)', 'Horas Orçadas', 'Horas Reais', 'Tags']
+    ];
+
+    const hoje = new Date(new Date().setHours(0,0,0,0));
+
+    for (const proj of Object.values(bdProjetos)) {
+        if (proj.arquivado) continue;
+        const etapas = proj.etapas || [];
+        const concluidas = etapas.filter(e => e.status === 'concluido').length;
+        const atrasadas = etapas.filter(e => e.status !== 'concluido' && e.prazo && new Date(e.prazo) < hoje).length;
+        const statusLabel = { negociacao: 'Negociação', andamento: 'Em Andamento', concluido: 'Concluído' }[proj.status_crm] || proj.status_crm;
+
+        linhas.push([
+            proj.nome || '',
+            proj.cliente || '',
+            proj.lider || '',
+            statusLabel,
+            proj.visivelHub ? 'Sim' : 'Não',
+            etapas.length,
+            concluidas,
+            atrasadas,
+            proj.valorContrato || 0,
+            proj.horasOrcadas || 0,
+            proj.horasReais || 0,
+            (proj.tags || []).join('; ')
+        ]);
+    }
+
+    const csvContent = linhas.map(row =>
+        row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')
+    ).join('\n');
+
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `cadarn-projetos-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+
+    showToast(`✅ ${linhas.length - 1} projeto(s) exportados!`, 'success');
+}
+window.exportarProjetosCSV = exportarProjetosCSV;
 
 initSegurancaSocios();
 
@@ -874,7 +1029,24 @@ function renderFinancialHealth() {
     const elAlertas = document.getElementById('fin-alertas-escopo');
 
     if (elFee) elFee.innerText = `R$ ${feeTotal.toLocaleString('pt-BR')}`;
-    if (elAlertas) elAlertas.innerText = `${alertas} Projetos`;
+    if (elAlertas) elAlertas.innerText = `${alertas} Projeto${alertas !== 1 ? 's' : ''}`;
+
+    // Barra de progresso de margem
+    const barraEl = document.getElementById('fin-margem-barra');
+    if (barraEl) {
+        const pct = Math.min(Math.max(margemMedia, 0), 100);
+        const cor = margemMedia < 20 ? '#dc3545' : margemMedia < 40 ? '#ffc107' : '#47e299';
+        barraEl.style.width = pct + '%';
+        barraEl.style.background = cor;
+        barraEl.style.boxShadow = `0 0 8px ${cor}60`;
+    }
+
+    // Alerta visual no card de alertas
+    const cardAlerta = document.getElementById('fin-alertas-escopo')?.closest('[class*="fin"]') || elAlertas?.parentElement?.parentElement;
+    if (alertas >= 2 && cardAlerta) {
+        cardAlerta.style.borderColor = 'rgba(220,53,69,0.4)';
+        cardAlerta.style.background = 'rgba(220,53,69,0.05)';
+    }
     
     if (elMargem) {
         elMargem.innerText = `${margemMedia.toFixed(1)}%`;
