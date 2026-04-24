@@ -166,7 +166,7 @@ button, a, .card, .project-row, .kanban-card,
     display: grid; 
     grid-template-columns: 200px 1.2fr 300px 160px; 
     gap: 24px; 
-    height: 290px; /* Altura ideal para acomodar paddings sem esmagar */
+    height: 380px; /* Altura premium (Aumentada para as tarefas e agenda respirarem) */
     align-items: stretch; 
 }
 
@@ -174,7 +174,7 @@ button, a, .card, .project-row, .kanban-card,
     width: 100%;
     max-width: 200px;
     height: 100%; 
-    max-height: 250px;
+    max-height: 380px;
     margin: auto;
     display: flex;
     align-items: center;
