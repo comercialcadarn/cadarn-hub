@@ -10,6 +10,75 @@ const emailsSocios = [
     'victor.mendes@cadarnconsultoria.com.br'
 ];
 
+/* ========================================================= */
+/* MATRIZ DE PERMISSÕES RBAC                                  */
+/* ========================================================= */
+const emailsRH = [
+    // Adicione emails de colaboradores de RH aqui
+    // Ex: 'fulano@cadarnconsultoria.com.br'
+];
+const emailsAnalistas = [
+    // Adicione emails de analistas sêniores aqui
+];
+
+function getUserRole(email) {
+    if (!email) return 'Visitante';
+    const e = email.toLowerCase().trim();
+    if (emailsSocios.includes(e)) return 'Sócio';
+    if (emailsRH.includes(e)) return 'RH';
+    if (emailsAnalistas.includes(e)) return 'Analista';
+    if (e.endsWith('@cadarnconsultoria.com.br')) return 'Estagiário';
+    return 'Visitante';
+}
+
+function aplicarPermissoesRBAC() {
+    const role = window.userRole || 'Estagiário';
+    
+    // Botão Área do Sócio: visível apenas para Sócios
+    const btnSocio = document.querySelector('button[onclick="acessarAreaSocio()"]');
+    if (btnSocio) btnSocio.style.display = (role === 'Sócio') ? '' : 'none';
+    
+    // Visão Executiva (dados financeiros): só Sócios e RH
+    const secaoFinanceira = document.querySelector('.visao-executiva-wrapper');
+    if (secaoFinanceira && role === 'Estagiário') {
+        const kpiTotal = document.getElementById('kpi-total');
+        if (kpiTotal) kpiTotal.closest('.visao-stats') && (kpiTotal.closest('.visao-stats').style.display = 'none');
+    }
+    
+    // Tags de filtro: Estagiários só veem projetos onde participam
+    window._rbacFiltragemAtiva = (role === 'Estagiário' || role === 'Analista');
+}
+
+function podeEditarProjeto() {
+    const role = window.userRole || 'Estagiário';
+    return role === 'Sócio' || role === 'RH' || role === 'Analista';
+}
+
+function podeDeletarProjeto() {
+    const role = window.userRole || 'Estagiário';
+    return role === 'Sócio';
+}
+
+function podeVerDadosFinanceiros() {
+    const role = window.userRole || 'Estagiário';
+    return role === 'Sócio';
+}
+
+function podeVerDossie(resourceOwnerId) {
+    const role = window.userRole || 'Estagiário';
+    const emailAtual = localStorage.getItem('cadarn_user_email') || '';
+    if (role === 'Sócio' || role === 'RH') return true;
+    if (resourceOwnerId && emailAtual.includes(resourceOwnerId)) return true;
+    return false;
+}
+
+window.getUserRole = getUserRole;
+window.aplicarPermissoesRBAC = aplicarPermissoesRBAC;
+window.podeEditarProjeto = podeEditarProjeto;
+window.podeDeletarProjeto = podeDeletarProjeto;
+window.podeVerDadosFinanceiros = podeVerDadosFinanceiros;
+window.podeVerDossie = podeVerDossie;
+
 let db, auth; 
 let firestore = {}; 
 let firebaseAuth = {};
@@ -43,8 +112,10 @@ async function initFirebase() {
                     usuarioLogado = user.displayName;
                     localStorage.setItem('cadarn_user', usuarioLogado);
                     localStorage.setItem('cadarn_user_email', user.email); 
+                    window.userRole = getUserRole(user.email);
                     document.getElementById('login-modal').classList.remove('active');
                     aplicarNome(usuarioLogado);
+                    aplicarPermissoesRBAC();
                     iniciarListeners(); 
                 } else {
                     showToast("Acesso restrito ao domínio @cadarnconsultoria.com.br", "danger");
@@ -122,6 +193,8 @@ function iniciarListeners() {
        localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos));
         renderMainProjects();
         atualizarDashboard();
+        renderRiskReport();
+        renderHubMetas();
 
         // Mostra o briefing uma vez, após os dados reais carregarem
         if (!window._briefingMostrado && usuarioLogado) {
@@ -1014,14 +1087,17 @@ function abrirProjeto(id) {
     document.getElementById('sp-lider-view').style.display = 'block';
     document.getElementById('edit-lider').style.display = 'none';
     
+    const podeEditar = podeEditarProjeto();
+    const podeDeletar = podeDeletarProjeto();
+
     if(proj.arquivado) {
         document.getElementById('btn-edit').style.display = 'none'; 
         document.getElementById('btn-delete').style.display = 'none'; 
-        document.getElementById('btn-restore').style.display = 'block'; 
-        document.getElementById('btn-perm-delete').style.display = 'block'; 
+        document.getElementById('btn-restore').style.display = podeDeletar ? 'block' : 'none'; 
+        document.getElementById('btn-perm-delete').style.display = podeDeletar ? 'block' : 'none'; 
     } else {
-        document.getElementById('btn-edit').style.display = 'block'; 
-        document.getElementById('btn-delete').style.display = 'block'; 
+        document.getElementById('btn-edit').style.display = podeEditar ? 'block' : 'none'; 
+        document.getElementById('btn-delete').style.display = podeDeletar ? 'block' : 'none'; 
         document.getElementById('btn-restore').style.display = 'none'; 
         document.getElementById('btn-perm-delete').style.display = 'none'; 
     }
@@ -1734,6 +1810,214 @@ function dispararConfete() {
         }, i * 30);
     }
 }
+/* ========================================================= */
+/* RELATÓRIO DE RISCOS COM IA                                 */
+/* ========================================================= */
+function renderRiskReport() {
+    const container = document.getElementById('risk-report-container');
+    if (!container) return;
+
+    const hoje = new Date(new Date().setHours(0, 0, 0, 0));
+    const limit48h = new Date(hoje.getTime() + 48 * 60 * 60 * 1000);
+    
+    let alertas = [];
+    let concluidos = [];
+
+    for (const [id, proj] of Object.entries(bdProjetos)) {
+        if (proj.arquivado || proj.visivelHub === false) continue;
+        
+        const etapas = proj.etapas || [];
+        const atrasadas = etapas.filter(t => t.status !== 'concluido' && t.prazo && new Date(t.prazo) < hoje);
+        const proximas = etapas.filter(t => t.status !== 'concluido' && t.prazo && new Date(t.prazo) <= limit48h && new Date(t.prazo) >= hoje);
+        const todasConcluidas = etapas.length > 0 && etapas.every(e => e.status === 'concluido');
+        
+        // Regra 1: 3+ tarefas atrasadas
+        if (atrasadas.length >= 3) {
+            alertas.push({ id, nome: proj.nome, cliente: proj.cliente, motivo: `${atrasadas.length} tarefas atrasadas`, tipo: 'critico' });
+        }
+        // Regra 2: deadline em 48h sem progresso
+        else if (proximas.length > 0 && !etapas.some(t => t.status === 'ativo' || t.status === 'concluido')) {
+            alertas.push({ id, nome: proj.nome, cliente: proj.cliente, motivo: `Deadline em 48h sem progresso`, tipo: 'atencao' });
+        }
+        // Projeto concluído recentemente
+        else if (todasConcluidas) {
+            concluidos.push({ id, nome: proj.nome, cliente: proj.cliente });
+        }
+    }
+
+    if (alertas.length === 0 && concluidos.length === 0) {
+        container.innerHTML = '';
+        container.style.display = 'none';
+        return;
+    }
+
+    container.style.display = 'flex';
+    let html = '';
+    
+    alertas.forEach(a => {
+        const cor = a.tipo === 'critico' ? '#dc3545' : '#ffc107';
+        const bg = a.tipo === 'critico' ? 'rgba(220,53,69,0.08)' : 'rgba(255,193,7,0.08)';
+        const borda = a.tipo === 'critico' ? 'rgba(220,53,69,0.3)' : 'rgba(255,193,7,0.3)';
+        html += `
+        <div class="risk-card" style="background:${bg}; border: 1px solid ${borda}; border-left: 4px solid ${cor}; border-radius: 12px; padding: 15px 18px; cursor: pointer; transition: 0.2s;" onclick="abrirProjeto('${a.id}')">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:5px;">
+                <span style="font-size:16px;">⚠️</span>
+                <strong style="color:${cor}; font-size:12px; text-transform:uppercase; letter-spacing:0.5px;">${a.tipo === 'critico' ? 'Risco Crítico' : 'Atenção'}</strong>
+            </div>
+            <div style="font-weight:600; font-size:13px; color:#fff; margin-bottom:3px;">${sanitize(a.nome)}</div>
+            <div style="font-size:11px; color:var(--cadarn-cinza);">${sanitize(a.cliente)} · ${sanitize(a.motivo)}</div>
+        </div>`;
+    });
+
+    concluidos.slice(0,3).forEach(p => {
+        html += `
+        <div class="risk-card" style="background:rgba(71,226,153,0.06); border: 1px solid rgba(71,226,153,0.2); border-left: 4px solid #47e299; border-radius: 12px; padding: 15px 18px; cursor: pointer;" onclick="abrirProjeto('${p.id}')">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:5px;">
+                <span style="font-size:16px;">✅</span>
+                <strong style="color:#47e299; font-size:12px; text-transform:uppercase; letter-spacing:0.5px;">Concluído</strong>
+            </div>
+            <div style="font-weight:600; font-size:13px; color:#fff; margin-bottom:3px;">${sanitize(p.nome)}</div>
+            <div style="font-size:11px; color:var(--cadarn-cinza);">${sanitize(p.cliente)}</div>
+        </div>`;
+    });
+
+    container.innerHTML = html;
+}
+window.renderRiskReport = renderRiskReport;
+
+
+/* ========================================================= */
+/* HUB DE METAS — TAREFAS PENDENTES DO USUÁRIO               */
+/* ========================================================= */
+function renderHubMetas() {
+    const container = document.getElementById('hub-metas-container');
+    if (!container) return;
+    
+    const nomeUsuario = usuarioLogado;
+    let tarefasPendentes = [];
+    
+    for (const [id, proj] of Object.entries(bdProjetos)) {
+        if (proj.arquivado || proj.visivelHub === false) continue;
+        (proj.etapas || []).forEach((t, idx) => {
+            if (t.status === 'pendente' && t.responsavel && t.responsavel.split('(')[0].trim() === nomeUsuario) {
+                tarefasPendentes.push({ ...t, projId: id, projNome: proj.nome, projCliente: proj.cliente });
+            }
+        });
+    }
+    
+    // Ordena por prazo
+    tarefasPendentes.sort((a, b) => {
+        if (!a.prazo) return 1; if (!b.prazo) return -1;
+        return new Date(a.prazo) - new Date(b.prazo);
+    });
+    
+    if (tarefasPendentes.length === 0) {
+        container.innerHTML = '<p style="color:var(--cadarn-cinza); font-size:13px; text-align:center; padding:15px;">✅ Nenhuma tarefa pendente para você no momento.</p>';
+        return;
+    }
+    
+    const hoje = new Date(new Date().setHours(0,0,0,0));
+    let html = '';
+    tarefasPendentes.slice(0, 8).forEach(t => {
+        let prazoHtml = '';
+        let prazoClass = '';
+        if (t.prazo) {
+            const dp = new Date(t.prazo); dp.setMinutes(dp.getMinutes() + dp.getTimezoneOffset());
+            const atrasada = dp < hoje;
+            const venceHoje = dp.getTime() === hoje.getTime();
+            prazoClass = atrasada ? 'color:#ff8793;' : (venceHoje ? 'color:#ffc107;' : 'color:var(--cadarn-cinza);');
+            prazoHtml = `<span style="font-size:11px; ${prazoClass} font-weight:600;">${atrasada ? '⚠️ ' : '📅 '}${dp.toLocaleDateString('pt-BR')}</span>`;
+        }
+        html += `
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.04); cursor:pointer;" onclick="abrirProjeto('${t.projId}')">
+            <div>
+                <div style="font-size:13px; font-weight:500; color:#fff; margin-bottom:3px;">${sanitize(t.titulo)}</div>
+                <div style="font-size:11px; color:var(--cadarn-cinza);">${sanitize(t.projNome)}</div>
+            </div>
+            ${prazoHtml}
+        </div>`;
+    });
+    
+    if (tarefasPendentes.length > 8) {
+        html += `<div style="text-align:center; padding-top:10px;"><span style="font-size:11px; color:var(--cadarn-cinza);">+${tarefasPendentes.length - 8} tarefas adicionais</span></div>`;
+    }
+    
+    container.innerHTML = html;
+}
+window.renderHubMetas = renderHubMetas;
+
+
+/* ========================================================= */
+/* PROFILE POPOVER — QUICK VIEW NO AVATAR                    */
+/* ========================================================= */
+function mostrarProfilePopover(nomeColaborador, anchorElement) {
+    fecharProfilePopover();
+    
+    const conf = configColaboradores[nomeColaborador] || {};
+    const hoje = new Date();
+    let anivHtml = '';
+    if (conf.nascimento) {
+        const nasc = new Date(conf.nascimento);
+        anivHtml = `<div style="font-size:11px; color:var(--cadarn-cinza); margin-top:4px;">🎂 ${String(nasc.getDate()).padStart(2,'0')}/${String(nasc.getMonth()+1).padStart(2,'0')}</div>`;
+    }
+    
+    // Projetos atuais do colaborador
+    let projAtivos = [];
+    for (const [id, proj] of Object.entries(bdProjetos)) {
+        if (proj.arquivado) continue;
+        const inTeam = (proj.equipeAtual || []).some(m => m.split('(')[0].trim() === nomeColaborador);
+        const isLider = proj.lider === nomeColaborador;
+        if (inTeam || isLider) projAtivos.push(proj.nome);
+    }
+    
+    const projHtml = projAtivos.length > 0 
+        ? projAtivos.slice(0,3).map(p => `<div style="font-size:11px; color:#c5a3ff; padding:3px 0; border-bottom:1px solid rgba(255,255,255,0.04);">${sanitize(p)}</div>`).join('')
+        : '<div style="font-size:11px; color:var(--cadarn-cinza);">Sem projetos ativos</div>';
+    
+    const popover = document.createElement('div');
+    popover.id = 'profile-popover';
+    popover.innerHTML = `
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+            ${getAvatarHtml(nomeColaborador, 38)}
+            <div>
+                <div style="font-weight:700; font-size:14px; color:#fff;">${sanitize(nomeColaborador)}</div>
+                ${anivHtml}
+            </div>
+        </div>
+        <div style="font-size:10px; color:var(--cadarn-cinza); text-transform:uppercase; font-weight:700; letter-spacing:0.5px; margin-bottom:6px;">Projetos Atuais</div>
+        ${projHtml}
+        <button onclick="abrirPerfil('${sanitize(nomeColaborador)}'); fecharProfilePopover();" style="width:100%; margin-top:10px; padding:7px; background:rgba(131,46,255,0.15); border:1px solid rgba(131,46,255,0.3); color:#c5a3ff; border-radius:6px; cursor:pointer; font-size:11px; font-weight:600;">Ver Perfil Completo</button>
+    `;
+    popover.style.cssText = `
+        position: fixed; z-index: 99999; 
+        background: rgba(15,15,20,0.97); border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 14px; padding: 16px; width: 220px;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+        backdrop-filter: blur(20px);
+        animation: fadeInUp 0.2s ease;
+    `;
+    document.body.appendChild(popover);
+    
+    const rect = anchorElement.getBoundingClientRect();
+    let top = rect.bottom + 8;
+    let left = rect.left - 80;
+    if (left + 220 > window.innerWidth) left = window.innerWidth - 230;
+    if (top + 200 > window.innerHeight) top = rect.top - 210;
+    popover.style.top = top + 'px';
+    popover.style.left = left + 'px';
+    
+    setTimeout(() => document.addEventListener('click', fecharProfilePopover, { once: true }), 100);
+}
+
+function fecharProfilePopover() {
+    const p = document.getElementById('profile-popover');
+    if (p) p.remove();
+}
+
+window.mostrarProfilePopover = mostrarProfilePopover;
+window.fecharProfilePopover = fecharProfilePopover;
+
+
 window.onload = () => {
     const progressBar = criarProgressBar();
     avancarProgressBar(progressBar, 20);
@@ -1801,6 +2085,15 @@ window.deleteSelectedLixeira = deleteSelectedLixeira;
 window.restaurarProjetoDireto = restaurarProjetoDireto;
 window.handleDropFoto = handleDropFoto;
 window.handleFileFoto = handleFileFoto;
+window.renderRiskReport = renderRiskReport;
+window.renderHubMetas = renderHubMetas;
+window.mostrarProfilePopover = mostrarProfilePopover;
+window.fecharProfilePopover = fecharProfilePopover;
+window.getUserRole = getUserRole;
+window.aplicarPermissoesRBAC = aplicarPermissoesRBAC;
+window.podeEditarProjeto = podeEditarProjeto;
+window.podeDeletarProjeto = podeDeletarProjeto;
+window.podeVerDossi = podeVerDossie;
 window.filtrarProjetosDestePerfil = () => {
     filtroMembro = perfilAtualNome;
     renderMainProjects();
