@@ -164,10 +164,9 @@ button, a, .card, .project-row, .kanban-card,
         /* --- VISÃO EXECUTIVA (KPIs) --- */
 .visao-executiva-wrapper { 
     display: grid; 
-    /* 3 Colunas: Gráfico (210px) | Stats (1fr - mais estreito) | Tarefas (1.4fr - mais largo) */
     grid-template-columns: 210px 1fr 1.4fr; 
     gap: 24px; 
-    height: 330px; /* Altura premium exata para comportar as duas listas */
+    min-height: 360px;
     align-items: stretch; 
 }
 .visao-chart { 
