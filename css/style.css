@@ -593,9 +593,6 @@ button, a, .card, .project-row, .kanban-card,
         /* ==================================================== */
         /* RESPONSIVIDADE E ADAPTAÇÃO PARA COMPONENTES NOVOS    */
         /* ==================================================== */
-        @media (min-width: 1001px) {
-            .team-availability-wrapper { flex-direction: row; justify-content: space-between; align-items: center; }
-        }
 
         @media (max-width: 1000px) {
             .visao-executiva-wrapper { grid-template-columns: 1fr; align-items: stretch; justify-items: stretch; }
