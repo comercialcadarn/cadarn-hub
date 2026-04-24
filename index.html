@@ -504,7 +504,7 @@ async function buscarEventosGCal(token) {
     const btn = document.getElementById('btn-google-calendar');
     const section = document.getElementById('google-calendar-section');
     const eventsEl = document.getElementById('google-calendar-events');
-    if (section) section.style.display = 'block';
+    if (section) section.style.display = 'flex';
     if (eventsEl) eventsEl.innerHTML = '<span style="color:var(--cadarn-cinza);font-size:11px;">Carregando...</span>';
 
     const hoje = new Date();
