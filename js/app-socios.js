@@ -240,7 +240,7 @@ function inicializarDragAndDrop() {
     const colunas = [
         document.getElementById('col-negociacao'), 
         document.getElementById('col-andamento'), 
-        document.getElementById('col-concluidos')
+        document.getElementById('col-iniciados')
     ];
     
     colunas.forEach(coluna => {
