@@ -164,16 +164,18 @@ button, a, .card, .project-row, .kanban-card,
         /* --- VISÃO EXECUTIVA (KPIs) --- */
 .visao-executiva-wrapper { 
     display: grid; 
-    grid-template-columns: 210px 1.3fr 290px 170px; 
-    gap: 22px; 
+    grid-template-columns: 200px 1.2fr 300px 160px; /* Proporção mais equilibrada */
+    gap: 20px; 
+    height: 250px; /* ⬅️ A MÁGICA: Trava a altura do painel para ficar compacto */
     align-items: stretch; 
 }
 
 .visao-chart { 
     width: 100%;
-    max-width: 190px;
-    height: 190px; 
-    margin: 0 auto;
+    max-width: 200px;
+    height: 100%; 
+    max-height: 250px;
+    margin: auto;
     display: flex;
     align-items: center;
     justify-content: center;
