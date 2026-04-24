@@ -1928,15 +1928,21 @@ function renderHubMetas() {
             prazoClass = atrasada ? 'color:#ff8793;' : (venceHoje ? 'color:#ffc107;' : 'color:var(--cadarn-cinza);');
             prazoHtml = `<span style="font-size:11px; ${prazoClass} font-weight:600;">${atrasada ? '⚠️ ' : '📅 '}${dp.toLocaleDateString('pt-BR')}</span>`;
         }
-        html += `
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.04); cursor:pointer;" onclick="abrirProjeto('${t.projId}')">
-            <div>
-                <div style="font-size:13px; font-weight:500; color:#fff; margin-bottom:3px;">${sanitize(t.titulo)}</div>
-                <div style="font-size:11px; color:var(--cadarn-cinza);">${sanitize(t.projNome)}</div>
-            </div>
-            ${prazoHtml}
-        </div>`;
-    });
+html += `
+<div style="
+    display:flex; justify-content:space-between; align-items:center;
+    padding:10px 12px; border-radius:8px; cursor:pointer;
+    background:rgba(255,255,255,0.03);
+    border:1px solid rgba(255,255,255,0.05);
+    border-left: 3px solid ${t.prazo && new Date(t.prazo) < hoje ? '#dc3545' : 'var(--cadarn-roxo)'};
+    transition: background 0.2s;
+" onmouseover="this.style.background='rgba(131,46,255,0.08)'" onmouseout="this.style.background='rgba(255,255,255,0.03)'" onclick="abrirProjeto('${t.projId}')">
+    <div style="min-width:0; flex:1; padding-right:8px;">
+        <div style="font-size:12px; font-weight:600; color:#fff; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${sanitize(t.titulo)}</div>
+        <div style="font-size:10px; color:var(--cadarn-cinza); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${sanitize(t.projNome)}</div>
+    </div>
+    ${prazoHtml}
+</div>`;
     
     if (tarefasPendentes.length > 8) {
         html += `<div style="text-align:center; padding-top:10px;"><span style="font-size:11px; color:var(--cadarn-cinza);">+${tarefasPendentes.length - 8} tarefas adicionais</span></div>`;
