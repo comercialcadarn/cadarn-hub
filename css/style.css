@@ -164,9 +164,9 @@ button, a, .card, .project-row, .kanban-card,
         /* --- VISÃO EXECUTIVA (KPIs) --- */
 .visao-executiva-wrapper { 
     display: grid; 
-    grid-template-columns: 200px 1.2fr 300px 160px; /* Proporção mais equilibrada */
-    gap: 20px; 
-    height: 250px; /* ⬅️ A MÁGICA: Trava a altura do painel para ficar compacto */
+    grid-template-columns: 200px 1.2fr 300px 160px; 
+    gap: 24px; 
+    height: 290px; /* Altura ideal para acomodar paddings sem esmagar */
     align-items: stretch; 
 }
 
