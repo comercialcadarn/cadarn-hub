@@ -472,13 +472,15 @@ function atualizarColaboradorDoMes() {
     const container = document.getElementById('colaborador-mes-container');
     if(topColab && maxEstrelas > 0) {
         container.innerHTML = `
-            <div style="font-size:11px; color:var(--cadarn-roxo-claro); text-transform:uppercase; font-weight:800; margin-bottom:18px; text-align:center; letter-spacing:1px; font-family: 'Outfit', sans-serif;">🌟 Destaque do Mês</div>
-            <div style="cursor:pointer; position:relative;" onclick="abrirPerfil('${sanitize(topColab)}')">
-                ${getAvatarHtml(topColab, 70)}
-                <div style="position:absolute; bottom:-4px; right:-4px; background:#ffc107; color:#000; border-radius:50%; width:24px; height:24px; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:900; border:2px solid #151515;">1º</div>
+            <div style="cursor:pointer; position:relative; flex-shrink:0;" onclick="abrirPerfil('${sanitize(topColab)}')">
+                ${getAvatarHtml(topColab, 60)}
+                <div style="position:absolute; bottom:-2px; right:-2px; background:#ffc107; color:#000; border-radius:50%; width:20px; height:20px; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:900; border:2px solid #151515;">1º</div>
             </div>
-            <div style="font-size:16px; font-weight:800; margin-top:16px; color:white; text-align:center; font-family: 'Outfit', sans-serif; letter-spacing:-0.3px;">${sanitize(topColab).split(' ')[0]}</div>
-            <div style="font-size:11px; color:#ffc107; font-weight:700; text-align:center; margin-top:4px;">${maxEstrelas} Reconhecimento(s)</div>
+            <div style="flex-grow: 1; text-align: left;">
+                <div style="font-size:10px; color:var(--cadarn-roxo-claro); text-transform:uppercase; font-weight:800; margin-bottom:4px; letter-spacing:1px; font-family: 'Outfit', sans-serif;">🌟 Destaque do Mês</div>
+                <div style="font-size:20px; font-weight:800; color:white; font-family: 'Outfit', sans-serif; letter-spacing:-0.5px; line-height: 1;">${sanitize(topColab).split(' ')[0]}</div>
+                <div style="font-size:12px; color:#ffc107; font-weight:700; margin-top:4px;">${maxEstrelas} Reconhecimento(s)</div>
+            </div>
         `;
     } else { container.innerHTML = `<div style="font-size:10px; color:var(--cadarn-cinza); text-transform:uppercase; text-align:center;">Nenhum destaque ainda</div>`; }
 }
