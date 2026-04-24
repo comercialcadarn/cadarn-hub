@@ -308,42 +308,22 @@
             </div>
             
             <div class="team-availability-wrapper">
+                <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:15px; margin-bottom:12px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <div style="font-size:11px; color:var(--cadarn-cinza); text-transform:uppercase; font-weight:700; letter-spacing:0.5px;">🎯 Minhas Tarefas Pendentes</div>
+                        <button onclick="conectarGoogleCalendario()" id="btn-google-calendar" style="font-size:10px; padding:4px 10px; background:rgba(131,46,255,0.15); border:1px solid rgba(131,46,255,0.3); color:#c5a3ff; border-radius:20px; cursor:pointer; font-weight:600;">📅 Agenda</button>
+                    </div>
+                    <div id="hub-metas-container" style="max-height:160px; overflow-y:auto; scrollbar-width:thin;"></div>
+                    <div id="google-calendar-section" style="display:none; margin-top:10px; border-top:1px solid rgba(255,255,255,0.05); padding-top:10px;">
+                        <div style="font-size:10px; color:var(--cadarn-cinza); text-transform:uppercase; font-weight:700; margin-bottom:8px;">📅 Hoje</div>
+                        <div id="google-calendar-events" style="font-size:12px; color:var(--cadarn-cinza);"></div>
+                    </div>
+                </div>
                 <div class="colab-mes-container" id="colaborador-mes-container">
                     <div style="font-size:10px; color:var(--cadarn-cinza); text-transform:uppercase;">Nenhum destaque ainda</div>
                 </div>
             </div>
 
-        </div>
-    </section>
-
-    <!-- ====== RELATÓRIO DE RISCOS IA ====== -->
-    <section class="anim-1" id="risk-report-section" style="margin-bottom: 20px;">
-        <h2 class="section-header">
-            <div class="section-header-title">🤖 Relatório de Riscos & Atividades (IA)</div>
-        </h2>
-        <div id="risk-report-container" style="display:none; flex-wrap:wrap; gap:12px;"></div>
-    </section>
-
-    <!-- ====== HUB DE METAS ====== -->
-    <section class="anim-2" style="margin-bottom: 20px;">
-        <h2 class="section-header">
-            <div class="section-header-title">🎯 Hub de Metas — Minhas Tarefas Pendentes</div>
-            <div class="section-header-controls">
-                <button id="btn-google-calendar" onclick="conectarGoogleCalendario()" class="btn-presenca" style="font-size:11px; padding: 7px 14px;">
-                    📅 Conectar Google Agenda
-                </button>
-            </div>
-        </h2>
-        <div class="card" style="padding: 20px;">
-            <div id="hub-metas-container">
-                <div class="skeleton-line" style="height:15px; margin-bottom:10px;"></div>
-                <div class="skeleton-line" style="height:15px; width:70%; margin-bottom:10px;"></div>
-                <div class="skeleton-line" style="height:15px; width:50%;"></div>
-            </div>
-            <div id="google-calendar-section" style="display:none; margin-top:20px; border-top:1px solid rgba(255,255,255,0.05); padding-top:15px;">
-                <div style="font-size:11px; color:var(--cadarn-cinza); text-transform:uppercase; font-weight:700; margin-bottom:10px;">📅 Agenda do Dia</div>
-                <div id="google-calendar-events" style="font-size:13px; color:var(--cadarn-cinza);">Nenhum evento encontrado.</div>
-            </div>
         </div>
     </section>
 
@@ -472,45 +452,91 @@
 </footer>
 
 <script>
-// Google Calendar placeholder (implementar OAuth quando disponível)
+const GCAL_CLIENT_ID = '1078276499614-p73tq6ro68r35bvec6gftt919h2p55dl.apps.googleusercontent.com'; // ← trocar
+const GCAL_SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
+
 function conectarGoogleCalendario() {
     const token = localStorage.getItem('cadarn_gcal_token');
-    const section = document.getElementById('google-calendar-section');
-    const btn = document.getElementById('btn-google-calendar');
-    
     if (token) {
-        // Token existe: simula listagem de eventos
-        if (section) section.style.display = 'block';
-        document.getElementById('google-calendar-events').innerHTML = `
-            <div style="padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; gap:10px; align-items:center;">
-                <span style="color:#c5a3ff; font-size:11px; font-weight:700;">09:00</span>
-                <span style="font-size:12px; color:#fff;">Reunião de Alinhamento</span>
-            </div>
-            <div style="padding:8px 0; display:flex; gap:10px; align-items:center;">
-                <span style="color:#c5a3ff; font-size:11px; font-weight:700;">14:30</span>
-                <span style="font-size:12px; color:#fff;">Review Sprint</span>
-            </div>`;
+        buscarEventosGCal(token);
     } else {
-        // Sem token: placeholder amigável
-        document.getElementById('google-calendar-events').innerHTML = `
-            <div style="text-align:center; padding:20px; color:var(--cadarn-cinza);">
-                <div style="font-size:24px; margin-bottom:10px;">📅</div>
-                <div style="font-size:13px; font-weight:600; color:#fff; margin-bottom:5px;">Conecte sua Google Agenda</div>
-                <div style="font-size:12px; margin-bottom:15px;">Visualize seus compromissos diretamente no Hub.</div>
-                <button onclick="simularConexaoGCal()" style="padding:10px 20px; background:rgba(66,133,244,0.2); border:1px solid rgba(66,133,244,0.4); color:#4285f4; border-radius:8px; cursor:pointer; font-size:12px; font-weight:600;">
-                    🔗 Autorizar Acesso
-                </button>
-            </div>`;
-        if (section) section.style.display = 'block';
+        // Abre popup OAuth do Google
+        const params = new URLSearchParams({
+            client_id: GCAL_CLIENT_ID,
+            redirect_uri: location.origin + location.pathname,
+            response_type: 'token',
+            scope: GCAL_SCOPES,
+            prompt: 'select_account'
+        });
+        const popup = window.open(
+            'https://accounts.google.com/o/oauth2/v2/auth?' + params,
+            'gcal_oauth',
+            'width=500,height=600,left=200,top=100'
+        );
+        // Escuta o retorno do OAuth via URL hash
+        window._gcalPollInterval = setInterval(() => {
+            try {
+                const hash = popup.location.hash;
+                if (hash && hash.includes('access_token')) {
+                    clearInterval(window._gcalPollInterval);
+                    popup.close();
+                    const tokenMatch = hash.match(/access_token=([^&]+)/);
+                    if (tokenMatch) {
+                        const accessToken = tokenMatch[1];
+                        localStorage.setItem('cadarn_gcal_token', accessToken);
+                        buscarEventosGCal(accessToken);
+                        if (window.showToast) showToast('Google Agenda conectada!', 'success');
+                    }
+                }
+            } catch(e) { /* cross-origin, aguarda */ }
+            if (popup.closed) clearInterval(window._gcalPollInterval);
+        }, 500);
     }
-    if (btn) btn.textContent = token ? '✅ Agenda Conectada' : '📅 Conectar Google Agenda';
 }
 
-function simularConexaoGCal() {
-    // Simula OAuth bem-sucedido
-    localStorage.setItem('cadarn_gcal_token', 'simulated_token_' + Date.now());
-    conectarGoogleCalendario();
-    if (window.showToast) showToast('Google Agenda conectada com sucesso!', 'success');
+async function buscarEventosGCal(token) {
+    const btn = document.getElementById('btn-google-calendar');
+    const section = document.getElementById('google-calendar-section');
+    const eventsEl = document.getElementById('google-calendar-events');
+    if (section) section.style.display = 'block';
+    if (eventsEl) eventsEl.innerHTML = '<span style="color:var(--cadarn-cinza);font-size:11px;">Carregando...</span>';
+
+    const hoje = new Date();
+    const inicioHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()).toISOString();
+    const fimHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 23, 59, 59).toISOString();
+
+    try {
+        const res = await fetch(
+            `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${inicioHoje}&timeMax=${fimHoje}&singleEvents=true&orderBy=startTime&maxResults=5`,
+            { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (res.status === 401) {
+            // Token expirado
+            localStorage.removeItem('cadarn_gcal_token');
+            if (eventsEl) eventsEl.innerHTML = '<span style="font-size:11px;color:#ff8793;">Sessão expirada. Clique em Agenda para reconectar.</span>';
+            if (btn) btn.textContent = '📅 Agenda';
+            return;
+        }
+        const data = await res.json();
+        const eventos = data.items || [];
+        if (btn) btn.textContent = '✅ Agenda';
+
+        if (eventos.length === 0) {
+            eventsEl.innerHTML = '<span style="font-size:11px;color:var(--cadarn-cinza);">Nenhum evento hoje.</span>';
+            return;
+        }
+        eventsEl.innerHTML = eventos.map(e => {
+            const hora = e.start?.dateTime
+                ? new Date(e.start.dateTime).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' })
+                : 'Dia todo';
+            return `<div style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);display:flex;gap:8px;align-items:center;">
+                <span style="color:#c5a3ff;font-size:10px;font-weight:700;flex-shrink:0;">${hora}</span>
+                <span style="font-size:11px;color:#fff;">${e.summary || '(sem título)'}</span>
+            </div>`;
+        }).join('');
+    } catch(err) {
+        if (eventsEl) eventsEl.innerHTML = '<span style="font-size:11px;color:#ff8793;">Erro ao buscar eventos.</span>';
+    }
 }
 </script>
 
