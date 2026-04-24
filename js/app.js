@@ -2099,7 +2099,7 @@ window.getUserRole = getUserRole;
 window.aplicarPermissoesRBAC = aplicarPermissoesRBAC;
 window.podeEditarProjeto = podeEditarProjeto;
 window.podeDeletarProjeto = podeDeletarProjeto;
-window.podeVerDossi = podeVerDossie;
+window.podeVerDossie = podeVerDossie;
 window.filtrarProjetosDestePerfil = () => {
     filtroMembro = perfilAtualNome;
     renderMainProjects();
