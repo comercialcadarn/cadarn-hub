@@ -312,15 +312,16 @@
                     <div style="font-size:11px; color:white; text-transform:uppercase; font-weight:800; letter-spacing:0.5px; font-family: 'Outfit', sans-serif;">🎯 Agenda & Tarefas</div>
                     <button onclick="conectarGoogleCalendario()" id="btn-google-calendar" style="font-size:10px; padding:4px 12px; background:rgba(131,46,255,0.15); border:1px solid rgba(131,46,255,0.3); color:#c5a3ff; border-radius:20px; cursor:pointer; font-weight:700; flex-shrink:0; transition:0.2s;" onmouseover="this.style.background='rgba(131,46,255,0.3)'" onmouseout="this.style.background='rgba(131,46,255,0.15)'">Conectar</button>
                 </div>
-                
                 <div id="hub-metas-container" style="max-height:100px; overflow-y:auto; scrollbar-width:thin;"></div>
-                
                 <div id="google-calendar-section" style="display:none; padding-top: 5px;">
                     <div style="font-size:10px; color:#c5a3ff; text-transform:uppercase; font-weight:800; margin-bottom:8px;">📅 Hoje</div>
                     <div id="google-calendar-events" style="font-size:12px; color:var(--cadarn-cinza);"></div>
                 </div>
+            </div>
 
-                <div class="colab-mes-container" id="colaborador-mes-container" style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px; width: 100%;">
+            <div class="team-availability-wrapper" style="display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 15px; text-align: center;">
+                <div style="font-size:11px; color:white; text-transform:uppercase; font-weight:800; letter-spacing:0.5px; font-family: 'Outfit', sans-serif;">🌟 Destaque</div>
+                <div class="colab-mes-container" id="colaborador-mes-container" style="width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0;">
                     <div style="font-size:10px; color:var(--cadarn-cinza); text-transform:uppercase;">Nenhum destaque ainda</div>
                 </div>
             </div>
