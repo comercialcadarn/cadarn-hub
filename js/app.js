@@ -472,10 +472,13 @@ function atualizarColaboradorDoMes() {
     const container = document.getElementById('colaborador-mes-container');
     if(topColab && maxEstrelas > 0) {
         container.innerHTML = `
-            <div style="font-size:10px; color:var(--cadarn-roxo-claro); text-transform:uppercase; font-weight:800; margin-bottom:10px; text-align:center; letter-spacing:1px;">⭐ Colaborador do Mês</div>
-            <div style="cursor:pointer;" onclick="abrirPerfil('${sanitize(topColab)}')">${getAvatarHtml(topColab, 54)}</div>
-            <div style="font-size:13px; font-weight:700; margin-top:8px; color:var(--cadarn-branco); text-align:center;">${sanitize(topColab).split(' ')[0]}</div>
-            <div style="font-size:11px; color:#ffc107; font-weight:600; text-align:center;">${maxEstrelas} Estrela(s)</div>
+            <div style="font-size:11px; color:var(--cadarn-roxo-claro); text-transform:uppercase; font-weight:800; margin-bottom:18px; text-align:center; letter-spacing:1px; font-family: 'Outfit', sans-serif;">🌟 Destaque do Mês</div>
+            <div style="cursor:pointer; position:relative;" onclick="abrirPerfil('${sanitize(topColab)}')">
+                ${getAvatarHtml(topColab, 70)}
+                <div style="position:absolute; bottom:-4px; right:-4px; background:#ffc107; color:#000; border-radius:50%; width:24px; height:24px; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:900; border:2px solid #151515;">1º</div>
+            </div>
+            <div style="font-size:16px; font-weight:800; margin-top:16px; color:white; text-align:center; font-family: 'Outfit', sans-serif; letter-spacing:-0.3px;">${sanitize(topColab).split(' ')[0]}</div>
+            <div style="font-size:11px; color:#ffc107; font-weight:700; text-align:center; margin-top:4px;">${maxEstrelas} Reconhecimento(s)</div>
         `;
     } else { container.innerHTML = `<div style="font-size:10px; color:var(--cadarn-cinza); text-transform:uppercase; text-align:center;">Nenhum destaque ainda</div>`; }
 }
@@ -1928,21 +1931,16 @@ function renderHubMetas() {
             prazoClass = atrasada ? 'color:#ff8793;' : (venceHoje ? 'color:#ffc107;' : 'color:var(--cadarn-cinza);');
             prazoHtml = `<span style="font-size:11px; ${prazoClass} font-weight:600;">${atrasada ? '⚠️ ' : '📅 '}${dp.toLocaleDateString('pt-BR')}</span>`;
         }
-html += `
-<div style="
-    display:flex; justify-content:space-between; align-items:center;
-    padding:10px 12px; border-radius:8px; cursor:pointer;
-    background:rgba(255,255,255,0.03);
-    border:1px solid rgba(255,255,255,0.05);
-    border-left: 3px solid ${t.prazo && new Date(t.prazo) < hoje ? '#dc3545' : 'var(--cadarn-roxo)'};
-    transition: background 0.2s;
-" onmouseover="this.style.background='rgba(131,46,255,0.08)'" onmouseout="this.style.background='rgba(255,255,255,0.03)'" onclick="abrirProjeto('${t.projId}')">
-    <div style="min-width:0; flex:1; padding-right:8px;">
-        <div style="font-size:12px; font-weight:600; color:#fff; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${sanitize(t.titulo)}</div>
-        <div style="font-size:10px; color:var(--cadarn-cinza); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${sanitize(t.projNome)}</div>
-    </div>
-    ${prazoHtml}
-</div>`;
+let prazoCor = atrasada ? '#dc3545' : (venceHoje ? '#ffc107' : 'var(--border-color)');
+        
+        html += `
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 14px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.04); border-left:3px solid ${prazoCor}; border-radius:8px; cursor:pointer; transition:0.2s;" onmouseover="this.style.background='rgba(131,46,255,0.08)'" onmouseout="this.style.background='rgba(255,255,255,0.02)'" onclick="abrirProjeto('${t.projId}')">
+            <div style="min-width:0; flex:1; padding-right:10px;">
+                <div style="font-size:13px; font-weight:600; color:#fff; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${sanitize(t.titulo)}</div>
+                <div style="font-size:11px; color:var(--cadarn-cinza); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">📁 ${sanitize(t.projNome)}</div>
+            </div>
+            <div style="flex-shrink:0;">${prazoHtml}</div>
+        </div>`;
     });
     
     if (tarefasPendentes.length > 8) {
