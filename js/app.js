@@ -1943,6 +1943,7 @@ html += `
     </div>
     ${prazoHtml}
 </div>`;
+    });
     
     if (tarefasPendentes.length > 8) {
         html += `<div style="text-align:center; padding-top:10px;"><span style="font-size:11px; color:var(--cadarn-cinza);">+${tarefasPendentes.length - 8} tarefas adicionais</span></div>`;
