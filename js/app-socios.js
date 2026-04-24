@@ -172,7 +172,7 @@ function sanitize(str) {
 // KANBAN RENDER
 // ==========================================
 function renderKanban() {
-    let htmlNegociacao = ''; let htmlAndamento = ''; let htmlConcluido = '';
+    let htmlNegociacao = ''; let htmlAndamento = ''; let htmlIniciado = '';
     const hoje = new Date(new Date().setHours(0,0,0,0));
 
     for (const [id, proj] of Object.entries(bdProjetos)) {
@@ -219,12 +219,11 @@ function renderKanban() {
 
         if (statusCrm === 'negociacao') htmlNegociacao += card;
         else if (statusCrm === 'andamento') htmlAndamento += card;
-        else if (statusCrm === 'concluido') htmlConcluido += card;
+        else if (statusCrm === 'concluido' || statusCrm === 'iniciado') htmlIniciado += card;
     }
-
     document.getElementById('col-negociacao').innerHTML = htmlNegociacao || '<div style="font-size:12px; color:var(--cadarn-cinza);">Nenhum projeto no backlog.</div>';
     document.getElementById('col-andamento').innerHTML = htmlAndamento || '<div style="font-size:12px; color:var(--cadarn-cinza);">Nenhum projeto em delivery.</div>';
-    document.getElementById('col-concluidos').innerHTML = htmlConcluido || '<div style="font-size:12px; color:var(--cadarn-cinza);">Vazio.</div>';
+    document.getElementById('col-iniciados').innerHTML = htmlIniciado || '<div style="font-size:12px; color:var(--cadarn-cinza);">Vazio.</div>';
     
     // Re-inicializa Sortable após trocar innerHTML (fix bug drag-and-drop)
     inicializarDragAndDrop();
@@ -286,10 +285,10 @@ function atualizarContadoresKanban() {
     const contar = (colId) => document.getElementById(colId)?.querySelectorAll('.kanban-card').length || 0;
     const countNeg = document.getElementById('count-negociacao');
     const countAnd = document.getElementById('count-andamento');
-    const countConc = document.getElementById('count-concluido');
+   const countConc = document.getElementById('count-iniciado');
     if (countNeg) countNeg.textContent = contar('col-negociacao');
     if (countAnd) countAnd.textContent = contar('col-andamento');
-    if (countConc) countConc.textContent = contar('col-concluidos');
+    if (countConc) countConc.textContent = contar('col-iniciados');
 }
 
 /* ========================================================= */
