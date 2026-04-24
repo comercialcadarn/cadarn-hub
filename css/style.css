@@ -164,8 +164,9 @@ button, a, .card, .project-row, .kanban-card,
         /* --- VISÃO EXECUTIVA (KPIs) --- */
 .visao-executiva-wrapper { 
     display: grid; 
-    grid-template-columns: 260px 1fr 280px; /* Aumentado para 280px para caber a Agenda */
-    gap: 30px; 
+    /* 4 Colunas: Gráfico (240px) | Stats (Estica) | Agenda (260px) | Colab (160px) */
+    grid-template-columns: 240px 1.2fr 260px 160px; 
+    gap: 25px; 
     align-items: stretch; 
 }
 
