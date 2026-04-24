@@ -290,19 +290,19 @@
                 <canvas id="kpiChart"></canvas>
             </div>
             
-            <div class="visao-stats" style="display: flex; flex-direction: column; justify-content: space-between; height: 100%; gap: 15px;">
-                <div style="background: rgba(255,255,255,0.03); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; justify-content: center; flex: 1;">
-                    <div style="font-size: 11px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 700; letter-spacing: 1px; margin-bottom: 5px;">Total de Projetos</div>
-                    <div style="font-size: 32px; font-weight: 900; color: white; font-family: 'Outfit', sans-serif; line-height: 1;" id="kpi-total">0</div>
+            <div class="visao-stats" style="display: grid; grid-template-rows: 1fr 1fr; gap: 16px; height: 100%;">
+                <div style="background: rgba(255,255,255,0.02); padding: 0 24px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.04); display: flex; flex-direction: column; justify-content: center;">
+                    <div style="font-size: 11px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 700; letter-spacing: 1px; margin-bottom: 6px;">Total de Projetos</div>
+                    <div style="font-size: 34px; font-weight: 900; color: white; font-family: 'Outfit', sans-serif; line-height: 1;" id="kpi-total">0</div>
                 </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; flex: 1;">
-                    <div style="background: rgba(182, 138, 255, 0.05); padding: 15px 20px; border-radius: 12px; border: 1px solid rgba(182, 138, 255, 0.15); display: flex; flex-direction: column; justify-content: center;">
-                        <div style="font-size: 10px; color: #b68aff; text-transform: uppercase; font-weight: 700; letter-spacing: 1px; margin-bottom: 5px;">Em Execução</div>
-                        <div style="font-size: 26px; font-weight: 800; color: #b68aff; font-family: 'Outfit', sans-serif; line-height: 1;" id="kpi-ativos">0</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div style="background: rgba(182, 138, 255, 0.05); padding: 0 20px; border-radius: 12px; border: 1px solid rgba(182, 138, 255, 0.15); display: flex; flex-direction: column; justify-content: center;">
+                        <div style="font-size: 10px; color: #b68aff; text-transform: uppercase; font-weight: 700; letter-spacing: 1px; margin-bottom: 6px;">Em Execução</div>
+                        <div style="font-size: 28px; font-weight: 800; color: #b68aff; font-family: 'Outfit', sans-serif; line-height: 1;" id="kpi-ativos">0</div>
                     </div>
-                    <div style="background: rgba(71, 226, 153, 0.05); padding: 15px 20px; border-radius: 12px; border: 1px solid rgba(71, 226, 153, 0.15); display: flex; flex-direction: column; justify-content: center;">
-                        <div style="font-size: 10px; color: #47e299; text-transform: uppercase; font-weight: 700; letter-spacing: 1px; margin-bottom: 5px;">Concluídos</div>
-                        <div style="font-size: 26px; font-weight: 800; color: #47e299; font-family: 'Outfit', sans-serif; line-height: 1;" id="kpi-concluidos">0</div>
+                    <div style="background: rgba(71, 226, 153, 0.05); padding: 0 20px; border-radius: 12px; border: 1px solid rgba(71, 226, 153, 0.15); display: flex; flex-direction: column; justify-content: center;">
+                        <div style="font-size: 10px; color: #47e299; text-transform: uppercase; font-weight: 700; letter-spacing: 1px; margin-bottom: 6px;">Concluídos</div>
+                        <div style="font-size: 28px; font-weight: 800; color: #47e299; font-family: 'Outfit', sans-serif; line-height: 1;" id="kpi-concluidos">0</div>
                     </div>
                 </div>
             </div>
