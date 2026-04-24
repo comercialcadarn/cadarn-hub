@@ -165,7 +165,7 @@ button, a, .card, .project-row, .kanban-card,
 .visao-executiva-wrapper { 
     display: grid; 
     /* Gráfico menor | Stats compacto | Agenda | Colab */
-    grid-template-columns: 190px minmax(0, 1fr) 250px 145px; 
+    grid-template-columns: 190px minmax(0, 1fr) minmax(300px, 1.4fr) 190px; 
     gap: 18px; 
     align-items: stretch; 
 }
