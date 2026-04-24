@@ -164,9 +164,8 @@ button, a, .card, .project-row, .kanban-card,
         /* --- VISÃO EXECUTIVA (KPIs) --- */
 .visao-executiva-wrapper { 
     display: grid; 
-    /* Gráfico menor | Stats compacto | Agenda | Colab */
-    grid-template-columns: 190px minmax(0, 1fr) minmax(300px, 1.4fr) 190px; 
-    gap: 18px; 
+    grid-template-columns: 210px 1.3fr 290px 170px; 
+    gap: 22px; 
     align-items: stretch; 
 }
 
