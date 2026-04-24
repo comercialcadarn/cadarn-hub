@@ -110,7 +110,7 @@ function iniciarListeners() {
 }
 
 function switchTab(tab) {
-    const views = ['projetos', 'pessoas', 'cronograma', 'calendario'];
+    const views = ['projetos', 'pessoas', 'cronograma', 'calendario', 'dossie'];
     
     // 1. Esconde todas as telas
     views.forEach(v => {
@@ -140,6 +140,7 @@ function switchTab(tab) {
         setTimeout(() => {
             targetView.style.opacity = '1';
             if(tab === 'cronograma') renderCronograma('gantt-master-container', filtroResponsavel);
+        if(tab === 'dossie') renderDossieList();
             if(tab === 'calendario') renderCalendario();
         }, 50);
     }
@@ -213,6 +214,7 @@ function renderKanban() {
                         ${proj.ultimaEdicao ? `<div style="font-size:9px; color:rgba(255,255,255,0.25);">✏️ ${tempoRelativoSocio(proj.ultimaEdicao)}</div>` : ''}
                     </div>
                 </div>
+            </div>
         `;
 
         if (statusCrm === 'negociacao') htmlNegociacao += card;
@@ -223,26 +225,218 @@ function renderKanban() {
     document.getElementById('col-negociacao').innerHTML = htmlNegociacao || '<div style="font-size:12px; color:var(--cadarn-cinza);">Nenhum projeto no backlog.</div>';
     document.getElementById('col-andamento').innerHTML = htmlAndamento || '<div style="font-size:12px; color:var(--cadarn-cinza);">Nenhum projeto em delivery.</div>';
     document.getElementById('col-concluidos').innerHTML = htmlConcluido || '<div style="font-size:12px; color:var(--cadarn-cinza);">Vazio.</div>';
+    
+    // Re-inicializa Sortable após trocar innerHTML (fix bug drag-and-drop)
+    inicializarDragAndDrop();
 }
 
+// Guarda instâncias para destruir antes de recriar
+let _sortableInstances = [];
+
 function inicializarDragAndDrop() {
-    const colunas = [document.getElementById('col-negociacao'), document.getElementById('col-andamento'), document.getElementById('col-concluidos')];
+    // Destrói instâncias antigas para evitar handlers duplicados
+    _sortableInstances.forEach(s => { try { s.destroy(); } catch(e) {} });
+    _sortableInstances = [];
+    
+    const colunas = [
+        document.getElementById('col-negociacao'), 
+        document.getElementById('col-andamento'), 
+        document.getElementById('col-concluidos')
+    ];
+    
     colunas.forEach(coluna => {
-        new Sortable(coluna, {
-            group: 'kanban_socios', animation: 150, ghostClass: 'sortable-ghost',
+        if (!coluna) return;
+        const inst = new Sortable(coluna, {
+            group: 'kanban_socios', 
+            animation: 150, 
+            ghostClass: 'sortable-ghost',
+            filter: '.kanban-no-drag',
             onEnd: async function (evt) {
-                const itemEl = evt.item; const toList = evt.to;
+                const itemEl = evt.item; 
+                const toList = evt.to;
                 const projetoId = itemEl.getAttribute('data-id');
                 const novoStatus = toList.getAttribute('data-status');
 
-                if(projetoId && novoStatus) {
-                    try { await firestore.setDoc(firestore.doc(db, "projetos", projetoId), { status_crm: novoStatus }, { merge: true }); } 
-                    catch (e) { console.error("Erro ao mover card:", e); }
+                if (projetoId && novoStatus && bdProjetos[projetoId]) {
+                    // Atualiza localmente primeiro (feedback imediato)
+                    bdProjetos[projetoId].status_crm = novoStatus;
+                    
+                    // Atualiza contadores
+                    atualizarContadoresKanban();
+                    
+                    try { 
+                        await firestore.setDoc(
+                            firestore.doc(db, "projetos", projetoId), 
+                            { status_crm: novoStatus }, 
+                            { merge: true }
+                        ); 
+                        showToast('Pipeline atualizado ✓', 'success');
+                    } catch (e) { 
+                        console.error("Erro ao mover card:", e); 
+                        showToast('Erro ao salvar. Tente novamente.', 'danger');
+                    }
                 }
             },
         });
+        _sortableInstances.push(inst);
     });
 }
+
+function atualizarContadoresKanban() {
+    const contar = (colId) => document.getElementById(colId)?.querySelectorAll('.kanban-card').length || 0;
+    const countNeg = document.getElementById('count-negociacao');
+    const countAnd = document.getElementById('count-andamento');
+    const countConc = document.getElementById('count-concluido');
+    if (countNeg) countNeg.textContent = contar('col-negociacao');
+    if (countAnd) countAnd.textContent = contar('col-andamento');
+    if (countConc) countConc.textContent = contar('col-concluidos');
+}
+
+/* ========================================================= */
+/* DOSSIÊ CONFIDENCIAL — SAÚDE / CONTRATOS                   */
+/* ========================================================= */
+function verificarAcessoDossie(resourceOwnerId) {
+    const role = window.userRole || 'Estagiário';
+    const emailAtual = localStorage.getItem('cadarn_user_email') || '';
+    if (role === 'Sócio' || role === 'RH') return true;
+    // Dono pode ver o próprio dossie
+    const primeiroNome = (usuarioLogado || '').split(' ')[0].toLowerCase();
+    if (resourceOwnerId && resourceOwnerId.toLowerCase().includes(primeiroNome)) return true;
+    return false;
+}
+
+async function salvarDossie(nomeColaborador, dados) {
+    if (!verificarAcessoDossie(nomeColaborador)) {
+        showToast('Acesso Negado: Apenas Sócios e RH podem editar dossiês.', 'danger');
+        return;
+    }
+    try {
+        await firestore.setDoc(
+            firestore.doc(db, "dossies", nomeColaborador.replace(/\s+/g, '_')), 
+            { ...dados, atualizadoEm: Date.now(), atualizadoPor: usuarioLogado }, 
+            { merge: true }
+        );
+        showToast('Dossiê salvo com segurança.', 'success');
+    } catch(e) {
+        showToast('Erro ao salvar dossiê.', 'danger');
+    }
+}
+
+async function abrirDossieColaborador(nomeColaborador) {
+    if (!verificarAcessoDossie(nomeColaborador)) {
+        const msg = document.createElement('div');
+        msg.innerHTML = `<div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(220,53,69,0.15);border:1px solid rgba(220,53,69,0.4);border-radius:16px;padding:40px;text-align:center;z-index:99999;color:#fff;">
+            <div style="font-size:40px;margin-bottom:15px;">🔒</div>
+            <h3 style="font-weight:800;margin-bottom:10px;">Acesso Negado</h3>
+            <p style="color:var(--cadarn-cinza);font-size:13px;">Dossiês confidenciais são restritos a Sócios, RH e ao próprio colaborador.</p>
+            <button onclick="this.closest('div').parentElement.remove()" style="margin-top:15px;padding:10px 20px;background:rgba(220,53,69,0.3);border:1px solid rgba(220,53,69,0.5);color:#fff;border-radius:8px;cursor:pointer;">Fechar</button>
+        </div><div onclick="this.parentElement.remove()" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.6);z-index:99998;"></div>`;
+        document.body.appendChild(msg);
+        return;
+    }
+    
+    // Busca dados do dossiê no Firebase
+    let dossieData = {};
+    try {
+        const { getDoc } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js");
+        const snap = await getDoc(firestore.doc(db, "dossies", nomeColaborador.replace(/\s+/g, '_')));
+        if (snap.exists()) dossieData = snap.data();
+    } catch(e) { console.warn('Dossie não encontrado:', e); }
+    
+    const modalEl = document.createElement('div');
+    modalEl.id = 'modal-dossie';
+    modalEl.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.8);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);';
+    modalEl.onclick = (e) => { if(e.target === modalEl) modalEl.remove(); };
+    
+    const canEdit = window.userRole === 'Sócio' || window.userRole === 'RH';
+    
+    modalEl.innerHTML = `
+        <div style="background:rgba(10,10,15,0.99);border:1px solid rgba(255,193,7,0.2);border-radius:20px;padding:35px;width:90%;max-width:600px;max-height:85vh;overflow-y:auto;" onclick="event.stopPropagation()">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:25px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:20px;">
+                <div>
+                    <div style="font-size:11px;color:#ffc107;text-transform:uppercase;font-weight:800;letter-spacing:2px;margin-bottom:8px;">🔒 Dossiê Confidencial</div>
+                    <h2 style="font-size:24px;font-weight:800;color:#fff;">${sanitize(nomeColaborador)}</h2>
+                </div>
+                <button onclick="document.getElementById('modal-dossie').remove()" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#fff;width:35px;height:35px;border-radius:50%;cursor:pointer;font-size:16px;">✕</button>
+            </div>
+            
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:25px;">
+                <div>
+                    <label style="font-size:10px;color:var(--cadarn-cinza);text-transform:uppercase;font-weight:700;display:block;margin-bottom:6px;">📅 Data de Admissão</label>
+                    <input type="date" id="dossie-admissao" value="${dossieData.admissao || ''}" ${!canEdit ? 'readonly' : ''} style="width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);color:#fff;padding:10px;border-radius:8px;font-size:13px;">
+                </div>
+                <div>
+                    <label style="font-size:10px;color:var(--cadarn-cinza);text-transform:uppercase;font-weight:700;display:block;margin-bottom:6px;">📋 Tipo de Contrato</label>
+                    <select id="dossie-contrato" ${!canEdit ? 'disabled' : ''} style="width:100%;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.1);color:#fff;padding:10px;border-radius:8px;font-size:13px;">
+                        <option value="" ${!dossieData.tipoContrato ? 'selected' : ''}>Selecione...</option>
+                        <option value="CLT" ${dossieData.tipoContrato === 'CLT' ? 'selected' : ''}>CLT</option>
+                        <option value="PJ" ${dossieData.tipoContrato === 'PJ' ? 'selected' : ''}>PJ</option>
+                        <option value="Estagio" ${dossieData.tipoContrato === 'Estagio' ? 'selected' : ''}>Estágio</option>
+                        <option value="Freelancer" ${dossieData.tipoContrato === 'Freelancer' ? 'selected' : ''}>Freelancer</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div style="margin-bottom:20px;">
+                <label style="font-size:10px;color:var(--cadarn-cinza);text-transform:uppercase;font-weight:700;display:block;margin-bottom:6px;">📝 Observações de Saúde / Bem-estar</label>
+                <textarea id="dossie-saude" ${!canEdit ? 'readonly' : ''} placeholder="Informações médicas relevantes, alergias, restrições..." style="width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);color:#fff;padding:10px;border-radius:8px;font-size:13px;resize:vertical;min-height:80px;">${dossieData.observacoesSaude || ''}</textarea>
+            </div>
+            
+            <div style="margin-bottom:25px;">
+                <label style="font-size:10px;color:var(--cadarn-cinza);text-transform:uppercase;font-weight:700;display:block;margin-bottom:10px;">📎 Documentos Anexados</label>
+                <div id="dossie-docs-list" style="margin-bottom:10px;">
+                    ${(dossieData.documentos || []).map(d => `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(255,255,255,0.04);border-radius:8px;margin-bottom:6px;font-size:12px;color:#c5a3ff;">📄 ${sanitize(d.nome)} <span style="color:var(--cadarn-cinza);font-size:10px;">${new Date(d.data).toLocaleDateString('pt-BR')}</span></div>`).join('')}
+                    ${(dossieData.documentos || []).length === 0 ? '<p style="font-size:12px;color:var(--cadarn-cinza);">Nenhum documento anexado.</p>' : ''}
+                </div>
+                ${canEdit ? `<input type="file" id="dossie-file-upload" accept=".pdf,.doc,.docx,.jpg,.png" style="display:none" onchange="processarArquivoDossie(event, '${sanitize(nomeColaborador)}')">
+                <button onclick="document.getElementById('dossie-file-upload').click()" style="padding:8px 16px;background:rgba(131,46,255,0.15);border:1px solid rgba(131,46,255,0.3);color:#c5a3ff;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;">📎 Anexar PDF / Exame</button>` : ''}
+            </div>
+            
+            ${canEdit ? `<button onclick="salvarDossieForm('${sanitize(nomeColaborador)}')" style="width:100%;padding:14px;background:linear-gradient(135deg,#832EFF,#420a9a);border:none;color:#fff;border-radius:10px;cursor:pointer;font-size:14px;font-weight:800;letter-spacing:0.5px;">💾 Salvar Dossiê</button>` : '<p style="text-align:center;font-size:12px;color:var(--cadarn-cinza);">Visualização apenas. Contate RH para atualizações.</p>'}
+            
+            ${dossieData.atualizadoPor ? `<div style="text-align:center;margin-top:10px;font-size:10px;color:rgba(255,255,255,0.2);">Última atualização por ${sanitize(dossieData.atualizadoPor)}</div>` : ''}
+        </div>
+    `;
+    document.body.appendChild(modalEl);
+}
+
+async function salvarDossieForm(nomeColaborador) {
+    const dados = {
+        admissao: document.getElementById('dossie-admissao')?.value || '',
+        tipoContrato: document.getElementById('dossie-contrato')?.value || '',
+        observacoesSaude: document.getElementById('dossie-saude')?.value || '',
+    };
+    await salvarDossie(nomeColaborador, dados);
+}
+
+async function processarArquivoDossie(event, nomeColaborador) {
+    const file = event.target.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { showToast('Arquivo muito grande (máx 5MB).', 'danger'); return; }
+    
+    showToast(`Anexando "${file.name}"...`, 'info');
+    // Em produção: fazer upload para Firebase Storage e salvar URL
+    // Por ora: salva metadados localmente
+    const docMeta = { nome: file.name, data: Date.now(), tipo: file.type };
+    
+    try {
+        const { getDoc } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js");
+        const snap = await getDoc(firestore.doc(db, "dossies", nomeColaborador.replace(/\s+/g, '_')));
+        const existing = snap.exists() ? snap.data() : {};
+        const docs = [...(existing.documentos || []), docMeta];
+        await salvarDossie(nomeColaborador, { documentos: docs });
+        
+        const list = document.getElementById('dossie-docs-list');
+        if (list) {
+            list.innerHTML += `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(255,255,255,0.04);border-radius:8px;margin-bottom:6px;font-size:12px;color:#c5a3ff;">📄 ${sanitize(file.name)} <span style="color:var(--cadarn-cinza);font-size:10px;">Agora</span></div>`;
+        }
+    } catch(e) { showToast('Erro ao salvar documento.', 'danger'); }
+}
+
+window.abrirDossieColaborador = abrirDossieColaborador;
+window.salvarDossieForm = salvarDossieForm;
+window.processarArquivoDossie = processarArquivoDossie;
+
 
 // ==========================================
 // CONTROLE DO MODAL DE PROJETOS
@@ -257,6 +451,15 @@ function novoProjetoSocio() {
 
     const elLider = document.getElementById('modal-lider');
     if (elLider) elLider.value = usuarioLogado;
+    
+    // Ativa validação em tempo real
+    setTimeout(() => {
+        ['modal-proj-nome', 'modal-proj-cliente', 'modal-lider', 'modal-desc'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('input', validarFormularioProjeto);
+        });
+        validarFormularioProjeto(); // Estado inicial
+    }, 100);
     
     const elVisivel = document.getElementById('modal-proj-visivel');
     if (elVisivel) elVisivel.checked = false;
@@ -349,6 +552,123 @@ function adicionarNovaTarefaModal() {
 
 function atualizarEtapaMemoria(idx, campo, valor) { if(etapasTemporarias[idx]) etapasTemporarias[idx][campo] = valor; }
 function removerEtapaMemoria(idx) { etapasTemporarias.splice(idx, 1); renderTarefasModalTemporario(); }
+
+/* ========================================================= */
+/* BOTÃO REVISAR + NUVEM DE TAGS COM IA                      */
+/* ========================================================= */
+function validarFormularioProjeto() {
+    const nome = document.getElementById('modal-proj-nome')?.value?.trim();
+    const cliente = document.getElementById('modal-proj-cliente')?.value?.trim();
+    const desc = document.getElementById('modal-desc')?.value?.trim();
+    const lider = document.getElementById('modal-lider')?.value?.trim();
+    
+    const btnRevisar = document.getElementById('btn-revisar-ia');
+    const btnSalvar = document.querySelector('[onclick="salvarProjetoSocio()"]');
+    
+    const isValid = nome && cliente && lider;
+    
+    if (btnSalvar) {
+        btnSalvar.disabled = !isValid;
+        btnSalvar.style.opacity = isValid ? '1' : '0.5';
+        btnSalvar.style.cursor = isValid ? 'pointer' : 'not-allowed';
+    }
+    if (btnRevisar) {
+        btnRevisar.disabled = !desc;
+        btnRevisar.style.opacity = desc ? '1' : '0.5';
+    }
+    return isValid;
+}
+
+async function revisarProjetoComIA() {
+    const desc = document.getElementById('modal-desc')?.value?.trim();
+    const nome = document.getElementById('modal-proj-nome')?.value?.trim() || '';
+    const tags = document.getElementById('modal-tags')?.value?.trim() || '';
+    const categoria = tags.split(',').pop().trim() || 'Consultoria';
+    
+    if (!desc) { showToast('Escreva uma descrição para gerar a nuvem de tags.', 'warning'); return; }
+    
+    const btnRevisar = document.getElementById('btn-revisar-ia');
+    if (btnRevisar) { btnRevisar.disabled = true; btnRevisar.textContent = '🔄 Analisando...'; }
+    
+    const tagContainer = document.getElementById('tag-cloud-container');
+    if (tagContainer) tagContainer.innerHTML = '<div style="text-align:center;padding:20px;color:var(--cadarn-cinza);font-size:12px;">🤖 IA extraindo palavras-chave...</div>';
+    
+    try {
+        const prompt = `Analise o seguinte escopo de projeto e extraia 6 a 8 palavras-chave estratégicas que representam os principais temas, competências e entregas. Responda APENAS com um JSON no formato: {"tags": ["palavra1", "palavra2", ...]}. A última tag deve sempre ser a categoria mais ampla do projeto (ex: "Estratégia", "Financeiro", "TI", "RH", "Marketing"). Escopo: "${desc.substring(0, 800)}"`;
+        
+        const response = await fetch("https://api.anthropic.com/v1/messages", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                model: "claude-sonnet-4-20250514",
+                max_tokens: 300,
+                messages: [{ role: "user", content: prompt }]
+            })
+        });
+        
+        const data = await response.json();
+        let rawText = (data.content || []).map(b => b.text || '').join('');
+        
+        // Parse JSON da resposta
+        const match = rawText.match(/\{[\s\S]*\}/);
+        if (!match) throw new Error('Formato inválido');
+        
+        const parsed = JSON.parse(match[0]);
+        let keywordTags = parsed.tags || [];
+        
+        // Garante que a última tag é a categoria
+        if (categoria && !keywordTags.includes(categoria)) {
+            keywordTags = [...keywordTags.slice(0, -1), categoria];
+        }
+        
+        renderTagCloud(keywordTags, tagContainer);
+        
+        // Atualiza o campo de tags com as novas tags
+        const tagsInput = document.getElementById('modal-tags');
+        if (tagsInput) tagsInput.value = keywordTags.join(', ');
+        
+        showToast('✨ Tags geradas pela IA com sucesso!', 'success');
+        
+    } catch(e) {
+        console.error('Erro ao gerar tags:', e);
+        // Fallback: extrai palavras da descrição manualmente
+        const palavras = desc.toLowerCase()
+            .replace(/[^a-záàãâéêíóôõúüç\s]/g, ' ')
+            .split(/\s+/)
+            .filter(p => p.length > 4)
+            .slice(0, 6)
+            .map(p => p.charAt(0).toUpperCase() + p.slice(1));
+        palavras.push(categoria);
+        renderTagCloud(palavras, tagContainer);
+        showToast('Tags extraídas localmente (IA indisponível).', 'info');
+    } finally {
+        if (btnRevisar) { btnRevisar.disabled = false; btnRevisar.textContent = '✨ Revisar com IA'; }
+    }
+}
+
+function renderTagCloud(tags, container) {
+    if (!container) return;
+    const cores = ['#832EFF', '#c5a3ff', '#47e299', '#ffc107', '#ff8793', '#20c997', '#4cc9f0'];
+    
+    const sizes = [18, 16, 20, 15, 17, 14, 16, 20]; // últimas tags maiores
+    
+    let html = '<div style="display:flex;flex-wrap:wrap;gap:8px;padding:15px 0;justify-content:center;">';
+    tags.forEach((tag, i) => {
+        const isCategoria = i === tags.length - 1;
+        const cor = isCategoria ? '#FFC107' : cores[i % cores.length];
+        const fsize = isCategoria ? 20 : sizes[i % sizes.length];
+        const weight = isCategoria ? 900 : 600;
+        const border = isCategoria ? '2px solid rgba(255,193,7,0.5)' : `1px solid ${cor}33`;
+        html += `<span style="font-size:${fsize}px;color:${cor};font-weight:${weight};border:${border};padding:5px 12px;border-radius:20px;background:${cor}11;transition:0.2s;cursor:default;" title="${isCategoria ? 'Categoria do Projeto' : 'Keyword'}">${sanitize(tag)}${isCategoria ? ' 🏷️' : ''}</span>`;
+    });
+    html += '</div>';
+    html += '<div style="font-size:10px;color:var(--cadarn-cinza);text-align:center;margin-top:5px;">Clique em "Salvar" para aplicar estas tags ao projeto</div>';
+    container.innerHTML = html;
+}
+
+window.revisarProjetoComIA = revisarProjetoComIA;
+window.validarFormularioProjeto = validarFormularioProjeto;
+
 
 async function salvarProjetoSocio() {
     if (!projetoModalAberto) return;
@@ -722,7 +1042,16 @@ function renderCalendario() {
                 `;
             });
         }
-        html += `<div class="calendar-day ${isHoje}"><div class="calendar-date">${i}</div>${tarefasHtml}</div>`;
+        // Projetos ativos neste dia (deadline ou kickoff)
+        const projsNoDia = Object.entries(bdProjetos).filter(([id, proj]) => {
+            if (proj.arquivado) return false;
+            return (proj.etapas || []).some(t => t.prazo === dataKey);
+        });
+        const hasProjs = projsNoDia.length > 0;
+        const projDataAttr = hasProjs ? `data-datekey="${dataKey}"` : '';
+        const clickHandler = hasProjs ? `onclick="abrirModalDiaCalendario('${dataKey}')" style="cursor:pointer;"` : '';
+        
+        html += `<div class="calendar-day ${isHoje} ${hasProjs ? 'has-events' : ''}" ${projDataAttr} ${clickHandler}><div class="calendar-date">${i}${hasProjs ? `<span style="float:right; font-size:9px; background:rgba(131,46,255,0.3); color:#c5a3ff; padding:1px 5px; border-radius:10px; font-weight:700;">${projsNoDia.length}</span>` : ''}</div>${tarefasHtml}</div>`;
     }
 
     const diasFaltando = 42 - (indexPrimeiroDia + diasNoMes);
@@ -731,6 +1060,73 @@ function renderCalendario() {
     }
     calendarBody.innerHTML = html;
 }
+
+/* ========================================================= */
+/* MODAL DO DIA DO CALENDÁRIO                                 */
+/* ========================================================= */
+function abrirModalDiaCalendario(dataKey) {
+    const [ano, mes, dia] = dataKey.split('-');
+    const dataFormatada = `${dia}/${mes}/${ano}`;
+    
+    // Coleta todos os projetos e tarefas do dia
+    let items = [];
+    for (const [id, proj] of Object.entries(bdProjetos)) {
+        if (proj.arquivado) continue;
+        const tarefasDoDia = (proj.etapas || []).filter(t => t.prazo === dataKey);
+        tarefasDoDia.forEach(t => {
+            items.push({ projId: id, projNome: proj.nome, projCliente: proj.cliente, tarefa: t });
+        });
+    }
+    
+    if (items.length === 0) return;
+    
+    // Remove modal anterior
+    const old = document.getElementById('modal-dia-calendario');
+    if (old) old.remove();
+    
+    let tarefasHtml = items.map(item => {
+        const statusCor = item.tarefa.status === 'concluido' ? '#47e299' : (item.tarefa.status === 'ativo' ? '#b68aff' : '#ffc107');
+        const statusLabel = item.tarefa.status === 'concluido' ? '✅ Concluído' : (item.tarefa.status === 'ativo' ? '🔵 Ativo' : '⏳ Pendente');
+        return `
+        <div style="padding:12px; background:rgba(255,255,255,0.03); border-radius:10px; border-left:3px solid ${statusCor}; cursor:pointer; transition:0.2s;" onclick="abrirModalProjeto('${item.projId}'); fecharModalDiaCalendario();" onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background='rgba(255,255,255,0.03)'">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
+                <strong style="font-size:13px; color:#fff;">${sanitize(item.tarefa.titulo)}</strong>
+                <span style="font-size:10px; color:${statusCor}; font-weight:700;">${statusLabel}</span>
+            </div>
+            <div style="font-size:11px; color:var(--cadarn-cinza);">📁 ${sanitize(item.projNome)} · ${sanitize(item.projCliente)}</div>
+            ${item.tarefa.responsavel ? `<div style="font-size:11px; color:var(--cadarn-cinza); margin-top:3px;">👤 ${sanitize(item.tarefa.responsavel)}</div>` : ''}
+        </div>`;
+    }).join('');
+    
+    const modal = document.createElement('div');
+    modal.id = 'modal-dia-calendario';
+    modal.style.cssText = 'position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.7); z-index:99999; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(5px);';
+    modal.onclick = (e) => { if (e.target === modal) fecharModalDiaCalendario(); };
+    modal.innerHTML = `
+        <div style="background:rgba(15,15,20,0.98); border:1px solid rgba(255,255,255,0.1); border-radius:20px; padding:30px; width:90%; max-width:500px; max-height:80vh; overflow-y:auto;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <div>
+                    <div style="font-size:11px; color:var(--cadarn-cinza); text-transform:uppercase; font-weight:700; letter-spacing:1px;">📅 Agenda do Dia</div>
+                    <h3 style="font-size:22px; font-weight:800; color:#fff; margin-top:5px;">${dataFormatada}</h3>
+                </div>
+                <button onclick="fecharModalDiaCalendario()" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; width:35px; height:35px; border-radius:50%; cursor:pointer; font-size:16px;">✕</button>
+            </div>
+            <div style="font-size:11px; color:var(--cadarn-cinza); text-transform:uppercase; font-weight:700; letter-spacing:0.5px; margin-bottom:12px;">${items.length} entrega${items.length > 1 ? 's' : ''} mapeada${items.length > 1 ? 's' : ''}</div>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+                ${tarefasHtml}
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+function fecharModalDiaCalendario() {
+    const m = document.getElementById('modal-dia-calendario');
+    if (m) m.remove();
+}
+
+window.abrirModalDiaCalendario = abrirModalDiaCalendario;
+window.fecharModalDiaCalendario = fecharModalDiaCalendario;
 
 // Funções definitivas de navegação do calendário
 function mudarMes(delta) {
@@ -1267,7 +1663,64 @@ function renderReuniaoSlide() {
     }
 }
 
+/* ========================================================= */
+/* LISTA DE DOSSIÊS                                           */
+/* ========================================================= */
+function renderDossieList() {
+    const container = document.getElementById('dossie-colab-list');
+    if (!container) return;
+    
+    const canAccess = window.userRole === 'Sócio' || window.userRole === 'RH';
+    
+    if (!canAccess) {
+        container.innerHTML = `
+            <div style="grid-column:1/-1; text-align:center; padding:40px; color:var(--cadarn-cinza);">
+                <div style="font-size:40px; margin-bottom:15px;">🔒</div>
+                <h3 style="font-weight:700; color:#fff; margin-bottom:10px;">Acesso Restrito</h3>
+                <p style="font-size:13px;">Esta área é exclusiva para Sócios e RH.</p>
+            </div>`;
+        return;
+    }
+    
+    let html = '';
+    const colabs = listaColaboradores;
+    
+    colabs.forEach(nome => {
+        const conf = bdColabs[nome] || {};
+        const primeiroNome = nome.split(' ')[0];
+        const iniciais = nome.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase();
+        html += `
+        <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:20px;cursor:pointer;transition:0.2s;" 
+             onmouseover="this.style.borderColor='rgba(255,193,7,0.3)'" 
+             onmouseout="this.style.borderColor='rgba(255,255,255,0.06)'"
+             onclick="abrirDossieColaborador('${nome}')">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+                <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#832EFF,#420a9a);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:#fff;flex-shrink:0;">${iniciais}</div>
+                <div>
+                    <div style="font-weight:700;font-size:14px;color:#fff;">${sanitize(nome)}</div>
+                    <div style="font-size:11px;color:var(--cadarn-cinza);">Colaborador(a)</div>
+                </div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:11px;color:#ffc107;background:rgba(255,193,7,0.1);border:1px solid rgba(255,193,7,0.2);padding:4px 10px;border-radius:20px;font-weight:700;">🔒 Ver Dossiê</span>
+            </div>
+        </div>`;
+    });
+    
+    container.innerHTML = html || '<p style="color:var(--cadarn-cinza);">Nenhum colaborador cadastrado.</p>';
+}
+
 // Expõe as funções globalmente para o HTML enxergar
+window.abrirDossieColaborador = abrirDossieColaborador;
+window.salvarDossieForm = salvarDossieForm;
+window.processarArquivoDossie = processarArquivoDossie;
+window.abrirModalDiaCalendario = abrirModalDiaCalendario;
+window.fecharModalDiaCalendario = fecharModalDiaCalendario;
+window.revisarProjetoComIA = revisarProjetoComIA;
+window.validarFormularioProjeto = validarFormularioProjeto;
+window.atualizarContadoresKanban = atualizarContadoresKanban;
+window.renderDossieList = renderDossieList;
+window.switchTab = switchTab;
 window.abrirModoReuniao = abrirModoReuniao;
 window.fecharModoReuniao = fecharModoReuniao;
 window.reuniaoNextSlide = reuniaoNextSlide;
