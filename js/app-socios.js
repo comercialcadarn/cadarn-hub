@@ -1310,12 +1310,15 @@ async function importarDados(event, tipo) {
                 descricao: rowData[3]?.trim(),
                 tags: rowData[4] ? rowData[4].split(';').map(s=>s.trim()) : [],
                 equipeAtual: rowData[7] ? rowData[7].split(';').map(s=>s.trim()) : [],
-                licoes: rowData[8]?.trim() || "Ainda em andamento.", // Nova coluna Mapeada!
+                licoes: rowData[8]?.trim() || "Ainda em andamento.", 
                 etapas: etapasProcessadas,
                 status_crm: tipo === 'pipe' ? 'negociacao' : 'andamento',
-                visivelHub: true, // Já vem visível para você ver os Gantts da equipe
+                visivelHub: true, 
                 arquivado: false,
-                dataCriacao: Date.now()
+                dataCriacao: Date.now(),
+                valorContrato: Number(rowData[9]) || 0,
+                horasOrcadas: Number(rowData[10]) || 0,
+                horasReais: Number(rowData[11]) || 0
             };
 
             try {
