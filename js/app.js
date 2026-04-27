@@ -910,7 +910,7 @@ function renderMainProjects() {
                 </div>
             </div>`;
         } else {
-            const cardHtml = `<div class="kanban-card" onclick="abrirProjeto('${sanitize(id)}')"><div style="display:flex; justify-content:space-between; align-items:flex-start;"><div class="kanban-card-title">${sanitize(proj.nome)}</div>${slaBadge}</div><div class="kanban-card-meta">${sanitize(proj.cliente)}</div><div style="margin-top: 10px;">${tagsHtml}</div><div style="margin-top: 10px; border-top: 1px solid rgba(131, 46, 255, 0.1); padding-top: 10px; font-size: 11px; color: var(--cadarn-cinza);">Líder: ${sanitize(proj.lider)}</div></div>`;
+            const cardHtml = `<div class="kanban-card" data-id="${sanitize(id)}" onclick="abrirProjeto('${sanitize(id)}')"><div style="display:flex; justify-content:space-between; align-items:flex-start;"><div class="kanban-card-title">${sanitize(proj.nome)}</div>${slaBadge}</div><div class="kanban-card-meta">${sanitize(proj.cliente)}</div><div style="margin-top: 10px;">${tagsHtml}</div><div style="margin-top: 10px; border-top: 1px solid rgba(131, 46, 255, 0.1); padding-top: 10px; font-size: 11px; color: var(--cadarn-cinza);">Líder: ${sanitize(proj.lider)}</div></div>`;
             if(statusGeral === 'pendente') kanbanAguardando += cardHtml; else if(statusGeral === 'ativo') kanbanAtivos += cardHtml; else kanbanConcluidos += cardHtml;
         }
     }
@@ -918,7 +918,22 @@ function renderMainProjects() {
     if (modoVisualizacao === 'list') { 
         container.innerHTML = listaNormal || '<p style="color:var(--cadarn-cinza); font-size: 13px; padding: 15px;">Nenhum projeto encontrado.</p>'; 
     } else if (modoVisualizacao === 'kanban') { 
-        container.innerHTML = `<div class="kanban-board"><div class="kanban-col"><div class="kanban-col-header">Aguardando <span class="status-dot dot-pendente" style="margin:0;"></span></div>${kanbanAguardando || '<div style="color:var(--cadarn-cinza); font-size:12px;">Vazio</div>'}</div><div class="kanban-col" style="background: rgba(182, 138, 255, 0.05); border-color: rgba(182, 138, 255, 0.2);"><div class="kanban-col-header" style="color: #b68aff;">Em Execução <span class="status-dot dot-ativo" style="margin:0;"></span></div>${kanbanAtivos || '<div style="color:var(--cadarn-cinza); font-size:12px;">Vazio</div>'}</div><div class="kanban-col" style="background: rgba(71, 226, 153, 0.05); border-color: rgba(71, 226, 153, 0.2);"><div class="kanban-col-header" style="color: #47e299;">Concluídos <span class="status-dot dot-concluido" style="margin:0;"></span></div>${kanbanConcluidos || '<div style="color:var(--cadarn-cinza); font-size:12px;">Vazio</div>'}</div></div>`; 
+        container.innerHTML = `
+            <div class="kanban-board">
+                <div class="kanban-col">
+                    <div class="kanban-col-header">Aguardando <span class="status-dot dot-pendente" style="margin:0;"></span></div>
+                    <div class="hub-kanban-dropzone" id="hub-col-pendente" data-status="pendente">${kanbanAguardando || '<div class="kanban-no-drag" style="color:var(--cadarn-cinza); font-size:12px;">Vazio</div>'}</div>
+                </div>
+                <div class="kanban-col" style="background: rgba(182, 138, 255, 0.05); border-color: rgba(182, 138, 255, 0.2);">
+                    <div class="kanban-col-header" style="color: #b68aff;">Em Execução <span class="status-dot dot-ativo" style="margin:0;"></span></div>
+                    <div class="hub-kanban-dropzone" id="hub-col-ativo" data-status="ativo">${kanbanAtivos || '<div class="kanban-no-drag" style="color:var(--cadarn-cinza); font-size:12px;">Vazio</div>'}</div>
+                </div>
+                <div class="kanban-col" style="background: rgba(71, 226, 153, 0.05); border-color: rgba(71, 226, 153, 0.2);">
+                    <div class="kanban-col-header" style="color: #47e299;">Concluídos <span class="status-dot dot-concluido" style="margin:0;"></span></div>
+                    <div class="hub-kanban-dropzone" id="hub-col-concluido" data-status="concluido">${kanbanConcluidos || '<div class="kanban-no-drag" style="color:var(--cadarn-cinza); font-size:12px;">Vazio</div>'}</div>
+                </div>
+            </div>`;
+        inicializarSortableHub();
     }
     
     atualizarDashboard(); 
@@ -2053,6 +2068,57 @@ window.onload = () => {
         setTimeout(() => concluirProgressBar(progressBar), 400);
     }).catch(() => concluirProgressBar(progressBar));
 };
+
+let _sortableHubInstances = [];
+
+function inicializarSortableHub() {
+    _sortableHubInstances.forEach(s => s.destroy());
+    _sortableHubInstances = [];
+
+    const role = window.userRole || 'Estagiário';
+    const isEstagiario = role === 'Estagiário';
+
+    document.querySelectorAll('.hub-kanban-dropzone').forEach(col => {
+        const inst = new Sortable(col, {
+            group: 'hub_kanban',
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            filter: '.kanban-no-drag',
+            disabled: isEstagiario, // Bloqueia arraste para estagiários
+            onEnd: async function (evt) {
+                const id = evt.item.getAttribute('data-id');
+                const novoStatus = evt.to.getAttribute('data-status');
+                const proj = bdProjetos[id];
+
+                if (proj && novoStatus) {
+                    // Atualiza o estado das etapas para refletir o movimento no Hub
+                    if (novoStatus === 'concluido') {
+                        proj.etapas.forEach(e => e.status = 'concluido');
+                        if (!proj.dataConclusao) proj.dataConclusao = Date.now();
+                    } else if (novoStatus === 'ativo') {
+                        if (!proj.etapas.some(e => e.status === 'ativo')) {
+                            const pendente = proj.etapas.find(e => e.status === 'pendente');
+                            if (pendente) pendente.status = 'ativo';
+                        }
+                        proj.dataConclusao = null;
+                    } else { // pendente
+                        proj.etapas.forEach(e => { if (e.status === 'ativo') e.status = 'pendente'; });
+                        proj.dataConclusao = null;
+                    }
+                    
+                    showToast(`Status atualizado para ${novoStatus}`, 'success');
+                    if (navigator.onLine) syncProjetoNuvem(id);
+                    renderMainProjects(); // Re-renderiza para atualizar contadores e cores
+                }
+            }
+        });
+        _sortableHubInstances.push(inst);
+    });
+
+    if (isEstagiario) {
+        showToast("Visualização restrita: Arraste desativado para estagiários.", "info");
+    }
+}
 
 // =========================================================
 // EXPORTANDO FUNÇÕES PARA O HTML ENXERGAR
