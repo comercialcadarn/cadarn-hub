@@ -70,7 +70,7 @@ function podeVerDadosFinanceiros() {
 function podeVerDossie(resourceOwnerId) {
     const role = window.userRole || 'Estagiário';
     const emailAtual = localStorage.getItem('cadarn_user_email') || '';
-    if (role === 'Sócio' || role === 'RH') return true;
+    if (role === 'Sócio' || role === 'RH' || role === 'DEV') return true;
     if (resourceOwnerId && emailAtual.includes(resourceOwnerId)) return true;
     return false;
 }
@@ -201,7 +201,6 @@ function iniciarListeners() {
         renderRiskReport();
         renderHubMetas();
 
-        // Mostra o briefing uma vez, após os dados reais carregarem
         if (!window._briefingMostrado && usuarioLogado) {
             window._briefingMostrado = true;
             if (navigator.onLine) document.getElementById('offline-banner').style.display = 'none';
