@@ -1275,7 +1275,8 @@ async function importarDados(event, tipo) {
     const reader = new FileReader();
     reader.onload = async (e) => {
         const text = e.target.result;
-        const rows = text.split('\n');
+        const textLimpo = text.replace(/^\uFEFF/, '');
+        const rows = textLimpo.split('\n');
         
         let processados = 0;
         
