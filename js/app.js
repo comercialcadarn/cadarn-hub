@@ -2,31 +2,38 @@
 /* NÚCLEO DE AUTENTICAÇÃO E SINCRONIZAÇÃO FIREBASE (V2)      */
 /* ========================================================= */
 
+/* ========================================================= */
+/* MATRIZ DE PERMISSÕES RBAC (ROLE-BASED ACCESS CONTROL)     */
+/* ========================================================= */
 const emailsSocios = [
     'debora.yuan@cadarnconsultoria.com.br',
     'felipe.penido@cadarnconsultoria.com.br',
     'leonardo.assis@cadarnconsultoria.com.br',
-    'juliana.deoracki@cadarnconsultoria.com.br',
+    'juliana.deoracki@cadarnconsultoria.com.br'
+];
+const emailsDEV = [
     'victor.mendes@cadarnconsultoria.com.br'
 ];
-
-/* ========================================================= */
-/* MATRIZ DE PERMISSÕES RBAC                                  */
-/* ========================================================= */
 const emailsRH = [
-    // Adicione emails de colaboradores de RH aqui
-    // Ex: 'fulano@cadarnconsultoria.com.br'
+    'barbara.figueiredo@cadarnconsultoria.com.br'
 ];
 const emailsAnalistas = [
-    // Adicione emails de analistas sêniores aqui
+    'ana.bittencourt@cadarnconsultoria.com.br',
+    'louise.varela@cadarnconsultoria.com.br',
+    'maria.macedo@cadarnconsultoria.com.br',
+    'rafaela.avila@cadarnconsultoria.com.br',
+    'stefano.miceli@cadarnconsultoria.com.br',
+    'susana.vicentin@cadarnconsultoria.com.br'
 ];
 
 function getUserRole(email) {
     if (!email) return 'Visitante';
     const e = email.toLowerCase().trim();
     if (emailsSocios.includes(e)) return 'Sócio';
+    if (emailsDEV.includes(e)) return 'DEV';
     if (emailsRH.includes(e)) return 'RH';
     if (emailsAnalistas.includes(e)) return 'Analista';
+    // Se não é nenhum dos cargos acima, mas tem e-mail da empresa, é Estagiário
     if (e.endsWith('@cadarnconsultoria.com.br')) return 'Estagiário';
     return 'Visitante';
 }
@@ -34,34 +41,30 @@ function getUserRole(email) {
 function aplicarPermissoesRBAC() {
     const role = window.userRole || 'Estagiário';
     
-    // Botão Área do Sócio: visível apenas para Sócios
+    // Botão Área do Sócio: visível apenas para Sócios, DEV e RH
     const btnSocio = document.querySelector('button[onclick="acessarAreaSocio()"]');
-    if (btnSocio) btnSocio.style.display = (role === 'Sócio') ? '' : 'none';
-    
-    // Visão Executiva (dados financeiros): só Sócios e RH
-    const secaoFinanceira = document.querySelector('.visao-executiva-wrapper');
-    if (secaoFinanceira && role === 'Estagiário') {
-        const kpiTotal = document.getElementById('kpi-total');
-        if (kpiTotal) kpiTotal.closest('.visao-stats') && (kpiTotal.closest('.visao-stats').style.display = 'none');
+    if (btnSocio) {
+        btnSocio.style.display = (role === 'Sócio' || role === 'DEV' || role === 'RH') ? '' : 'none';
     }
     
-    // Tags de filtro: Estagiários só veem projetos onde participam
-    window._rbacFiltragemAtiva = (role === 'Estagiário' || role === 'Analista');
+    window._rbacFiltragemAtiva = (role === 'Estagiário');
 }
 
 function podeEditarProjeto() {
     const role = window.userRole || 'Estagiário';
-    return role === 'Sócio' || role === 'RH' || role === 'Analista';
+    // Sócios, DEV, RH e Analistas podem editar. Estagiário APENAS visualiza.
+    return role === 'Sócio' || role === 'DEV' || role === 'RH' || role === 'Analista';
 }
 
 function podeDeletarProjeto() {
     const role = window.userRole || 'Estagiário';
-    return role === 'Sócio';
+    // Apenas Sócio e DEV podem arquivar/excluir
+    return role === 'Sócio' || role === 'DEV';
 }
 
 function podeVerDadosFinanceiros() {
     const role = window.userRole || 'Estagiário';
-    return role === 'Sócio';
+    return role === 'Sócio' || role === 'DEV';
 }
 
 function podeVerDossie(resourceOwnerId) {
@@ -169,11 +172,13 @@ function acessarAreaSocio() {
         showToast("Sessão expirada. Faça login novamente.", "warning");
         logout(); return;
     }
-    const emailFormatado = emailAtual.toLowerCase().trim();
-    if (emailsSocios.includes(emailFormatado)) {
+    const role = getUserRole(emailAtual);
+    
+    // Libera a passagem apenas para o Alto Escalão
+    if (role === 'Sócio' || role === 'DEV' || role === 'RH') {
         window.location.href = 'socios.html';
     } else {
-        showToast("Acesso negado. Área restrita a sócios diretivos.", "danger");
+        showToast("Acesso negado. Sua credencial não permite entrar nesta área.", "danger");
     }
 }
 
