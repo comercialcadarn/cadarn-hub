@@ -841,10 +841,23 @@ function renderMainProjects() {
     }
     
     if (modoVisualizacao === 'lixeira') {
+        const idsArquivados = Object.keys(bdProjetos).filter(id => bdProjetos[id].arquivado);
+        const todosSelecionados = selectedLixeiraItems.size === idsArquivados.length && idsArquivados.length > 0;
+
         let lixeiraHtml = `
-            <div class="lixeira-controls">
-                <button class="sp-btn-edit" style="background: transparent; border-color: var(--cadarn-roxo); color: var(--cadarn-roxo);" onclick="toggleSelectModeLixeira()">${isSelectModeLixeira ? 'Cancelar Seleção' : '☑️ Selecionar Vários'}</button>
-                ${isSelectModeLixeira ? `<button id="btn-delete-selected" class="sp-btn-edit" style="background: rgba(220, 53, 69, 0.2); border-color: #dc3545; color: #ff8793; opacity: 0.5;" disabled onclick="deleteSelectedLixeira()">🗑️ Apagar Selecionados (0)</button>` : ''}
+            <div class="lixeira-controls" style="display:flex; gap:10px;">
+                <button class="sp-btn-edit" style="background: transparent; border-color: var(--cadarn-roxo); color: var(--cadarn-roxo);" onclick="toggleSelectModeLixeira()">
+                    ${isSelectModeLixeira ? 'Cancelar Seleção' : '☑️ Selecionar Vários'}
+                </button>
+                
+                ${isSelectModeLixeira ? `
+                    <button class="tag-filter-btn" onclick="toggleSelectAllLixeira()">
+                        ${todosSelecionados ? 'Desmarcar Tudo' : '✅ Selecionar Tudo'}
+                    </button>
+                    <button id="btn-delete-selected" class="sp-btn-edit" style="background: rgba(220, 53, 69, 0.2); border-color: #dc3545; color: #ff8793; opacity: ${selectedLixeiraItems.size === 0 ? '0.5' : '1'};" ${selectedLixeiraItems.size === 0 ? 'disabled' : ''} onclick="deleteSelectedLixeira()">
+                        🗑️ Apagar Selecionados (${selectedLixeiraItems.size})
+                    </button>
+                ` : ''}
             </div>
         `;
         let temItemLixeira = false;
@@ -2216,6 +2229,18 @@ async function arquivarSelecionadosHub() {
     renderMainProjects();
 }
 
+function toggleSelectAllLixeira() {
+    const idsArquivados = Object.keys(bdProjetos).filter(id => bdProjetos[id].arquivado);
+    
+    if (selectedLixeiraItems.size === idsArquivados.length) {
+        selectedLixeiraItems.clear();
+    } else {
+        idsArquivados.forEach(id => selectedLixeiraItems.add(id));
+    }
+    renderMainProjects();
+}
+
+window.toggleSelectAllLixeira = toggleSelectAllLixeira;
 // =========================================================
 // EXPORTANDO FUNÇÕES PARA O HTML ENXERGAR
 // =========================================================
