@@ -285,6 +285,8 @@ let isSelectModeLixeira = false;
 let selectedLixeiraItems = new Set();
 let presentationSlides = [];
 let currentSlideIndex = 0;
+let isSelectModeHub = false;
+let selectedHubItems = new Set();
 
 function autoDetectGender(name) {
     const first = name.toLowerCase().split(' ')[0];
@@ -807,6 +809,26 @@ function renderMainProjects() {
         </span>`;
     }
 
+    // Injeta os botões de seleção em massa ao lado dos filtros
+    const canBatchEdit = podeDeletarProjeto(); // Sócio ou DEV
+    if (canBatchEdit && modoVisualizacao !== 'roadmap' && modoVisualizacao !== 'equipe' && modoVisualizacao !== 'lixeira') {
+        const totalVisiveis = Object.keys(bdProjetos).filter(id => !bdProjetos[id].arquivado && bdProjetos[id].visivelHub).length;
+        const textoSelecionar = selectedHubItems.size === totalVisiveis ? 'Desmarcar Tudo' : '☑️ Selecionar Tudo';
+        
+        filterHtml += `
+            <div style="margin-left: auto; display: flex; gap: 8px; align-items: center;">
+                <button class="tag-filter-btn" style="background: rgba(131,46,255,0.15); color: #c5a3ff; border-color: var(--cadarn-roxo);" onclick="toggleSelectAllHub()">
+                    ${textoSelecionar}
+                </button>
+                ${selectedHubItems.size > 0 ? `
+                    <button class="sp-btn-edit" style="background: rgba(220, 53, 69, 0.2); border-color: #dc3545; color: #ff8793; padding: 6px 15px;" onclick="arquivarSelecionadosHub()">
+                        📥 Enviar para Lixeira (${selectedHubItems.size})
+                    </button>
+                ` : ''}
+            </div>
+        `;
+    }
+    
     filterContainer.innerHTML = filterHtml;
     
     let kanbanAguardando = ''; let kanbanAtivos = ''; let kanbanConcluidos = ''; let listaNormal = '';
@@ -896,22 +918,47 @@ function renderMainProjects() {
         
         const tagsHtml = (proj.tags || []).map(t => `<span class="tag-pill">${sanitize(t)}</span>`).join('');
         
+        const checkboxHtml = canBatchEdit ? `
+            <div style="margin-right: 15px;" onclick="event.stopPropagation()">
+                <input type="checkbox" style="width:18px; height:18px; accent-color: var(--cadarn-roxo); cursor: pointer;" 
+                       ${selectedHubItems.has(id) ? 'checked' : ''} 
+                       onchange="toggleHubItem('${id}')">
+            </div>
+        ` : '';
+
         if (modoVisualizacao === 'list') {
             listaNormal += `<div class="project-row" onclick="abrirProjeto('${sanitize(id)}')">
-                <div>
-                    <div style="font-weight: 500; font-size: 15px; margin-bottom: 5px; display:flex; align-items:center;">${sanitize(proj.nome)} ${slaBadge}</div>
-                    <div style="display:flex; flex-wrap:wrap; margin-bottom:5px;">${tagsHtml}</div>
-                    <div style="font-size: 12px; color: var(--cadarn-cinza);">Cliente: ${sanitize(proj.cliente)} • Líder: ${sanitize(proj.lider)}</div>
-                </div>
-                <div style="font-size: 13px; color: ${statusGeral === 'concluido' ? '#47e299' : (statusGeral === 'ativo' ? '#b68aff' : '#666')}; display: flex; align-items: center; font-weight: 500; cursor:pointer;" 
-                     onclick="event.stopPropagation(); filtrarPorStatus('${statusGeral}')" 
-                     title="Filtrar por: ${labelStatus}">
-                    <span class="status-dot dot-${statusGeral}"></span> ${labelStatus}
+                <div style="display:flex; align-items:center; width:100%;">
+                    ${checkboxHtml}
+                    <div style="flex-grow:1;">
+                        <div style="font-weight: 500; font-size: 15px; margin-bottom: 5px; display:flex; align-items:center;">${sanitize(proj.nome)} ${slaBadge}</div>
+                        <div style="display:flex; flex-wrap:wrap; margin-bottom:5px;">${tagsHtml}</div>
+                        <div style="font-size: 12px; color: var(--cadarn-cinza);">Cliente: ${sanitize(proj.cliente)} • Líder: ${sanitize(proj.lider)}</div>
+                    </div>
+                    <div style="font-size: 13px; color: ${statusGeral === 'concluido' ? '#47e299' : (statusGeral === 'ativo' ? '#b68aff' : '#666')}; display: flex; align-items: center; font-weight: 500; cursor:pointer;" 
+                         onclick="event.stopPropagation(); filtrarPorStatus('${statusGeral}')" 
+                         title="Filtrar por: ${labelStatus}">
+                        <span class="status-dot dot-${statusGeral}"></span> ${labelStatus}
+                    </div>
                 </div>
             </div>`;
         } else {
-            const cardHtml = `<div class="kanban-card" data-id="${sanitize(id)}" onclick="abrirProjeto('${sanitize(id)}')"><div style="display:flex; justify-content:space-between; align-items:flex-start;"><div class="kanban-card-title">${sanitize(proj.nome)}</div>${slaBadge}</div><div class="kanban-card-meta">${sanitize(proj.cliente)}</div><div style="margin-top: 10px;">${tagsHtml}</div><div style="margin-top: 10px; border-top: 1px solid rgba(131, 46, 255, 0.1); padding-top: 10px; font-size: 11px; color: var(--cadarn-cinza);">Líder: ${sanitize(proj.lider)}</div></div>`;
-            if(statusGeral === 'pendente') kanbanAguardando += cardHtml; else if(statusGeral === 'ativo') kanbanAtivos += cardHtml; else kanbanConcluidos += cardHtml;
+            const cardHtml = `
+            <div class="kanban-card" data-id="${sanitize(id)}" onclick="abrirProjeto('${sanitize(id)}')">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <div style="display:flex; align-items:flex-start;">
+                        ${checkboxHtml}
+                        <div class="kanban-card-title">${sanitize(proj.nome)}</div>
+                    </div>
+                    ${slaBadge}
+                </div>
+                <div class="kanban-card-meta">${sanitize(proj.cliente)}</div>
+                <div style="margin-top: 10px;">${tagsHtml}</div>
+                <div style="margin-top: 10px; border-top: 1px solid rgba(131, 46, 255, 0.1); padding-top: 10px; font-size: 11px; color: var(--cadarn-cinza);">Líder: ${sanitize(proj.lider)}</div>
+            </div>`;
+            if(statusGeral === 'pendente') kanbanAguardando += cardHtml; 
+            else if(statusGeral === 'ativo') kanbanAtivos += cardHtml; 
+            else kanbanConcluidos += cardHtml;
         }
     }
 
@@ -2072,7 +2119,7 @@ window.onload = () => {
 let _sortableHubInstances = [];
 
 function inicializarSortableHub() {
-    _sortableHubInstances.forEach(s => s.destroy());
+    _sortableHubInstances.forEach(s => { try { s.destroy(); } catch(e) {} });
     _sortableHubInstances = [];
 
     const role = window.userRole || 'Estagiário';
@@ -2084,14 +2131,16 @@ function inicializarSortableHub() {
             animation: 150,
             ghostClass: 'sortable-ghost',
             filter: '.kanban-no-drag',
-            disabled: isEstagiario, // Bloqueia arraste para estagiários
+            disabled: isEstagiario, // Estagiário não arrasta
+            preventOnFilter: false,
+            delay: 50, // Previne clique acidental ao tentar arrastar
+            delayOnTouchOnly: true,
             onEnd: async function (evt) {
                 const id = evt.item.getAttribute('data-id');
                 const novoStatus = evt.to.getAttribute('data-status');
                 const proj = bdProjetos[id];
 
                 if (proj && novoStatus) {
-                    // Atualiza o estado das etapas para refletir o movimento no Hub
                     if (novoStatus === 'concluido') {
                         proj.etapas.forEach(e => e.status = 'concluido');
                         if (!proj.dataConclusao) proj.dataConclusao = Date.now();
@@ -2101,24 +2150,77 @@ function inicializarSortableHub() {
                             if (pendente) pendente.status = 'ativo';
                         }
                         proj.dataConclusao = null;
-                    } else { // pendente
+                    } else { 
                         proj.etapas.forEach(e => { if (e.status === 'ativo') e.status = 'pendente'; });
                         proj.dataConclusao = null;
                     }
                     
                     showToast(`Status atualizado para ${novoStatus}`, 'success');
-                    if (navigator.onLine) syncProjetoNuvem(id);
-                    renderMainProjects(); // Re-renderiza para atualizar contadores e cores
+                    
+                    // Salva no LocalStorage imediatamente
+                    localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos));
+                    
+                    if (navigator.onLine) {
+                        try {
+                            const { doc, setDoc } = firestore;
+                            await setDoc(doc(db, "projetos", id), proj, { merge: true });
+                        } catch(e) { console.error("Erro ao salvar:", e); }
+                    }
+                    
+                    // Pequeno atraso antes de re-renderizar para a animação de soltar fluir
+                    setTimeout(renderMainProjects, 100);
                 }
             }
         });
         _sortableHubInstances.push(inst);
     });
-
+}
     if (isEstagiario) {
         showToast("Visualização restrita: Arraste desativado para estagiários.", "info");
     }
 }
+function toggleHubItem(id) {
+    if (selectedHubItems.has(id)) selectedHubItems.delete(id);
+    else selectedHubItems.add(id);
+    renderMainProjects();
+}
+
+function toggleSelectAllHub() {
+    const todosVisiveisIds = Object.keys(bdProjetos).filter(id => {
+        const p = bdProjetos[id];
+        return !p.arquivado && p.visivelHub && (filtroAtual === 'Todos' || (p.tags || []).includes(filtroAtual));
+    });
+
+    if (selectedHubItems.size === todosVisiveisIds.length) {
+        selectedHubItems.clear(); // Desmarcar tudo
+    } else {
+        todosVisiveisIds.forEach(id => selectedHubItems.add(id)); // Marcar tudo
+    }
+    renderMainProjects();
+}
+
+async function arquivarSelecionadosHub() {
+    if (selectedHubItems.size === 0) return;
+    const ids = Array.from(selectedHubItems);
+    
+    ids.forEach(id => { bdProjetos[id].arquivado = true; });
+    localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos));
+    
+    showToast(`${ids.length} projetos movidos para a lixeira.`, 'warning');
+    
+    if (navigator.onLine && firestore.doc) {
+        try {
+            await Promise.all(ids.map(id => firestore.setDoc(firestore.doc(db, "projetos", id), { arquivado: true }, { merge: true })));
+        } catch(e) { console.error("Erro ao arquivar na nuvem", e); }
+    }
+    
+    selectedHubItems.clear();
+    renderMainProjects();
+}
+
+window.toggleHubItem = toggleHubItem;
+window.toggleSelectAllHub = toggleSelectAllHub;
+window.arquivarSelecionadosHub = arquivarSelecionadosHub;
 
 // =========================================================
 // EXPORTANDO FUNÇÕES PARA O HTML ENXERGAR
