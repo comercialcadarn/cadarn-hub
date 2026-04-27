@@ -494,6 +494,8 @@ function abrirModalProjeto(id) {
     renderTarefasModalTemporario();
     const modal = document.getElementById('modal-projeto');
     if (modal) modal.classList.add('active');
+
+    setTimeout(validarFormularioProjeto, 200);
 }
 
 function fecharModalProjeto(e) {
@@ -563,7 +565,7 @@ function validarFormularioProjeto() {
     const lider = document.getElementById('modal-lider')?.value?.trim();
     
     const btnRevisar = document.getElementById('btn-revisar-ia');
-    const btnSalvar = document.querySelector('[onclick="salvarProjetoSocio()"]');
+    const btnSalvar = document.getElementById('btn-salvar-definitivo');
     
     const isValid = nome && cliente && lider;
     
