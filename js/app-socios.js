@@ -110,7 +110,7 @@ function iniciarListeners() {
 }
 
 function switchTab(tab) {
-    const views = ['projetos', 'pessoas', 'cronograma', 'calendario', 'dossie'];
+    const views = ['projetos', 'pessoas', 'cronograma', 'calendario', 'dossie', 'financeiro'];
     
     // 1. Esconde todas as telas
     views.forEach(v => {
@@ -142,6 +142,7 @@ function switchTab(tab) {
             if(tab === 'cronograma') renderCronograma('gantt-master-container', filtroResponsavel);
         if(tab === 'dossie') renderDossieList();
             if(tab === 'calendario') renderCalendario();
+            if(tab === 'financeiro') renderFinanceiroPremium();
         }, 50);
     }
 }
@@ -1708,7 +1709,149 @@ function renderDossieList() {
     
     container.innerHTML = html || '<p style="color:var(--cadarn-cinza);">Nenhum colaborador cadastrado.</p>';
 }
+// Variáveis globais para armazenar as instâncias do Chart.js
+let chartReceitaInstance = null;
+let chartMargemInstance = null;
 
+function renderFinanceiroPremium() {
+    let projetosFinanceiros = [];
+    let totalFee = 0;
+    let totalCusto = 0;
+    
+    // 1. Mineração de Dados
+    Object.entries(bdProjetos).forEach(([id, proj]) => {
+        if (proj.arquivado || proj.status_crm === 'concluido') return;
+        
+        const fee = proj.valorContrato || 0;
+        const custoHoras = (proj.horasReais || 0) * 150; // Custo hora estimado base R$150
+        const margemPct = fee > 0 ? ((fee - custoHoras) / fee) * 100 : 0;
+        
+        totalFee += fee;
+        totalCusto += custoHoras;
+
+        projetosFinanceiros.push({
+            nome: proj.nome,
+            cliente: proj.cliente,
+            fee: fee,
+            custo: custoHoras,
+            margem: margemPct,
+            status: proj.status_crm
+        });
+    });
+
+    // Ordena do maior contrato para o menor
+    projetosFinanceiros.sort((a, b) => b.fee - a.fee);
+
+    // 2. Renderizar Tabela
+    const tbody = document.getElementById('financeiro-tabela-body');
+    if (tbody) {
+        if (projetosFinanceiros.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:var(--cadarn-cinza);">Nenhum dado financeiro de projetos ativos.</td></tr>';
+        } else {
+            tbody.innerHTML = projetosFinanceiros.map(p => {
+                const margemColor = p.margem >= 40 ? '#47e299' : (p.margem >= 20 ? '#ffc107' : '#ff8793');
+                return `
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.03); transition: 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+                    <td style="padding: 15px 20px; color: white; font-weight: 600;">${sanitize(p.nome)} <br><span style="font-size:10px; color:var(--cadarn-cinza); font-weight:400;">${sanitize(p.cliente)}</span></td>
+                    <td style="padding: 15px 20px; color: #FFC107; font-family: 'Outfit', sans-serif; font-weight: 700;">R$ ${p.fee.toLocaleString('pt-BR')}</td>
+                    <td style="padding: 15px 20px; color: #ff8793; font-family: 'Outfit', sans-serif; font-weight: 600;">R$ ${p.custo.toLocaleString('pt-BR')}</td>
+                    <td style="padding: 15px 20px; color: ${margemColor}; font-weight: 700;">${p.margem.toFixed(1)}%</td>
+                    <td style="padding: 15px 20px; text-transform: uppercase; font-size: 10px; color: var(--cadarn-cinza);">${p.status}</td>
+                </tr>
+                `;
+            }).join('');
+        }
+    }
+
+    // 3. Renderizar Gráfico de Barras (Receita vs Custo - Top 5)
+    const ctxReceita = document.getElementById('chart-receita-custo');
+    if (ctxReceita) {
+        if (chartReceitaInstance) chartReceitaInstance.destroy();
+        
+        const top5 = projetosFinanceiros.slice(0, 5);
+        chartReceitaInstance = new Chart(ctxReceita, {
+            type: 'bar',
+            data: {
+                labels: top5.map(p => p.nome.substring(0, 15) + '...'),
+                datasets: [
+                    {
+                        label: 'Fee (Receita)',
+                        data: top5.map(p => p.fee),
+                        backgroundColor: 'rgba(255, 193, 7, 0.8)',
+                        borderRadius: 4
+                    },
+                    {
+                        label: 'Custo Base',
+                        data: top5.map(p => p.custo),
+                        backgroundColor: 'rgba(220, 53, 69, 0.8)',
+                        borderRadius: 4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { ticks: { color: '#a1a1aa' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    x: { ticks: { color: '#a1a1aa', font: {size: 10} }, grid: { display: false } }
+                },
+                plugins: { legend: { labels: { color: '#fff' } } }
+            }
+        });
+    }
+
+    // 4. Renderizar Gráfico de Margem Geral (Doughnut)
+    const ctxMargem = document.getElementById('chart-margem-geral');
+    if (ctxMargem) {
+        if (chartMargemInstance) chartMargemInstance.destroy();
+        
+        let saudaveis = 0, atencao = 0, criticos = 0;
+        projetosFinanceiros.forEach(p => {
+            if(p.fee > 0) {
+                if(p.margem >= 40) saudaveis++;
+                else if (p.margem >= 20) atencao++;
+                else criticos++;
+            }
+        });
+
+        chartMargemInstance = new Chart(ctxMargem, {
+            type: 'doughnut',
+            data: {
+                labels: ['+40% (Saudável)', '20-40% (Atenção)', '<20% (Crítico)'],
+                datasets: [{
+                    data: [saudaveis, atencao, criticos],
+                    backgroundColor: ['#47e299', '#ffc107', '#dc3545'],
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '70%',
+                plugins: { legend: { position: 'bottom', labels: { color: '#a1a1aa', boxWidth: 10, font: {size: 10} } } }
+            }
+        });
+    }
+
+    // 5. Gerar Insight Dinâmico
+    const insightBox = document.getElementById('financeiro-insight-texto');
+    if (insightBox) {
+        const margemGeral = totalFee > 0 ? ((totalFee - totalCusto) / totalFee) * 100 : 0;
+        let texto = '';
+        
+        if (totalFee === 0) {
+            texto = "O portfólio não possui contratos com valores preenchidos. Preencha os valores nas configurações dos projetos para gerar insights.";
+        } else if (margemGeral < 25) {
+            texto = `⚠️ **ALERTA DE RENTABILIDADE:** A margem média do portfólio está em apenas <span style="color:#ff8793;">${margemGeral.toFixed(1)}%</span>. Os custos de horas alocadas estão consumindo agressivamente os Fees. Ação recomendada: Revisar escopos dos top projetos.`;
+        } else if (margemGeral >= 25 && margemGeral < 45) {
+            texto = `⚖️ **PORTFÓLIO ESTÁVEL:** A margem média do portfólio está em <span style="color:#FFC107;">${margemGeral.toFixed(1)}%</span>. O volume está bom, mas há espaço para otimização de tempo em projetos de delivery longo.`;
+        } else {
+            texto = `🚀 **PERFORMANCE EXCELENTE:** A margem média do portfólio está em impressionantes <span style="color:#47e299;">${margemGeral.toFixed(1)}%</span>. A relação de esforço/hora versus precificação está altamente lucrativa no momento.`;
+        }
+        insightBox.innerHTML = texto.replace(/\*\*(.*?)\*\*/g, '<strong style="color:white;">$1</strong>');
+    }
+}
 // Expõe as funções globalmente para o HTML enxergar
 window.abrirDossieColaborador = abrirDossieColaborador;
 window.salvarDossieForm = salvarDossieForm;
@@ -1724,3 +1867,4 @@ window.abrirModoReuniao = abrirModoReuniao;
 window.fecharModoReuniao = fecharModoReuniao;
 window.reuniaoNextSlide = reuniaoNextSlide;
 window.reuniaoPrevSlide = reuniaoPrevSlide;
+window.renderFinanceiroPremium = renderFinanceiroPremium;
