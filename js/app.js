@@ -2116,6 +2116,9 @@ window.onload = () => {
     }).catch(() => concluirProgressBar(progressBar));
 };
 
+/* ========================================================= */
+/* MOTOR DE DRAG AND DROP (HUB) E SELEÇÃO EM LOTE            */
+/* ========================================================= */
 let _sortableHubInstances = [];
 
 function inicializarSortableHub() {
@@ -2133,7 +2136,7 @@ function inicializarSortableHub() {
             filter: '.kanban-no-drag',
             disabled: isEstagiario,
             preventOnFilter: false,
-            delay: 50, // Previne clique acidental de abrir o projeto ao arrastar
+            delay: 50, 
             delayOnTouchOnly: true,
             onEnd: async function (evt) {
                 const id = evt.item.getAttribute('data-id');
@@ -2187,9 +2190,9 @@ function toggleSelectAllHub() {
     });
 
     if (selectedHubItems.size === todosVisiveisIds.length) {
-        selectedHubItems.clear(); // Desmarcar tudo se já estiver tudo marcado
+        selectedHubItems.clear(); 
     } else {
-        todosVisiveisIds.forEach(id => selectedHubItems.add(id)); // Marcar todos os visíveis
+        todosVisiveisIds.forEach(id => selectedHubItems.add(id)); 
     }
     renderMainProjects();
 }
