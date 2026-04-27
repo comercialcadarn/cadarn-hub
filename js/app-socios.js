@@ -382,24 +382,27 @@ async function abrirDossieColaborador(nomeColaborador) {
     const canEdit = window.userRole === 'Sócio' || window.userRole === 'RH';
     
     modalEl.innerHTML = `
-        <div style="background:rgba(10,10,15,0.99);border:1px solid rgba(255,193,7,0.2);border-radius:20px;padding:35px;width:90%;max-width:600px;max-height:85vh;overflow-y:auto;" onclick="event.stopPropagation()">
+        <div id="dossie-modal-box" style="background:rgba(10,10,15,0.99);border:1px solid rgba(255,193,7,0.2);border-radius:20px;padding:35px;width:90%;max-width:600px;max-height:85vh;overflow-y:auto;" onclick="event.stopPropagation()">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:25px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:20px;">
                 <div>
                     <div style="font-size:11px;color:#ffc107;text-transform:uppercase;font-weight:800;letter-spacing:2px;margin-bottom:8px;">🔒 Dossiê Confidencial</div>
                     <h2 style="font-size:24px;font-weight:800;color:#fff;">${sanitize(nomeColaborador)}</h2>
                 </div>
-                <button onclick="document.getElementById('modal-dossie').remove()" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#fff;width:35px;height:35px;border-radius:50%;cursor:pointer;font-size:16px;">✕</button>
+                <div style="display: flex; gap: 10px;">
+                    ${canEdit ? `<button id="btn-toggle-edit-dossie" onclick="toggleEditDossie()" style="background:rgba(131,46,255,0.15); border:1px solid rgba(131,46,255,0.3); color:#c5a3ff; padding: 8px 16px; border-radius:8px; cursor:pointer; font-size:12px; font-weight:700;">✏️ Editar Informações</button>` : ''}
+                    <button onclick="document.getElementById('modal-dossie').remove()" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#fff;width:35px;height:35px;border-radius:50%;cursor:pointer;font-size:16px;">✕</button>
+                </div>
             </div>
             
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:25px;">
                 <div>
                     <label style="font-size:10px;color:var(--cadarn-cinza);text-transform:uppercase;font-weight:700;display:block;margin-bottom:6px;">📅 Data de Admissão</label>
-                    <input type="date" id="dossie-admissao" value="${dossieData.admissao || ''}" ${!canEdit ? 'readonly' : ''} style="width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);color:#fff;padding:10px;border-radius:8px;font-size:13px;">
+                    <input type="date" id="dossie-admissao" class="dossie-field" value="${dossieData.admissao || ''}" readonly style="width:100%;background:rgba(255,255,255,0.02);border:1px solid transparent;color:#fff;padding:10px;border-radius:8px;font-size:14px;outline:none;transition:0.3s;">
                 </div>
                 <div>
                     <label style="font-size:10px;color:var(--cadarn-cinza);text-transform:uppercase;font-weight:700;display:block;margin-bottom:6px;">📋 Tipo de Contrato</label>
-                    <select id="dossie-contrato" ${!canEdit ? 'disabled' : ''} style="width:100%;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.1);color:#fff;padding:10px;border-radius:8px;font-size:13px;">
-                        <option value="" ${!dossieData.tipoContrato ? 'selected' : ''}>Selecione...</option>
+                    <select id="dossie-contrato" class="dossie-field" disabled style="width:100%;background:rgba(255,255,255,0.02);border:1px solid transparent;color:#fff;padding:10px;border-radius:8px;font-size:14px;outline:none;transition:0.3s;-webkit-appearance:none;">
+                        <option value="" ${!dossieData.tipoContrato ? 'selected' : ''}>Não definido</option>
                         <option value="CLT" ${dossieData.tipoContrato === 'CLT' ? 'selected' : ''}>CLT</option>
                         <option value="PJ" ${dossieData.tipoContrato === 'PJ' ? 'selected' : ''}>PJ</option>
                         <option value="Estagio" ${dossieData.tipoContrato === 'Estagio' ? 'selected' : ''}>Estágio</option>
@@ -410,7 +413,7 @@ async function abrirDossieColaborador(nomeColaborador) {
             
             <div style="margin-bottom:20px;">
                 <label style="font-size:10px;color:var(--cadarn-cinza);text-transform:uppercase;font-weight:700;display:block;margin-bottom:6px;">📝 Observações de Saúde / Bem-estar</label>
-                <textarea id="dossie-saude" ${!canEdit ? 'readonly' : ''} placeholder="Informações médicas relevantes, alergias, restrições..." style="width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);color:#fff;padding:10px;border-radius:8px;font-size:13px;resize:vertical;min-height:80px;">${dossieData.observacoesSaude || ''}</textarea>
+                <textarea id="dossie-saude" class="dossie-field" readonly placeholder="Nenhuma observação registrada..." style="width:100%;background:rgba(255,255,255,0.02);border:1px solid transparent;color:#fff;padding:10px;border-radius:8px;font-size:14px;resize:none;min-height:80px;outline:none;transition:0.3s;">${dossieData.observacoesSaude || ''}</textarea>
             </div>
             
             <div style="margin-bottom:25px;">
@@ -419,13 +422,15 @@ async function abrirDossieColaborador(nomeColaborador) {
                     ${(dossieData.documentos || []).map(d => `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(255,255,255,0.04);border-radius:8px;margin-bottom:6px;font-size:12px;color:#c5a3ff;">📄 ${sanitize(d.nome)} <span style="color:var(--cadarn-cinza);font-size:10px;">${new Date(d.data).toLocaleDateString('pt-BR')}</span></div>`).join('')}
                     ${(dossieData.documentos || []).length === 0 ? '<p style="font-size:12px;color:var(--cadarn-cinza);">Nenhum documento anexado.</p>' : ''}
                 </div>
-                ${canEdit ? `<input type="file" id="dossie-file-upload" accept=".pdf,.doc,.docx,.jpg,.png" style="display:none" onchange="processarArquivoDossie(event, '${sanitize(nomeColaborador)}')">
-                <button onclick="document.getElementById('dossie-file-upload').click()" style="padding:8px 16px;background:rgba(131,46,255,0.15);border:1px solid rgba(131,46,255,0.3);color:#c5a3ff;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;">📎 Anexar PDF / Exame</button>` : ''}
+                <div id="dossie-upload-area" style="display:none;">
+                    <input type="file" id="dossie-file-upload" accept=".pdf,.doc,.docx,.jpg,.png" style="display:none" onchange="processarArquivoDossie(event, '${sanitize(nomeColaborador)}')">
+                    <button onclick="document.getElementById('dossie-file-upload').click()" style="padding:8px 16px;background:rgba(131,46,255,0.15);border:1px dashed rgba(131,46,255,0.5);color:#c5a3ff;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;width:100%;">📎 Clicar para Anexar PDF / Exame</button>
+                </div>
             </div>
             
-            ${canEdit ? `<button onclick="salvarDossieForm('${sanitize(nomeColaborador)}')" style="width:100%;padding:14px;background:linear-gradient(135deg,#832EFF,#420a9a);border:none;color:#fff;border-radius:10px;cursor:pointer;font-size:14px;font-weight:800;letter-spacing:0.5px;">💾 Salvar Dossiê</button>` : '<p style="text-align:center;font-size:12px;color:var(--cadarn-cinza);">Visualização apenas. Contate RH para atualizações.</p>'}
+            <button id="btn-salvar-dossie" onclick="salvarDossieForm('${sanitize(nomeColaborador)}')" style="display:none; width:100%;padding:14px;background:linear-gradient(135deg,#198754,#157347);border:none;color:#fff;border-radius:10px;cursor:pointer;font-size:14px;font-weight:800;letter-spacing:0.5px;box-shadow:0 4px 15px rgba(25,135,84,0.3);">💾 Confirmar e Salvar Alterações</button>
             
-            ${dossieData.atualizadoPor ? `<div style="text-align:center;margin-top:10px;font-size:10px;color:rgba(255,255,255,0.2);">Última atualização por ${sanitize(dossieData.atualizadoPor)}</div>` : ''}
+            ${dossieData.atualizadoPor ? `<div id="dossie-timestamp" style="text-align:center;margin-top:15px;font-size:10px;color:rgba(255,255,255,0.2);">Última atualização por ${sanitize(dossieData.atualizadoPor)}</div>` : ''}
         </div>
     `;
     document.body.appendChild(modalEl);
@@ -1889,7 +1894,71 @@ function renderFinanceiroPremium() {
         insightBox.innerHTML = texto.replace(/\*\*(.*?)\*\*/g, '<strong style="color:white;">$1</strong>');
     }
 }
-// Expõe as funções globalmente para o HTML enxergar
+let isDossieEditing = false;
+
+function toggleEditDossie() {
+    isDossieEditing = !isDossieEditing;
+    const fields = document.querySelectorAll('.dossie-field');
+    const btnSalvar = document.getElementById('btn-salvar-dossie');
+    const btnToggle = document.getElementById('btn-toggle-edit-dossie');
+    const uploadArea = document.getElementById('dossie-upload-area');
+    const box = document.getElementById('dossie-modal-box');
+
+    if (isDossieEditing) {
+        // Ativar modo edição
+        fields.forEach(f => {
+            f.removeAttribute('readonly');
+            f.removeAttribute('disabled');
+            f.style.background = 'rgba(0,0,0,0.5)';
+            f.style.border = '1px solid var(--cadarn-roxo)';
+            if (f.tagName === 'TEXTAREA') f.style.resize = 'vertical';
+        });
+        btnSalvar.style.display = 'block';
+        uploadArea.style.display = 'block';
+        btnToggle.innerHTML = '✕ Cancelar Edição';
+        btnToggle.style.color = '#ff8793';
+        btnToggle.style.borderColor = 'rgba(220,53,69,0.3)';
+        btnToggle.style.background = 'rgba(220,53,69,0.1)';
+        box.style.borderColor = 'var(--cadarn-roxo)';
+    } else {
+        // Voltar para visualização
+        fields.forEach(f => {
+            f.setAttribute('readonly', 'true');
+            f.setAttribute('disabled', 'true');
+            f.style.background = 'rgba(255,255,255,0.02)';
+            f.style.border = '1px solid transparent';
+            if (f.tagName === 'TEXTAREA') f.style.resize = 'none';
+        });
+        btnSalvar.style.display = 'none';
+        uploadArea.style.display = 'none';
+        btnToggle.innerHTML = '✏️ Editar Informações';
+        btnToggle.style.color = '#c5a3ff';
+        btnToggle.style.borderColor = 'rgba(131,46,255,0.3)';
+        btnToggle.style.background = 'rgba(131,46,255,0.15)';
+        box.style.borderColor = 'rgba(255,193,7,0.2)';
+    }
+}
+
+// Sobrescrevemos a salvarDossieForm para desligar o modo de edição ao salvar
+const salvarDossieOriginal = salvarDossieForm;
+window.salvarDossieForm = async function(nome) {
+    const btn = document.getElementById('btn-salvar-dossie');
+    btn.innerHTML = '⏳ Salvando...';
+    btn.disabled = true;
+    
+    const dados = {
+        admissao: document.getElementById('dossie-admissao')?.value || '',
+        tipoContrato: document.getElementById('dossie-contrato')?.value || '',
+        observacoesSaude: document.getElementById('dossie-saude')?.value || '',
+    };
+    await salvarDossie(nome, dados);
+    
+    btn.innerHTML = '💾 Confirmar e Salvar Alterações';
+    btn.disabled = false;
+    toggleEditDossie(); // Volta pro modo leitura automaticamente
+};
+
+window.toggleEditDossie = toggleEditDossie;
 window.abrirDossieColaborador = abrirDossieColaborador;
 window.salvarDossieForm = salvarDossieForm;
 window.processarArquivoDossie = processarArquivoDossie;
