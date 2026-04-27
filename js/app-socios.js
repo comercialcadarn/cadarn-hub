@@ -329,7 +329,7 @@ function atualizarContadoresKanban() {
 function verificarAcessoDossie(resourceOwnerId) {
     const role = window.userRole || 'Estagiário';
     const emailAtual = localStorage.getItem('cadarn_user_email') || '';
-    if (role === 'Sócio' || role === 'RH') return true;
+    if (role === 'Sócio' || role === 'RH' || role === 'DEV') return true;
     // Dono pode ver o próprio dossie
     const primeiroNome = (usuarioLogado || '').split(' ')[0].toLowerCase();
     if (resourceOwnerId && resourceOwnerId.toLowerCase().includes(primeiroNome)) return true;
@@ -1707,7 +1707,7 @@ function renderDossieList() {
     const container = document.getElementById('dossie-colab-list');
     if (!container) return;
     
-    const canAccess = window.userRole === 'Sócio' || window.userRole === 'RH';
+    const canAccess = window.userRole === 'Sócio' || window.userRole === 'RH' || window.userRole === 'DEV';
     
     if (!canAccess) {
         container.innerHTML = `
