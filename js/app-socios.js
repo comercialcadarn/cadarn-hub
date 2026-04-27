@@ -354,6 +354,7 @@ async function salvarDossie(nomeColaborador, dados) {
 }
 
 async function abrirDossieColaborador(nomeColaborador) {
+    window.isDossieEditing = false;
     if (!verificarAcessoDossie(nomeColaborador)) {
         const msg = document.createElement('div');
         msg.innerHTML = `<div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(220,53,69,0.15);border:1px solid rgba(220,53,69,0.4);border-radius:16px;padding:40px;text-align:center;z-index:99999;color:#fff;">
@@ -389,7 +390,7 @@ async function abrirDossieColaborador(nomeColaborador) {
                     <h2 style="font-size:24px;font-weight:800;color:#fff;">${sanitize(nomeColaborador)}</h2>
                 </div>
                 <div style="display: flex; gap: 10px;">
-                    ${canEdit ? `<button id="btn-toggle-edit-dossie" onclick="toggleEditDossie()" style="background:rgba(131,46,255,0.15); border:1px solid rgba(131,46,255,0.3); color:#c5a3ff; padding: 8px 16px; border-radius:8px; cursor:pointer; font-size:12px; font-weight:700;">✏️ Editar Informações</button>` : ''}
+                    ${canEdit ? `<button id="btn-toggle-edit-dossie" onclick="window.toggleEditDossie()" style="background:rgba(131,46,255,0.15); border:1px solid rgba(131,46,255,0.3); color:#c5a3ff; padding: 8px 16px; border-radius:8px; cursor:pointer; font-size:12px; font-weight:700;">✏️ Editar Informações</button>` : ''}
                     <button onclick="document.getElementById('modal-dossie').remove()" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#fff;width:35px;height:35px;border-radius:50%;cursor:pointer;font-size:16px;">✕</button>
                 </div>
             </div>
@@ -1894,18 +1895,22 @@ function renderFinanceiroPremium() {
         insightBox.innerHTML = texto.replace(/\*\*(.*?)\*\*/g, '<strong style="color:white;">$1</strong>');
     }
 }
-let isDossieEditing = false;
+// =========================================================
+// LÓGICA FINAL: CONTROLE DE EDIÇÃO E EXPOSIÇÃO GLOBAL
+// =========================================================
 
-function toggleEditDossie() {
-    isDossieEditing = !isDossieEditing;
+window.isDossieEditing = false;
+
+window.toggleEditDossie = function() {
+    window.isDossieEditing = !window.isDossieEditing;
     const fields = document.querySelectorAll('.dossie-field');
     const btnSalvar = document.getElementById('btn-salvar-dossie');
     const btnToggle = document.getElementById('btn-toggle-edit-dossie');
     const uploadArea = document.getElementById('dossie-upload-area');
     const box = document.getElementById('dossie-modal-box');
 
-    if (isDossieEditing) {
-        // Ativar modo edição
+    if (window.isDossieEditing) {
+        // MODO EDIÇÃO ATIVO
         fields.forEach(f => {
             f.removeAttribute('readonly');
             f.removeAttribute('disabled');
@@ -1913,15 +1918,17 @@ function toggleEditDossie() {
             f.style.border = '1px solid var(--cadarn-roxo)';
             if (f.tagName === 'TEXTAREA') f.style.resize = 'vertical';
         });
-        btnSalvar.style.display = 'block';
-        uploadArea.style.display = 'block';
-        btnToggle.innerHTML = '✕ Cancelar Edição';
-        btnToggle.style.color = '#ff8793';
-        btnToggle.style.borderColor = 'rgba(220,53,69,0.3)';
-        btnToggle.style.background = 'rgba(220,53,69,0.1)';
-        box.style.borderColor = 'var(--cadarn-roxo)';
+        if(btnSalvar) btnSalvar.style.display = 'block';
+        if(uploadArea) uploadArea.style.display = 'block';
+        if(btnToggle) {
+            btnToggle.innerHTML = '✕ Cancelar Edição';
+            btnToggle.style.color = '#ff8793';
+            btnToggle.style.borderColor = 'rgba(220,53,69,0.3)';
+            btnToggle.style.background = 'rgba(220,53,69,0.1)';
+        }
+        if(box) box.style.borderColor = 'var(--cadarn-roxo)';
     } else {
-        // Voltar para visualização
+        // VOLTAR PARA MODO LEITURA
         fields.forEach(f => {
             f.setAttribute('readonly', 'true');
             f.setAttribute('disabled', 'true');
@@ -1929,38 +1936,48 @@ function toggleEditDossie() {
             f.style.border = '1px solid transparent';
             if (f.tagName === 'TEXTAREA') f.style.resize = 'none';
         });
-        btnSalvar.style.display = 'none';
-        uploadArea.style.display = 'none';
-        btnToggle.innerHTML = '✏️ Editar Informações';
-        btnToggle.style.color = '#c5a3ff';
-        btnToggle.style.borderColor = 'rgba(131,46,255,0.3)';
-        btnToggle.style.background = 'rgba(131,46,255,0.15)';
-        box.style.borderColor = 'rgba(255,193,7,0.2)';
+        if(btnSalvar) btnSalvar.style.display = 'none';
+        if(uploadArea) uploadArea.style.display = 'none';
+        if(btnToggle) {
+            btnToggle.innerHTML = '✏️ Editar Informações';
+            btnToggle.style.color = '#c5a3ff';
+            btnToggle.style.borderColor = 'rgba(131,46,255,0.3)';
+            btnToggle.style.background = 'rgba(131,46,255,0.15)';
+        }
+        if(box) box.style.borderColor = 'rgba(255,193,7,0.2)';
     }
-}
+};
 
-// Sobrescrevemos a salvarDossieForm para desligar o modo de edição ao salvar
-const salvarDossieOriginal = salvarDossieForm;
-window.salvarDossieForm = async function(nome) {
+window.salvarDossieForm = async function(nomeColaborador) {
     const btn = document.getElementById('btn-salvar-dossie');
-    btn.innerHTML = '⏳ Salvando...';
-    btn.disabled = true;
+    if(btn) {
+        btn.innerHTML = '⏳ Salvando...';
+        btn.disabled = true;
+    }
     
     const dados = {
         admissao: document.getElementById('dossie-admissao')?.value || '',
         tipoContrato: document.getElementById('dossie-contrato')?.value || '',
         observacoesSaude: document.getElementById('dossie-saude')?.value || '',
     };
-    await salvarDossie(nome, dados);
-    
-    btn.innerHTML = '💾 Confirmar e Salvar Alterações';
-    btn.disabled = false;
-    toggleEditDossie(); // Volta pro modo leitura automaticamente
+
+    try {
+        await salvarDossie(nomeColaborador, dados);
+        showToast('Dossiê atualizado com sucesso!', 'success');
+        window.isDossieEditing = true; // Força para o toggle entender que deve fechar
+        window.toggleEditDossie(); 
+    } catch(e) {
+        showToast('Erro ao salvar dossiê.', 'danger');
+    } finally {
+        if(btn) {
+            btn.innerHTML = '💾 Confirmar e Salvar Alterações';
+            btn.disabled = false;
+        }
+    }
 };
 
-window.toggleEditDossie = toggleEditDossie;
+// EXPOSIÇÃO DE TODAS AS FUNÇÕES AO WINDOW (PARA O HTML ENXERGAR)
 window.abrirDossieColaborador = abrirDossieColaborador;
-window.salvarDossieForm = salvarDossieForm;
 window.processarArquivoDossie = processarArquivoDossie;
 window.abrirModalDiaCalendario = abrirModalDiaCalendario;
 window.fecharModalDiaCalendario = fecharModalDiaCalendario;
