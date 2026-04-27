@@ -15,9 +15,23 @@ const emailsSocios = [
     'debora.yuan@cadarnconsultoria.com.br',
     'felipe.penido@cadarnconsultoria.com.br',
     'leonardo.assis@cadarnconsultoria.com.br',
-    'juliana.deoracki@cadarnconsultoria.com.br',
+    'juliana.deoracki@cadarnconsultoria.com.br'
+];
+const emailsDEV = [
     'victor.mendes@cadarnconsultoria.com.br'
 ];
+const emailsRH = [
+    'barbara.figueiredo@cadarnconsultoria.com.br'
+];
+
+function getSocioRole(email) {
+    if (!email) return 'Visitante';
+    const e = email.toLowerCase().trim();
+    if (emailsSocios.includes(e)) return 'Sócio';
+    if (emailsDEV.includes(e)) return 'DEV';
+    if (emailsRH.includes(e)) return 'RH';
+    return 'Visitante'; // Barrado
+}
 
 let db;
 let firestore = {};
@@ -29,6 +43,7 @@ let projetoModalAberto = null;
 let isCriandoNovo = false;
 let etapasTemporarias = [];
 let usuarioLogado = localStorage.getItem('cadarn_user') || 'Sócio';
+window.userRole = getSocioRole(localStorage.getItem('cadarn_user_email') || '');
 
 // Controle do Calendário
 let dataAtualCalendario = new Date();
@@ -63,9 +78,12 @@ async function initSegurancaSocios() {
     const auth = getAuth(app);
 
     onAuthStateChanged(auth, (user) => {
-        if (!user || !emailsSocios.includes(user.email.toLowerCase().trim())) {
+        const role = getSocioRole(user ? user.email : '');
+        // Se não for Sócio, DEV ou RH, toma "kick" pra tela inicial
+        if (!user || role === 'Visitante') {
             window.location.href = 'index.html'; 
         } else {
+            window.userRole = role;
             document.getElementById('conteudo-restrito').style.display = 'block';
             iniciarUI();
             iniciarListeners();
@@ -86,6 +104,19 @@ function iniciarUI() {
         datalistLider.innerHTML = listaColaboradores.map(nome => `<option value="${nome}">`).join('');
     }
     setupAutocompleteMulti(document.getElementById("modal-equipe"), listaColaboradores);
+
+    // CORTA ACESSO FINANCEIRO DO RH
+    if (window.userRole === 'RH') {
+        const btnFinanceiro = document.getElementById('tab-btn-financeiro');
+        if (btnFinanceiro) btnFinanceiro.style.display = 'none';
+        
+        const barraFinanceiraTopo = document.querySelector('.financial-health-bar');
+        if (barraFinanceiraTopo) barraFinanceiraTopo.style.display = 'none';
+        
+        // Bloqueia a aba de inputs financeiros de contrato caso tentem editar
+        const campoFinContrato = document.getElementById('modal-valor-contrato');
+        if (campoFinContrato) campoFinContrato.parentElement.parentElement.style.display = 'none';
+    }
 }
 
 function iniciarListeners() {
