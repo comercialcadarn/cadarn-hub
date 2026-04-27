@@ -2131,9 +2131,9 @@ function inicializarSortableHub() {
             animation: 150,
             ghostClass: 'sortable-ghost',
             filter: '.kanban-no-drag',
-            disabled: isEstagiario, // Estagiário não arrasta
+            disabled: isEstagiario,
             preventOnFilter: false,
-            delay: 50, // Previne clique acidental ao tentar arrastar
+            delay: 50, // Previne clique acidental de abrir o projeto ao arrastar
             delayOnTouchOnly: true,
             onEnd: async function (evt) {
                 const id = evt.item.getAttribute('data-id');
@@ -2157,17 +2157,15 @@ function inicializarSortableHub() {
                     
                     showToast(`Status atualizado para ${novoStatus}`, 'success');
                     
-                    // Salva no LocalStorage imediatamente
                     localStorage.setItem('cadarn_projetos_db', JSON.stringify(bdProjetos));
                     
-                    if (navigator.onLine) {
+                    if (navigator.onLine && firestore.doc) {
                         try {
                             const { doc, setDoc } = firestore;
                             await setDoc(doc(db, "projetos", id), proj, { merge: true });
                         } catch(e) { console.error("Erro ao salvar:", e); }
                     }
                     
-                    // Pequeno atraso antes de re-renderizar para a animação de soltar fluir
                     setTimeout(renderMainProjects, 100);
                 }
             }
@@ -2175,10 +2173,7 @@ function inicializarSortableHub() {
         _sortableHubInstances.push(inst);
     });
 }
-    if (isEstagiario) {
-        showToast("Visualização restrita: Arraste desativado para estagiários.", "info");
-    }
-}
+
 function toggleHubItem(id) {
     if (selectedHubItems.has(id)) selectedHubItems.delete(id);
     else selectedHubItems.add(id);
@@ -2192,9 +2187,9 @@ function toggleSelectAllHub() {
     });
 
     if (selectedHubItems.size === todosVisiveisIds.length) {
-        selectedHubItems.clear(); // Desmarcar tudo
+        selectedHubItems.clear(); // Desmarcar tudo se já estiver tudo marcado
     } else {
-        todosVisiveisIds.forEach(id => selectedHubItems.add(id)); // Marcar tudo
+        todosVisiveisIds.forEach(id => selectedHubItems.add(id)); // Marcar todos os visíveis
     }
     renderMainProjects();
 }
@@ -2217,10 +2212,6 @@ async function arquivarSelecionadosHub() {
     selectedHubItems.clear();
     renderMainProjects();
 }
-
-window.toggleHubItem = toggleHubItem;
-window.toggleSelectAllHub = toggleSelectAllHub;
-window.arquivarSelecionadosHub = arquivarSelecionadosHub;
 
 // =========================================================
 // EXPORTANDO FUNÇÕES PARA O HTML ENXERGAR
@@ -2278,3 +2269,6 @@ window.filtrarProjetosDestePerfil = () => {
     renderMainProjects();
     document.getElementById('profile-modal').classList.remove('active');
 };
+window.toggleHubItem = toggleHubItem;
+window.toggleSelectAllHub = toggleSelectAllHub;
+window.arquivarSelecionadosHub = arquivarSelecionadosHub;
