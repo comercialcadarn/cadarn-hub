@@ -164,7 +164,7 @@ button, a, .card, .project-row, .kanban-card,
         /* --- VISÃO EXECUTIVA (KPIs) --- */
 .visao-executiva-wrapper { 
     display: grid; 
-    grid-template-columns: 210px 1fr 1.4fr; 
+    grid-template-columns: 210px 1fr 2.2fr;
     gap: 24px; 
     min-height: 360px;
     align-items: stretch; 
@@ -547,7 +547,7 @@ button, a, .card, .project-row, .kanban-card,
         .pres-close:hover { background: rgba(220, 53, 69, 0.8); border-color: transparent;}
 
         /* --- MODAL PERFIL DO COLABORADOR --- */
-        .profile-card { text-align: left !important; max-width: 500px !important; padding: 30px !important; }
+        .profile-card { text-align: left !important; max-width: 1000px !important; padding: 40px !important; }
         .profile-header { display: flex; gap: 20px; align-items: center; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--border-color); }
         .profile-avatar-container { position: relative; cursor: pointer; width: 80px; height: 80px; border-radius: 50%; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.5); flex-shrink: 0; }
         .profile-avatar-container:hover .avatar-overlay { opacity: 1; }
