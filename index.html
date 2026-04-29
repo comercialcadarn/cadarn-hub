@@ -447,13 +447,14 @@
         <div style="background: rgba(0,0,0,0.8); border-bottom: 1px solid rgba(255,255,255,0.1); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;">
             <div style="display: flex; align-items: center; gap: 10px;">
                 <span style="font-size: 18px;">⏱️</span>
-                <strong style="color: white; font-family: 'Outfit', sans-serif; font-size: 16px; letter-spacing: 1px; text-transform: uppercase;">Presença</strong>
+                <strong style="color: white; font-family: 'Outfit', sans-serif; font-size: 16px; letter-spacing: 1px; text-transform: uppercase;">Ponto Eletrônico</strong>
             </div>
             <button class="sp-close" onclick="fecharModalPresenca(event)" style="background: rgba(255,255,255,0.1); border: none; color: white; width: 30px; height: 30px; border-radius: 50%; cursor: pointer;">✕</button>
         </div>
 
-        <iframe id="iframe-presenca" src="https://script.google.com/a/macros/cadarnconsultoria.com.br/s/AKfycbzg0ROCbiPrpH9jowKDPpQKNdjMxJGv7dgH3_HwhU5adYYc_vZBnAgkpj8m5c1-8q7LrA/exec"></iframe>
+        <iframe id="iframe-presenca" src="" style="flex-grow: 1; width: 100%; border: none; background: transparent;"></iframe>
     </div>
+</div>
 </div>
 <footer>
     <div class="tradingview-widget-container">
@@ -583,6 +584,7 @@ async function buscarEventosGCal(token) {
 <script type="module" src="js/app.js"></script>
 </body>
 </html>
+
 
 
 
