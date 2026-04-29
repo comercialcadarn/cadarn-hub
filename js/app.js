@@ -369,7 +369,11 @@ function abrirPerfil(nome) {
     let pCount = 0; const MAX_PROJECTS = 5;
     let pendencias = [];
     const hojeCompare = new Date(new Date().setHours(0,0,0,0));
-
+    // REGRAS DE PRIVACIDADE: Só mostra pendências se for o próprio colaborador
+    const pendenciasSection = document.getElementById('profile-pendencias-section');
+    if (pendenciasSection) {
+        pendenciasSection.style.display = (nome === usuarioLogado) ? 'block' : 'none';
+    }
     for (const [id, proj] of Object.entries(bdProjetos)) {
         if (proj.arquivado || proj.visivelHub === false) continue;
         
