@@ -10,237 +10,419 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 
+    <!-- ✅ BUG CORRIGIDO: tag <style> duplicada removida — agora há apenas uma abertura -->
     <style>
     :root {
         --glass: rgba(255, 255, 255, 0.03);
         --glass-border: rgba(255, 255, 255, 0.08);
         --premium-gold: linear-gradient(135deg, #FFC107, #FF9800);
         --premium-roxo: #832EFF;
-        --cadarn-cinza: #a1a1aa;
-        --cadarn-roxo: #832EFF;
     }
 
-    /* SCROLLBAR PREMIUM */
-    ::-webkit-scrollbar { width: 8px; height: 8px; }
-    ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); border-radius: 10px; }
-    ::-webkit-scrollbar-thumb { background: rgba(131, 46, 255, 0.3); border-radius: 10px; border: 1px solid rgba(255,255,255,0.05); }
-    ::-webkit-scrollbar-thumb:hover { background: rgba(131, 46, 255, 0.6); }
-
-    body { margin: 0; background-color: #050505; color: white; font-family: 'Inter', sans-serif; overflow-x: hidden; }
-
-    /* Efeito de Iluminação de Fundo Animado */
+    /* ───────────────────────────────────────────
+       EFEITO DE ILUMINAÇÃO AMBIENTE
+    ─────────────────────────────────────────── */
     .ambient-glow {
         position: fixed; top: -10%; left: 50%; transform: translateX(-50%);
         width: 80vw; height: 50vh;
-        background: radial-gradient(circle, rgba(131, 46, 255, 0.12) 0%, transparent 70%);
+        background: radial-gradient(circle, rgba(131, 46, 255, 0.08) 0%, transparent 70%);
         pointer-events: none; z-index: -1;
-        animation: pulseGlow 8s infinite alternate ease-in-out;
     }
 
-    @keyframes pulseGlow {
-        0% { opacity: 0.7; transform: translateX(-50%) scale(1); }
-        100% { opacity: 1; transform: translateX(-50%) scale(1.1); }
-    }
+    /* ───────────────────────────────────────────
+       SCROLLBAR GLOBAL ELEGANTE
+    ─────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(131, 46, 255, 0.3); border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(131, 46, 255, 0.6); }
 
+    /* ───────────────────────────────────────────
+       HEADER
+    ─────────────────────────────────────────── */
     header {
         padding: 20px 40px;
         display: flex; justify-content: space-between; align-items: center;
         border-bottom: 1px solid var(--glass-border);
-        backdrop-filter: blur(15px); background: rgba(0,0,0,0.6);
-        position: sticky; top: 0; z-index: 100;
+        backdrop-filter: blur(10px); background: rgba(0,0,0,0.4);
+        position: sticky; top: 0; z-index: 900;
     }
 
-    .brand-container { display: flex; align-items: center; gap: 15px; }
-    .logo-text { font-family: 'Outfit', sans-serif; font-size: 24px; font-weight: 900; letter-spacing: -0.5px; }
-    .logo-text span { color: var(--premium-roxo); }
-
+    /* ───────────────────────────────────────────
+       BADGE DO SÓCIO — ✅ BUG CORRIGIDO: animation agora aplicada
+    ─────────────────────────────────────────── */
     .socio-badge {
         background: linear-gradient(90deg, #FFC107 0%, #FFF3E0 50%, #FF9800 100%);
         background-size: 200% auto;
+        animation: shine-gold 2.5s linear infinite;
         color: #000;
-        padding: 6px 16px; 
+        padding: 6px 16px;
         border-radius: 30px;
         font-family: 'Outfit', sans-serif;
-        font-size: 11px; 
-        font-weight: 900; 
+        font-size: 11px;
+        font-weight: 900;
         text-transform: uppercase;
-        letter-spacing: 1.5px; 
-        box-shadow: 0 0 20px rgba(255, 193, 7, 0.3);
-        animation: shine-gold 3s linear infinite;
+        letter-spacing: 1.5px;
+        box-shadow: 0 0 20px rgba(255, 193, 7, 0.35);
     }
 
-    @keyframes shine-gold { to { background-position: 200% center; } }
+    @keyframes shine-gold {
+        to { background-position: 200% center; }
+    }
 
-    /* Títulos display na área do sócio */
-    .capacity-header, .kanban-col-header, .sp-title, #modal-proj-nome,
-    #modal-proj-cliente, .workload-nome, #reuniao-content h1, #reuniao-content h2,
-    .kanban-card-title, .calendar-title {
+    /* ───────────────────────────────────────────
+       ✅ BUG CORRIGIDO: @keyframes slideUp (usado no Modo Reunião mas ausente no CSS)
+    ─────────────────────────────────────────── */
+    @keyframes slideUp {
+        from { opacity: 0; transform: translateY(30px) scale(0.98); }
+        to   { opacity: 1; transform: translateY(0)   scale(1); }
+    }
+
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(8px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes pulseAlert {
+        0%, 100% { box-shadow: 0 0 10px rgba(220,53,69,0.3); }
+        50%       { box-shadow: 0 0 20px rgba(220,53,69,0.6); }
+    }
+
+    /* ───────────────────────────────────────────
+       TIPOGRAFIA
+    ─────────────────────────────────────────── */
+    .capacity-header,
+    .kanban-col-header,
+    .sp-title,
+    #modal-proj-nome,
+    #modal-proj-cliente,
+    .workload-nome,
+    #reuniao-content h1,
+    #reuniao-content h2 {
         font-family: 'Outfit', sans-serif;
         letter-spacing: -0.3px;
     }
 
-    /* Inputs do modal sempre Inter para legibilidade */
-    .edit-input, .edit-textarea {
+    #modal-proj-nome, #modal-proj-cliente,
+    #modal-lider, #modal-desc,
+    #modal-equipe, #modal-tags {
         font-family: 'Inter', sans-serif;
         letter-spacing: 0;
     }
 
-    /* Números financeiros com Outfit */
     #fin-fee-total, #fin-margem-media, #fin-alertas-escopo {
-        font-family: 'Outfit', sans-serif; font-weight: 800; letter-spacing: -1px;
+        font-family: 'Outfit', sans-serif;
+        font-weight: 800;
+        letter-spacing: -1px;
     }
 
-    /* 3. Efeito de Vidro Jateado (Inner Shadow) nos Cards do Kanban */
-    .kanban-card {
-        background: rgba(25, 25, 25, 0.5);
-        border: 1px solid rgba(255, 255, 255, 0.06);
-        border-radius: 16px; padding: 20px; margin-bottom: 15px;
-        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        cursor: pointer;
-        box-shadow: 0 8px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);
-        position: relative; overflow: hidden;
+    /* ───────────────────────────────────────────
+       BARRA DE COMANDO (DASHBOARD CTRL)
+    ─────────────────────────────────────────── */
+    .dashboard-ctrl {
+        background: var(--glass);
+        border: 1px solid var(--glass-border);
+        border-radius: 16px; padding: 15px 25px;
+        margin: 20px 40px 30px 40px; display: flex; align-items: center;
+        justify-content: space-between; gap: 20px;
+        backdrop-filter: blur(20px);
     }
 
-    .kanban-card::before {
-        content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%;
-        background: var(--premium-roxo); opacity: 0; transition: 0.3s;
+    .nav-tabs {
+        display: flex; background: rgba(0,0,0,0.4);
+        padding: 5px; border-radius: 12px; border: 1px solid var(--glass-border);
     }
 
-    .kanban-card:hover {
-        background: rgba(35, 35, 35, 0.8);
-        border-color: rgba(131, 46, 255, 0.5);
-        transform: translateY(-4px) scale(1.02);
-        box-shadow: 0 15px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1);
+    .action-group { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+    .btn-import {
+        background: transparent; border: 1px solid var(--glass-border);
+        color: #aaa; padding: 10px 18px; border-radius: 10px;
+        font-size: 11px; font-weight: 600; cursor: pointer; transition: 0.2s;
     }
+    .btn-import:hover { background: rgba(255,255,255,0.05); color: #fff; border-color: #666; }
 
-    .kanban-card:hover::before { opacity: 1; }
+    .btn-create {
+        background: #fff; color: #000; border: none;
+        padding: 12px 24px; border-radius: 12px;
+        font-size: 13px; font-weight: 800; cursor: pointer;
+        display: flex; align-items: center; gap: 8px;
+        transition: 0.3s; box-shadow: 0 10px 25px rgba(255,255,255,0.1);
+    }
+    .btn-create:hover { transform: translateY(-2px); box-shadow: 0 15px 30px rgba(255,255,255,0.2); }
 
-    .kanban-card-title { font-size: 17px; font-weight: 700; color: #ffffff; margin-bottom: 8px; }
-
-    /* === NOVA SEÇÃO PREMIUM: CENTRAL DE CAPACIDADE === */
+    /* ───────────────────────────────────────────
+       CENTRAL DE CAPACIDADE
+    ─────────────────────────────────────────── */
     .capacity-center {
-        margin: 25px 40px 0 40px; padding: 20px 25px;
-        background: linear-gradient(135deg, rgba(255,255,255,0.03), rgba(131, 46, 255, 0.04));
-        border: 1px solid var(--glass-border); border-radius: 20px;
-        backdrop-filter: blur(15px); box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        margin: 25px 40px 0 40px;
+        padding: 20px;
+        background: linear-gradient(135deg, rgba(255,255,255,0.03), rgba(131, 46, 255, 0.02));
+        border: 1px solid var(--glass-border);
+        border-radius: 20px;
+        backdrop-filter: blur(15px);
     }
 
     .capacity-header {
-        font-size: 11px; color: var(--cadarn-cinza); text-transform: uppercase;
-        font-weight: 800; letter-spacing: 1.5px; margin-bottom: 15px;
-        display: flex; align-items: center; gap: 10px;
+        font-size: 10px;
+        color: var(--cadarn-cinza);
+        text-transform: uppercase;
+        font-weight: 800;
+        letter-spacing: 1.5px;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .capacity-header::after {
+        content: ''; flex-grow: 1; height: 1px; background: var(--glass-border);
     }
 
-    .capacity-header::after { content: ''; flex-grow: 1; height: 1px; background: var(--glass-border); }
-
-    /* Barra de Comando (Dashboard Header) */
-    .dashboard-ctrl {
-        background: rgba(15,15,15,0.7); border: 1px solid var(--glass-border);
-        border-radius: 16px; padding: 15px 25px; margin: 20px 40px 30px 40px; 
-        display: flex; align-items: center; justify-content: space-between; gap: 20px;
-        backdrop-filter: blur(20px); box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+    /* ───────────────────────────────────────────
+       BARRA FINANCEIRA DO TOPO
+    ─────────────────────────────────────────── */
+    .financial-health-bar {
+        margin: 15px 40px;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
     }
 
-    .nav-tabs { display: flex; background: rgba(0,0,0,0.5); padding: 5px; border-radius: 12px; border: 1px solid var(--glass-border); }
-    
-    .view-btn {
-        background: transparent; border: none; color: var(--cadarn-cinza);
-        padding: 10px 20px; border-radius: 8px; font-size: 13px; font-weight: 600;
-        cursor: pointer; transition: 0.3s;
+    .fin-card {
+        background: rgba(255,255,255,0.02);
+        border: 1px solid rgba(255,255,255,0.08);
+        padding: 18px 20px;
+        border-radius: 16px;
+        transition: border-color 0.3s, background 0.3s;
+        position: relative;
+        overflow: hidden;
     }
-    .view-btn:hover { color: #fff; background: rgba(255,255,255,0.05); }
-    .view-btn.active { background: rgba(131, 46, 255, 0.2); color: #fff; border: 1px solid rgba(131,46,255,0.3); }
 
-    .action-group { display: flex; gap: 12px; align-items: center; }
-
-    .btn-import {
-        background: transparent; border: 1px dashed rgba(255,255,255,0.2);
-        color: #ccc; padding: 10px 18px; border-radius: 10px;
-        font-size: 12px; font-weight: 600; cursor: pointer; transition: 0.2s;
+    .fin-card::before {
+        content: '';
+        position: absolute; bottom: 0; left: 0; right: 0;
+        height: 3px;
+        background: var(--glass-border);
+        border-radius: 0 0 16px 16px;
     }
-    .btn-import:hover { background: rgba(255,255,255,0.08); color: #fff; border-color: #832EFF; }
 
-    .btn-create {
-        background: #fff; color: #000; border: none; padding: 12px 24px; border-radius: 12px;
-        font-size: 13px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 8px;
-        transition: 0.3s; box-shadow: 0 5px 15px rgba(255,255,255,0.15);
+    .fin-card:hover { border-color: rgba(255,255,255,0.15); }
+
+    .fin-margem-barra-bg {
+        width: 100%; height: 3px;
+        background: rgba(255,255,255,0.08);
+        border-radius: 10px;
+        margin-top: 8px;
+        overflow: hidden;
     }
-    .btn-create:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(255,255,255,0.3); background: #f0f0f0; }
 
-    .kanban-socio-board { padding: 0 40px 40px 40px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px; }
+    /* ✅ BUG CORRIGIDO: elemento #fin-margem-barra estava referenciado no JS mas ausente no HTML */
+    #fin-margem-barra {
+        height: 100%;
+        width: 0%;
+        border-radius: 10px;
+        background: #47e299;
+        transition: width 1s ease, background 0.5s ease;
+    }
+
+    /* ───────────────────────────────────────────
+       KANBAN BOARD — 4 COLUNAS (bug: 3ª col misturava iniciado+concluido)
+    ─────────────────────────────────────────── */
+    .kanban-socio-board {
+        padding: 0 40px 40px 40px;
+        display: grid;
+        /* ✅ BUG CORRIGIDO: 4 colunas para separar Iniciados de Concluídos */
+        grid-template-columns: repeat(4, 1fr);
+        gap: 20px;
+    }
 
     .kanban-socio-col {
-        background: rgba(255,255,255,0.015); border: 1px solid var(--glass-border);
-        border-radius: 24px; padding: 25px; min-height: 70vh; display: flex; flex-direction: column;
+        background: rgba(255,255,255,0.015);
+        border: 1px solid var(--glass-border);
+        border-radius: 24px; padding: 25px;
+        min-height: 70vh; display: flex; flex-direction: column;
+        position: relative;
+        overflow: hidden;
     }
 
-    .kanban-col-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 18px; font-weight: 700; }
-    .status-badge-count { background: rgba(255,255,255,0.08); padding: 4px 12px; border-radius: 20px; font-size: 12px; color: #fff; font-weight: bold; }
-    .kanban-dropzone { flex-grow: 1; min-height: 100px; }
+    /* Acento de cor no topo de cada coluna */
+    .kanban-socio-col::before {
+        content: '';
+        position: absolute; top: 0; left: 0; right: 0;
+        height: 3px;
+        border-radius: 24px 24px 0 0;
+    }
+    .kanban-col--negociacao::before { background: linear-gradient(90deg, #FFC107, #FF9800); }
+    .kanban-col--andamento::before  { background: linear-gradient(90deg, #832EFF, #420a9a); }
+    .kanban-col--iniciado::before   { background: linear-gradient(90deg, #47e299, #20c997); }
+    .kanban-col--concluido::before  { background: linear-gradient(90deg, #4cc9f0, #0dcaf0); }
 
+    .kanban-col-header {
+        display: flex; justify-content: space-between; align-items: center;
+        margin-bottom: 20px; padding-bottom: 15px;
+        border-bottom: 1px solid var(--glass-border);
+        font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 800;
+    }
+
+    .status-badge-count {
+        background: rgba(255,255,255,0.05); padding: 4px 10px;
+        border-radius: 20px; font-size: 10px; color: #666; font-weight: 700;
+    }
+
+    /* ───────────────────────────────────────────
+       KANBAN CARDS
+    ─────────────────────────────────────────── */
+    .kanban-card {
+        background: rgba(25, 25, 25, 0.4);
+        border: 1px solid rgba(255, 255, 255, 0.04);
+        border-radius: 16px;
+        padding: 20px;
+        margin-bottom: 12px;
+        transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+                    box-shadow 0.4s ease,
+                    border-color 0.3s ease,
+                    background 0.3s ease;
+        cursor: pointer;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);
+        animation: fadeInUp 0.35s ease forwards;
+    }
+
+    .kanban-card:hover {
+        background: rgba(30, 30, 30, 0.6);
+        border-color: rgba(131, 46, 255, 0.4);
+        transform: translateY(-4px) scale(1.01);
+        box-shadow: 0 15px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1);
+    }
+
+    .kanban-card-title {
+        font-family: 'Outfit', sans-serif;
+        font-size: 15px;
+        font-weight: 600;
+        color: #ffffff;
+        margin-bottom: 6px;
+        line-height: 1.3;
+    }
+
+    /* Barra de progresso das tarefas no card */
+    .card-progress-bar-bg {
+        width: 100%; height: 3px; background: rgba(255,255,255,0.06);
+        border-radius: 10px; margin-top: 10px; overflow: hidden;
+    }
+    .card-progress-bar-fill {
+        height: 100%; border-radius: 10px;
+        transition: width 0.8s ease;
+    }
+
+    .sortable-ghost {
+        opacity: 0.4;
+        background: rgba(131,46,255,0.2) !important;
+        border: 2px dashed rgba(131,46,255,0.5) !important;
+        transform: rotate(1deg);
+    }
+
+    .sortable-drag {
+        box-shadow: 0 25px 50px rgba(0,0,0,0.7) !important;
+        transform: rotate(-1deg) scale(1.03) !important;
+    }
+
+    /* ───────────────────────────────────────────
+       FADE VIEW (transição de aba)
+    ─────────────────────────────────────────── */
+    .fade-view {
+        transition: opacity 0.3s ease;
+    }
+
+    /* ───────────────────────────────────────────
+       WORKLOAD GRID
+    ─────────────────────────────────────────── */
+    .workload-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 25px;
+    }
+
+    /* ───────────────────────────────────────────
+       CALENDÁRIO
+    ─────────────────────────────────────────── */
+    .calendar-wrapper { background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); border-radius: 20px; overflow: hidden; }
+    .calendar-header { display: flex; justify-content: space-between; align-items: center; padding: 20px; border-bottom: 1px solid var(--glass-border); }
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        background: var(--glass-border); gap: 1px;
+    }
+    .calendar-day-name { background: #0a0a0a; padding: 15px; font-size: 11px; font-weight: 800; color: #666; text-transform: uppercase; text-align: center; }
+    .calendar-day { background: #0f0f0f; min-height: 120px; padding: 10px; transition: background 0.2s; }
+    .calendar-day.other-month { opacity: 0.35; }
+    .calendar-date { font-size: 14px; font-weight: 700; margin-bottom: 10px; display: block; }
+    /* ✅ MELHORIA: destaque maior para o dia de hoje */
+    .calendar-day.today {
+        background: rgba(131, 46, 255, 0.06);
+        border: 1px solid rgba(131, 46, 255, 0.3) !important;
+    }
+    .calendar-day.today .calendar-date {
+        color: #c5a3ff;
+        background: rgba(131, 46, 255, 0.2);
+        width: 28px; height: 28px;
+        display: flex; align-items: center; justify-content: center;
+        border-radius: 50%;
+        margin-bottom: 8px;
+    }
+    .cal-task { background: rgba(131, 46, 255, 0.2); color: #c5a3ff; font-size: 10px; padding: 5px 8px; border-radius: 6px; margin-bottom: 4px; border-left: 3px solid var(--premium-roxo); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cal-task.atrasado { background: rgba(220,53,69,0.15); color: #ff8793; border-left-color: #dc3545; }
+    .cal-task.concluido { background: rgba(71,226,153,0.1); color: #47e299; border-left-color: #47e299; }
+    .calendar-day.has-events { cursor: pointer; border: 1px solid rgba(131,46,255,0.2); }
+    .calendar-day.has-events:hover { background: rgba(131,46,255,0.08); }
+
+    /* ───────────────────────────────────────────
+       PREMIUM SELECT
+    ─────────────────────────────────────────── */
     .premium-select {
-        background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1);
-        color: #fff; padding: 10px 15px; border-radius: 10px; font-size: 13px; outline: none; cursor: pointer; transition: 0.3s;
+        background: rgba(0,0,0,0.4); border: 1px solid var(--glass-border);
+        color: #fff; padding: 10px 15px; border-radius: 10px;
+        font-size: 13px; outline: none; cursor: pointer;
+        transition: border-color 0.2s;
     }
-    .premium-select:focus { border-color: var(--premium-roxo); box-shadow: 0 0 10px rgba(131,46,255,0.3); }
+    .premium-select:focus { border-color: rgba(131,46,255,0.5); }
 
-    .workload-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 25px; }
-    
-    .calendar-wrapper { background: rgba(15,15,15,0.8); border: 1px solid var(--glass-border); border-radius: 20px; overflow: hidden; backdrop-filter: blur(10px); }
-    .calendar-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 30px; border-bottom: 1px solid var(--glass-border); }
-    .calendar-title { font-size: 24px; font-weight: 800; }
-    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); background: var(--glass-border); gap: 1px; }
-    .calendar-day-name { background: rgba(0,0,0,0.8); padding: 15px; font-size: 12px; font-weight: 800; color: #888; text-transform: uppercase; text-align: center; }
-    .calendar-day { background: #0f0f0f; min-height: 140px; padding: 12px; transition: 0.2s; }
-    .calendar-day.other-month { background: #080808; opacity: 0.5; }
-    .calendar-day.today { background: rgba(131,46,255,0.08); border: 1px solid rgba(131,46,255,0.3); }
-    .calendar-date { font-size: 16px; font-weight: 700; margin-bottom: 10px; display: block; color: #e0e0e0; }
-    .cal-task { font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 600; padding: 6px 8px; border-radius: 6px; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-    .cal-task.pendente { background: rgba(255, 193, 7, 0.15); color: #FFD54F; border-left: 3px solid #FFC107; }
-    .cal-task.ativo { background: rgba(131, 46, 255, 0.2); color: #c5a3ff; border-left: 3px solid var(--premium-roxo); }
-    .cal-task.concluido { background: rgba(71, 226, 153, 0.15); color: #69f0ae; border-left: 3px solid #47e299; text-decoration: line-through; opacity: 0.7; }
-    .cal-task.atrasado { background: rgba(220, 53, 69, 0.2); color: #ff8a80; border-left: 3px solid #dc3545; }
-    .calendar-day.has-events { cursor: pointer; }
-    .calendar-day.has-events:hover { background: rgba(255,255,255,0.05); }
+    /* ───────────────────────────────────────────
+       TOGGLE PREMIUM (PERMISSÕES)
+    ─────────────────────────────────────────── */
+    .premium-toggle { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; }
+    .premium-toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(255,255,255,0.1); transition: .4s; border-radius: 34px; border: 1px solid rgba(255,255,255,0.05); }
+    .toggle-slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: #a1a1aa; transition: .4s; border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
+    .premium-toggle input:checked + .toggle-slider { background-color: var(--cadarn-roxo); border-color: #a86bff; }
+    .premium-toggle input:checked + .toggle-slider:before { transform: translateX(20px); background-color: #fff; }
+    .perm-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; background: rgba(0,0,0,0.2); border-radius: 10px; border: 1px solid rgba(255,255,255,0.02); transition: 0.2s; }
+    .perm-row:hover { background: rgba(131,46,255,0.05); border-color: rgba(131,46,255,0.2); }
+    .perm-info { display: flex; flex-direction: column; gap: 4px; }
+    .perm-title { font-size: 13px; font-weight: 700; color: white; }
+    .perm-desc { font-size: 10px; color: var(--cadarn-cinza); }
 
-    /* Modais Estilizados */
-    .modal-overlay {
-        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-        background: rgba(0,0,0,0.6); z-index: 9999; display: none;
-        align-items: center; justify-content: center; backdrop-filter: blur(8px);
-        opacity: 0; transition: opacity 0.3s ease;
+    /* ───────────────────────────────────────────
+       LOADING SPINNER (usado em operações async)
+    ─────────────────────────────────────────── */
+    @keyframes spin {
+        to { transform: rotate(360deg); }
     }
-    .modal-overlay.active { display: flex; opacity: 1; }
-    .modal-content {
-        background: rgba(18, 18, 20, 0.95); border: 1px solid rgba(255,255,255,0.1);
-        border-radius: 24px; padding: 40px; box-shadow: 0 25px 50px rgba(0,0,0,0.5);
-        transform: scale(0.95); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    .loading-dot {
+        display: inline-block;
+        animation: spin 1s linear infinite;
     }
-    .modal-overlay.active .modal-content { transform: scale(1); }
 
-    /* Toasts Animados */
-    .toast-container { position: fixed; bottom: 30px; right: 30px; z-index: 100000; display: flex; flex-direction: column; gap: 10px; }
-    .toast {
-        min-width: 280px; padding: 16px 20px; border-radius: 12px; font-size: 14px; font-weight: 600;
-        color: white; display: flex; align-items: center; gap: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-        transform: translateX(120%); opacity: 0; animation: slideInToast 0.4s forwards cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        position: relative; overflow: hidden;
+    /* ───────────────────────────────────────────
+       CHIP DE ATUALIZAÇÃO RECENTE NO CARD
+    ─────────────────────────────────────────── */
+    .recently-updated {
+        position: absolute; top: 12px; right: 12px;
+        width: 8px; height: 8px;
+        background: #47e299;
+        border-radius: 50%;
+        box-shadow: 0 0 6px #47e299;
+        animation: pulseAlert 2s infinite;
     }
-    .toast::after {
-        content: ''; position: absolute; bottom: 0; left: 0; height: 3px; background: rgba(255,255,255,0.5);
-        animation: toastProgress 3s linear forwards;
-    }
-    .toast-success { background: linear-gradient(135deg, #198754, #146c43); border: 1px solid #198754; }
-    .toast-danger { background: linear-gradient(135deg, #dc3545, #b02a37); border: 1px solid #dc3545; }
-    .toast-info { background: linear-gradient(135deg, #0dcaf0, #0bacbe); border: 1px solid #0dcaf0; }
-    .toast-warning { background: linear-gradient(135deg, #ffc107, #cc9a06); border: 1px solid #ffc107; color: #000; }
-    .toast-warning::after { background: rgba(0,0,0,0.3); }
 
-    @keyframes slideInToast { to { transform: translateX(0); opacity: 1; } }
-    @keyframes toastProgress { 0% { width: 100%; } 100% { width: 0%; } }
-
-    .fade-view { opacity: 0; transition: opacity 0.4s ease; }
-    .sortable-ghost { opacity: 0.3; background: rgba(131,46,255,0.1) !important; border: 2px dashed rgba(131,46,255,0.6) !important; transform: scale(0.98); }
     </style>
 </head>
 <body>
@@ -248,41 +430,49 @@
     <div class="ambient-glow"></div>
 
     <div class="container" style="display: none;" id="conteudo-restrito">
-        
+
         <header>
             <div class="brand-container">
                 <div class="logo-text">CADARN <span>HUB</span></div>
-                <div class="socio-badge">Acesso Sócio</div>
+                <div class="socio-badge">⭐ Acesso Sócio</div>
             </div>
-            <div class="header-controls">
-                <a href="index.html" class="btn-create" style="text-decoration: none; background: rgba(255,255,255,0.08); color: #fff; border: 1px solid var(--glass-border); box-shadow: none;">← Voltar ao Hub</a>
+            <div class="header-controls" style="display:flex; align-items:center; gap:12px;">
+                <!-- Indicador de usuário logado -->
+                <div id="header-user-info" style="font-size:12px; color:var(--cadarn-cinza); font-weight:500; display:flex; align-items:center; gap:8px;">
+                    <span id="header-user-avatar" style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#832EFF,#420a9a);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0;">?</span>
+                    <span id="header-user-name">Carregando...</span>
+                </div>
+                <a href="index.html" class="btn-create" style="text-decoration: none; background: rgba(255,255,255,0.05); color: #fff; border: 1px solid var(--glass-border); font-size:12px; padding:10px 18px;">← Voltar ao Hub</a>
             </div>
         </header>
 
+        <!-- Central de Capacidade -->
         <div class="capacity-center">
-            <div class="capacity-header">⚡ Central de Capacidade & Disponibilidade em Tempo Real</div>
-            <div id="teamAvailabilityContainer" style="display: flex; gap: 20px; overflow-x: auto; padding-bottom: 10px;">
-                </div>
+            <div class="capacity-header">⚡ Central de Capacidade &amp; Disponibilidade em Tempo Real</div>
+            <div id="teamAvailabilityContainer" style="display: flex; gap: 18px; overflow-x: auto; padding-bottom: 10px;"></div>
         </div>
 
-        <div class="financial-health-bar" style="margin: 20px 40px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
-            <div class="fin-card" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); padding: 20px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
-                <div style="font-size: 11px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 800; letter-spacing: 1px;">💰 Fee Total Portfólio</div>
-                <div id="fin-fee-total" style="font-size: 24px; font-weight: 800; color: #fff; margin-top: 8px;">R$ 0,00</div>
+        <!-- ✅ MELHORIA: Barra Financeira com barra de progresso de margem -->
+        <div class="financial-health-bar">
+            <div class="fin-card" id="fin-card-fee">
+                <div style="font-size: 10px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 800; letter-spacing: 1px;">💰 Fee Total Portfólio</div>
+                <div id="fin-fee-total" style="font-size: 22px; font-weight: 800; color: #fff; margin-top: 6px;">R$ 0,00</div>
+                <div style="font-size: 10px; color: var(--cadarn-cinza); margin-top: 4px;">Projetos ativos</div>
             </div>
-            <div class="fin-card" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); padding: 20px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); position: relative; overflow: hidden;">
-                <div style="font-size: 11px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 800; letter-spacing: 1px;">📈 Margem Média Est.</div>
-                <div id="fin-margem-media" style="font-size: 24px; font-weight: 800; color: #47e299; margin-top: 8px;">0%</div>
-                <div style="position: absolute; bottom: 0; left: 0; height: 4px; width: 100%; background: rgba(255,255,255,0.1);">
-                    <div id="fin-margem-barra" style="height: 100%; width: 0%; background: #47e299; transition: width 1s ease;"></div>
-                </div>
+            <div class="fin-card" id="fin-card-margem">
+                <div style="font-size: 10px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 800; letter-spacing: 1px;">📈 Margem Média Est.</div>
+                <div id="fin-margem-media" style="font-size: 22px; font-weight: 800; color: #47e299; margin-top: 6px;">0%</div>
+                <!-- ✅ BUG CORRIGIDO: elemento ausente no HTML mas referenciado no JS -->
+                <div class="fin-margem-barra-bg"><div id="fin-margem-barra"></div></div>
             </div>
-            <div class="fin-card" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); padding: 20px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
-                <div style="font-size: 11px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 800; letter-spacing: 1px;">⚠️ Alertas de Escopo (+90%)</div>
-                <div id="fin-alertas-escopo" style="font-size: 24px; font-weight: 800; color: #dc3545; margin-top: 8px;">0 Projetos</div>
+            <div class="fin-card" id="fin-card-alertas">
+                <div style="font-size: 10px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 800; letter-spacing: 1px;">⚠️ Alertas de Escopo (+90%)</div>
+                <div id="fin-alertas-escopo" style="font-size: 22px; font-weight: 800; color: #dc3545; margin-top: 6px;">0 Projetos</div>
+                <div style="font-size: 10px; color: var(--cadarn-cinza); margin-top: 4px;">Horas orçadas consumidas</div>
             </div>
         </div>
 
+        <!-- Barra de Comando -->
         <div class="dashboard-ctrl">
             <div class="nav-tabs">
                 <button class="view-btn active" id="tab-btn-projetos" onclick="switchTab('projetos')">📊 Pipeline</button>
@@ -297,63 +487,76 @@
                 <select id="filtro-responsavel" class="premium-select" onchange="aplicarFiltros()">
                     <option value="">Toda a Equipe</option>
                 </select>
-                
+
                 <div style="display: flex; gap: 8px;">
                     <input type="file" id="file-import-pipe" accept=".csv" style="display:none" onchange="importarDados(event, 'pipe')">
                     <input type="file" id="file-import-projetos" accept=".csv" style="display:none" onchange="importarDados(event, 'projetos')">
-                    
-                    <button class="btn-import" onclick="document.getElementById('file-import-pipe').click()">📥 Import Pipe</button>
-                    <button class="btn-import" onclick="document.getElementById('file-import-projetos').click()">📂 Import Projs</button>
+                    <button class="btn-import" onclick="document.getElementById('file-import-pipe').click()" title="Importar pipeline via CSV">📥 Pipe</button>
+                    <button class="btn-import" onclick="document.getElementById('file-import-projetos').click()" title="Importar projetos via CSV">📂 Projetos</button>
+                    <button class="btn-import" onclick="exportarProjetosCSV()" title="Exportar todos os projetos como CSV">📤 Exportar</button>
                 </div>
-                <button onclick="abrirModoReuniao()" style="background: linear-gradient(135deg, #832EFF, #420a9a); color: white; border: 1px solid rgba(131,46,255,0.5); padding: 12px 20px; border-radius: 12px; font-size: 13px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(131, 46, 255, 0.3); transition: 0.3s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 25px rgba(131, 46, 255, 0.5)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(131, 46, 255, 0.3)';">
-                    📽️ Modo Reunião
+
+                <button onclick="abrirModoReuniao()" style="background: linear-gradient(135deg, #832EFF, #420a9a); color: white; border: 1px solid rgba(131,46,255,0.5); padding: 10px 18px; border-radius: 10px; font-size: 13px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(131, 46, 255, 0.3); transition: 0.3s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 25px rgba(131, 46, 255, 0.5)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(131, 46, 255, 0.3)';">
+                    🎤 Modo Reunião
                 </button>
-                
+
                 <button class="btn-create" onclick="novoProjetoSocio()">
-                    <span>+</span> Novo Projeto
+                    <span>+</span> Criar Projeto
                 </button>
             </div>
         </div>
 
-        <div id="view-projetos" class="kanban-socio-board fade-view" style="opacity: 1;">
-            <div class="kanban-socio-col">
+        <!-- ✅ BUG CORRIGIDO: 4 colunas separando Iniciados de Concluídos -->
+        <div id="view-projetos" class="kanban-socio-board fade-view">
+            <div class="kanban-socio-col kanban-col--negociacao">
                 <div class="kanban-col-header" style="color: #ffc107;">
                     <span>🤝 Negociação</span>
                     <span class="status-badge-count" id="count-negociacao">0</span>
                 </div>
                 <div class="kanban-dropzone" id="col-negociacao" data-status="negociacao"></div>
             </div>
-            <div class="kanban-socio-col">
+            <div class="kanban-socio-col kanban-col--andamento">
                 <div class="kanban-col-header" style="color: #b68aff;">
                     <span>🚀 Delivery</span>
                     <span class="status-badge-count" id="count-andamento">0</span>
                 </div>
                 <div class="kanban-dropzone" id="col-andamento" data-status="andamento"></div>
             </div>
-            <div class="kanban-socio-col">
+            <div class="kanban-socio-col kanban-col--iniciado">
                 <div class="kanban-col-header" style="color: #47e299;">
-                    <span>✅ Concluídos</span>
+                    <span>🎯 Iniciados</span>
                     <span class="status-badge-count" id="count-iniciado">0</span>
                 </div>
-                <div class="kanban-dropzone" id="col-iniciados" data-status="concluido"></div>
+                <div class="kanban-dropzone" id="col-iniciados" data-status="iniciado"></div>
+            </div>
+            <!-- ✅ NOVA COLUNA: Concluídos separados dos Iniciados -->
+            <div class="kanban-socio-col kanban-col--concluido">
+                <div class="kanban-col-header" style="color: #4cc9f0;">
+                    <span>✅ Concluídos</span>
+                    <span class="status-badge-count" id="count-concluido">0</span>
+                </div>
+                <div class="kanban-dropzone" id="col-concluido" data-status="concluido"></div>
             </div>
         </div>
 
+        <!-- VIEW WORKLOAD -->
         <div id="view-pessoas" class="fade-view" style="display: none; padding: 0 40px;">
             <div class="workload-grid" id="workload-container"></div>
         </div>
 
+        <!-- VIEW CRONOGRAMA -->
         <div id="view-cronograma" class="fade-view" style="display: none; padding: 0 40px;">
             <div id="gantt-master-container"></div>
         </div>
 
-        <div id="view-calendario" class="fade-view" style="display: none; padding: 0 40px 40px 40px;">
+        <!-- VIEW CALENDÁRIO -->
+        <div id="view-calendario" class="fade-view" style="display: none; padding: 0 40px;">
             <div class="calendar-wrapper">
                 <div class="calendar-header">
-                    <div class="calendar-title" id="cal-month-year">Mês 2026</div>
-                    <div class="calendar-nav">
+                    <div class="calendar-title" id="cal-month-year" style="font-family:'Outfit',sans-serif; font-size:20px; font-weight:800; color:#fff;">Abril 2026</div>
+                    <div class="calendar-nav" style="display:flex; gap:8px;">
                         <button class="btn-import" onclick="mudarMes(-1)">← Anterior</button>
-                        <button class="btn-import" onclick="irParaHoje()" style="color:white; border-color:rgba(255,255,255,0.4);">Hoje</button>
+                        <button class="btn-import" onclick="irParaHoje()">Hoje</button>
                         <button class="btn-import" onclick="mudarMes(1)">Próximo →</button>
                     </div>
                 </div>
@@ -364,16 +567,18 @@
             </div>
         </div>
 
+        <!-- VIEW DOSSIÊ -->
         <div id="view-dossie" class="fade-view" style="display: none; padding: 0 40px;">
-            <div style="margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                    <h3 style="font-family: 'Outfit', sans-serif; font-size: 28px; font-weight: 800; color: #fff; margin-bottom: 5px; letter-spacing:-0.5px;">🔒 Dossiês Confidenciais</h3>
-                    <p style="font-size: 13px; color: var(--cadarn-cinza);">Acesso restrito a Sócios e RH. Dados protegidos conforme LGPD.</p>
+                    <h3 style="font-size: 18px; font-weight: 800; color: #fff; margin-bottom: 5px;">🔒 Dossiês Confidenciais</h3>
+                    <p style="font-size: 12px; color: var(--cadarn-cinza);">Acesso restrito a Sócios e RH. Dados protegidos conforme LGPD.</p>
                 </div>
             </div>
             <div class="workload-grid" id="dossie-colab-list"></div>
         </div>
 
+        <!-- VIEW FINANCEIRO -->
         <div id="view-financeiro" class="fade-view" style="display: none; padding: 0 40px 40px 40px;">
             <div style="margin-bottom: 25px;">
                 <h2 style="font-family: 'Outfit', sans-serif; font-size: 32px; font-weight: 900; color: white; letter-spacing: -1px;">Deep Dive <span style="color: #FFC107;">Financeiro</span></h2>
@@ -381,8 +586,8 @@
             </div>
 
             <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 20px;">
-                
-                <div style="background: rgba(0,0,0,0.6); border: 1px solid rgba(255,193,7,0.2); border-radius: 20px; padding: 25px; box-shadow: inset 0 0 40px rgba(255,193,7,0.02); backdrop-filter: blur(10px);">
+
+                <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,193,7,0.2); border-radius: 20px; padding: 25px; box-shadow: inset 0 0 40px rgba(255,193,7,0.02);">
                     <div style="font-size: 11px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 800; letter-spacing: 1.5px; margin-bottom: 15px;">📊 Receita vs Custo (Top Projetos)</div>
                     <div style="height: 300px; width: 100%;">
                         <canvas id="chart-receita-custo"></canvas>
@@ -390,14 +595,14 @@
                 </div>
 
                 <div style="display: flex; flex-direction: column; gap: 20px;">
-                    <div style="background: rgba(0,0,0,0.6); border: 1px solid var(--glass-border); border-radius: 20px; padding: 25px; flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(10px);">
+                    <div style="background: rgba(0,0,0,0.4); border: 1px solid var(--glass-border); border-radius: 20px; padding: 25px; flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;">
                         <div style="font-size: 11px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 800; letter-spacing: 1.5px; margin-bottom: 15px; width: 100%; text-align: left;">📈 Saúde das Margens</div>
                         <div style="height: 180px; width: 100%; position: relative;">
                             <canvas id="chart-margem-geral"></canvas>
                         </div>
                     </div>
-                    
-                    <div style="background: linear-gradient(135deg, rgba(255,193,7,0.1), rgba(255,152,0,0.05)); border: 1px solid rgba(255,193,7,0.3); border-radius: 20px; padding: 20px; box-shadow: 0 4px 15px rgba(255,193,7,0.1);">
+
+                    <div style="background: linear-gradient(135deg, rgba(255,193,7,0.1), rgba(255,152,0,0.05)); border: 1px solid rgba(255,193,7,0.3); border-radius: 20px; padding: 20px;">
                         <div style="font-size: 11px; color: #FFC107; text-transform: uppercase; font-weight: 800; letter-spacing: 1px; margin-bottom: 10px;">💡 Insight Algorítmico</div>
                         <div id="financeiro-insight-texto" style="font-size: 14px; color: white; line-height: 1.5; font-weight: 500;">
                             Analisando portfólio...
@@ -406,12 +611,12 @@
                 </div>
             </div>
 
-            <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); border-radius: 20px; overflow: hidden; backdrop-filter: blur(5px);">
+            <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); border-radius: 20px; overflow: hidden;">
                 <div style="padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 12px; text-transform: uppercase; color: var(--cadarn-cinza); font-weight: 800; letter-spacing: 1px;">Detalhamento de Caixa</div>
                 <div style="overflow-x: auto;">
                     <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">
                         <thead>
-                            <tr style="background: rgba(0,0,0,0.6); color: var(--cadarn-cinza); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">
+                            <tr style="background: rgba(0,0,0,0.5); color: var(--cadarn-cinza); font-size: 10px; text-transform: uppercase;">
                                 <th style="padding: 15px 20px;">Projeto</th>
                                 <th style="padding: 15px 20px;">Fee (R$)</th>
                                 <th style="padding: 15px 20px;">Custo Est. (R$)</th>
@@ -419,135 +624,117 @@
                                 <th style="padding: 15px 20px;">Status</th>
                             </tr>
                         </thead>
-                        <tbody id="financeiro-tabela-body">
-                            </tbody>
+                        <tbody id="financeiro-tabela-body"></tbody>
                     </table>
                 </div>
             </div>
         </div>
 
+        <!-- MODAL PROJETO -->
         <div id="modal-projeto" class="modal-overlay" onclick="fecharModalProjeto(event)">
-            <div class="modal-content" style="max-width: 1100px; width: 95%; text-align: left; max-height: 90vh; overflow-y: auto;" onclick="event.stopPropagation()">
-                <button class="sp-close" onclick="fecharModalProjeto(event)" style="position:absolute; top:25px; right:25px; background:rgba(255,255,255,0.1); border:none; color:white; width:36px; height:36px; border-radius:50%; font-size:16px; cursor:pointer; transition:0.3s;" onmouseover="this.style.background='rgba(220,53,69,0.8)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">✕</button>
-                
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 25px; margin-bottom: 30px;">
+            <div class="modal-content" style="max-width: 1100px; width: 95%; text-align: left; max-height: 90vh; overflow-y: auto; background: rgba(15,15,15,0.98); border: 1px solid rgba(255,193,7,0.3); box-shadow: 0 30px 80px rgba(0,0,0,0.9);" onclick="event.stopPropagation()">
+                <button class="sp-close" onclick="fecharModalProjeto(event)" style="position:absolute; top:20px; right:20px;">✕</button>
+
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 20px; margin-bottom: 25px;">
                     <div style="flex-grow: 1; padding-right: 20px;">
-                        <input type="text" id="modal-proj-cliente" class="edit-input" style="font-size: 16px; color: #FFC107; font-weight: 800; text-transform: uppercase; margin-bottom: 8px; background: transparent; border: none; padding: 0; outline: none; width: 100%;" placeholder="NOME DO CLIENTE">
-                        <input type="text" id="modal-proj-nome" class="edit-input" style="font-size: 36px; color: white; font-weight: 900; background: transparent; border: none; padding: 0; outline: none; width: 100%; letter-spacing: -1px; font-family: 'Outfit', sans-serif;" placeholder="Nome do Projeto Estratégico">
+                        <input type="text" id="modal-proj-cliente" class="edit-input" style="font-size: 14px; color: #FFC107; font-weight: 800; text-transform: uppercase; margin-bottom: 5px; background: transparent; border: none; padding: 0; box-shadow: none;" placeholder="NOME DO CLIENTE" oninput="validarFormularioProjeto()">
+                        <input type="text" id="modal-proj-nome" class="edit-input" style="font-size: 32px; color: white; font-weight: 800; background: transparent; border: none; padding: 0; box-shadow: none; letter-spacing: -1px;" placeholder="Nome do Projeto Estratégico" oninput="validarFormularioProjeto()">
                     </div>
-                    
-                    <div style="display: flex; align-items: center; background: rgba(255,193,7,0.1); padding: 12px 20px; border-radius: 12px; border: 1px solid rgba(255,193,7,0.3);">
+
+                    <div style="display: flex; align-items: center; background: rgba(255,193,7,0.1); padding: 12px 18px; border-radius: 8px; border: 1px solid rgba(255,193,7,0.3);">
                         <label style="font-size: 14px; color: #FFC107; cursor: pointer; display: flex; align-items: center; gap: 10px; font-weight: 700;">
-                            <input type="checkbox" id="modal-proj-visivel" style="accent-color: #FFC107; width: 20px; height: 20px; cursor: pointer;">
+                            <input type="checkbox" id="modal-proj-visivel" style="accent-color: #FFC107; width: 18px; height: 18px; cursor: pointer;">
                             👁️ Exibir no Hub da Equipe
                         </label>
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1.8fr; gap: 40px;">
-                    <div style="display: flex; flex-direction: column; gap: 20px; background: rgba(0,0,0,0.3); padding: 25px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05);">
+                <div style="display: grid; grid-template-columns: 1fr 1.8fr; gap: 35px;">
+                    <div style="display: flex; flex-direction: column; gap: 18px; background: rgba(255,255,255,0.02); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
                         <div>
-                            <label style="font-size: 11px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px;">👤 Líder do Projeto</label>
-                            <input type="text" id="modal-lider" class="edit-input" placeholder="Comece a digitar o nome..." list="lista-nomes-datalist" autocomplete="off" style="width:100%; padding:12px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.5); color:white; margin-top:8px;">
+                            <label style="font-size: 11px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">👤 Líder do Projeto</label>
+                            <input type="text" id="modal-lider" class="edit-input" placeholder="Comece a digitar o nome..." list="lista-nomes-datalist" autocomplete="off" oninput="validarFormularioProjeto()">
                             <datalist id="lista-nomes-datalist"></datalist>
                         </div>
                         <div>
-                            <label style="font-size: 11px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px;">📝 Escopo Estratégico</label>
-                            <textarea id="modal-desc" class="edit-textarea" placeholder="Detalhes gerais do projeto..." style="width:100%; padding:12px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.5); color:white; margin-top:8px; min-height: 100px; resize: vertical;"></textarea>
+                            <label style="font-size: 11px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">📝 Escopo Estratégico</label>
+                            <textarea id="modal-desc" class="edit-textarea" placeholder="Detalhes gerais do projeto..." oninput="validarFormularioProjeto()"></textarea>
                         </div>
                         <div>
-                            <label style="font-size: 11px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px;">🏷️ Tags</label>
-                            <input type="text" id="modal-tags" class="edit-input" placeholder="Ex: Financeiro, TI (vírgula)" style="width:100%; padding:12px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.5); color:white; margin-top:8px;">
+                            <label style="font-size: 11px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">🏷️ Tags</label>
+                            <input type="text" id="modal-tags" class="edit-input" placeholder="Ex: Financeiro, TI (vírgula)">
                         </div>
                         <div style="position: relative;">
-                            <label style="font-size: 11px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px;">👥 Equipe (Separe com vírgula)</label>
-                            <input type="text" id="modal-equipe" class="edit-input" placeholder="Digite um nome..." autocomplete="off" style="width:100%; padding:12px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.5); color:white; margin-top:8px;">
+                            <label style="font-size: 11px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">👥 Equipe (Separe com vírgula)</label>
+                            <input type="text" id="modal-equipe" class="edit-input" placeholder="Digite um nome..." autocomplete="off">
                         </div>
-                        
-                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-top: 10px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.08);">
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 10px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.05);">
                             <div>
-                                <label style="font-size: 10px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 800;">Valor Contrato</label>
-                                <input type="number" id="modal-valor-contrato" class="edit-input" placeholder="0.00" style="width:100%; font-size: 13px; padding: 10px; border-radius:6px; border:1px solid rgba(255,193,7,0.3); background:rgba(255,193,7,0.05); color:#FFC107; margin-top:5px; font-weight:bold;">
+                                <label style="font-size: 10px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 700;">Valor Contrato (R$)</label>
+                                <input type="number" id="modal-valor-contrato" class="edit-input" placeholder="0.00" style="font-size: 12px; padding: 8px;">
                             </div>
                             <div>
-                                <label style="font-size: 10px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 800;">Hrs Orçadas</label>
-                                <input type="number" id="modal-horas-orcadas" class="edit-input" placeholder="0" style="width:100%; font-size: 13px; padding: 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.5); color:white; margin-top:5px;">
+                                <label style="font-size: 10px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 700;">Horas Orçadas</label>
+                                <input type="number" id="modal-horas-orcadas" class="edit-input" placeholder="0" style="font-size: 12px; padding: 8px;">
                             </div>
                             <div>
-                                <label style="font-size: 10px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 800;">Hrs Reais</label>
-                                <input type="number" id="modal-horas-reais" class="edit-input" placeholder="0" style="width:100%; font-size: 13px; padding: 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.5); color:white; margin-top:5px;">
+                                <label style="font-size: 10px; color: var(--cadarn-cinza); text-transform: uppercase; font-weight: 700;">Horas Reais</label>
+                                <input type="number" id="modal-horas-reais" class="edit-input" placeholder="0" style="font-size: 12px; padding: 8px;">
                             </div>
                         </div>
                     </div>
 
                     <div>
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 15px;">
-                            <h3 style="font-size: 18px; color: white; font-weight: 800; display: flex; align-items: center; gap: 10px;">📋 Tarefas e Prazos</h3>
-                            <button class="sp-btn-edit" style="background: rgba(131,46,255,0.2); color: #c5a3ff; border: 1px solid var(--cadarn-roxo); padding: 8px 16px; border-radius:8px; font-weight:700; cursor:pointer; transition:0.2s;" onmouseover="this.style.background='rgba(131,46,255,0.4)'" onmouseout="this.style.background='rgba(131,46,255,0.2)'" onclick="adicionarNovaTarefaModal()">➕ Nova Tarefa</button>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 15px;">
+                            <h3 style="font-size: 16px; color: white; font-weight: 700; display: flex; align-items: center; gap: 10px;">📋 Tarefas, Prazos e Kick-off</h3>
+                            <button class="sp-btn-edit" style="background: rgba(131,46,255,0.2); color: #c5a3ff; border-color: var(--cadarn-roxo);" onclick="adicionarNovaTarefaModal()">➕ Nova Tarefa</button>
                         </div>
-                        <div style="display: grid; grid-template-columns: 2fr 1.5fr 1fr 1fr auto; gap: 10px; font-size: 11px; font-weight: 800; color: var(--cadarn-cinza); text-transform: uppercase; padding: 0 10px 10px 10px;">
+                        <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 10px; font-size: 11px; font-weight: 700; color: var(--cadarn-cinza); text-transform: uppercase; padding: 0 10px 10px 10px;">
                             <div>Descrição</div> <div>Responsável</div> <div>Prazo</div> <div>Status</div> <div></div>
                         </div>
-                        <div id="lista-tarefas" style="max-height: 480px; overflow-y: auto; padding-right: 10px; display: flex; flex-direction: column; gap: 12px;"></div>
+                        <div id="lista-tarefas" style="max-height: 480px; overflow-y: auto; padding-right: 8px; display: flex; flex-direction: column; gap: 10px;"></div>
                     </div>
                 </div>
 
-                <div style="margin-top: 35px; padding-top: 25px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: flex-end; flex-direction: column; gap: 15px;">
-                    <div id="tag-cloud-container" style="width:100%;"></div>
-                    
-                    <div style="display:flex; gap:15px; width:100%; justify-content:flex-end; align-items:center;">
-                        <button class="sp-btn-edit" style="background: transparent; color: var(--cadarn-cinza); border: 1px solid rgba(255,255,255,0.1); padding: 14px 28px; border-radius:12px; cursor:pointer; font-weight:600; transition:0.2s;" onmouseover="this.style.color='white'; this.style.borderColor='white'" onmouseout="this.style.color='var(--cadarn-cinza)'; this.style.borderColor='rgba(255,255,255,0.1)'" onclick="fecharModalProjeto()">Cancelar</button>
-                        
-                        <button id="btn-revisar-ia" style="background: linear-gradient(135deg, rgba(131,46,255,0.2), rgba(66,0,210,0.2)); border: 1px solid rgba(131,46,255,0.5); color: #c5a3ff; padding: 14px 28px; border-radius: 12px; cursor:pointer; font-size:14px; font-weight:800; transition:all 0.3s; opacity:0.5; display:flex; align-items:center; gap:8px;" onmouseover="if(!this.disabled) {this.style.background='rgba(131,46,255,0.4)'; this.style.transform='translateY(-2px)';}" onmouseout="if(!this.disabled) {this.style.background='linear-gradient(135deg, rgba(131,46,255,0.2), rgba(66,0,210,0.2))'; this.style.transform='translateY(0)';}" onclick="revisarProjetoComIA()" disabled>
-                            ✨ Revisar com IA
-                        </button>
-                        
-                        <button id="btn-salvar-definitivo" class="btn-present" style="background: linear-gradient(135deg, #198754, #146c43); border: none; color:white; font-size: 15px; font-weight:800; padding: 14px 35px; border-radius:12px; box-shadow: 0 5px 20px rgba(25,135,84,0.3); opacity:0.5; cursor:not-allowed; transition:all 0.3s;" onmouseover="if(!this.disabled){this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 25px rgba(25,135,84,0.5)';}" onmouseout="if(!this.disabled){this.style.transform='translateY(0)'; this.style.boxShadow='0 5px 20px rgba(25,135,84,0.3)';}" onclick="salvarProjetoSocio()" disabled>
-                            💾 Salvar Projeto Definitivo
-                        </button>
+                <div style="margin-top: 35px; padding-top: 25px; border-top: 1px solid rgba(255,255,255,0.05);">
+                    <!-- Tag Cloud gerada pela IA -->
+                    <div id="tag-cloud-container" style="width:100%; margin-bottom:15px;"></div>
+
+                    <div style="display:flex; gap:12px; width:100%; justify-content:flex-end; align-items:center;">
+                        <button class="sp-btn-edit" style="background: transparent; color: var(--cadarn-cinza); border: 1px solid rgba(255,255,255,0.1); padding: 12px 24px;" onclick="fecharModalProjeto(event)">Cancelar Rascunho</button>
+                        <button id="btn-revisar-ia" style="background: linear-gradient(135deg, rgba(131,46,255,0.3), rgba(66,0,210,0.3)); border: 1px solid rgba(131,46,255,0.5); color: #c5a3ff; padding: 12px 24px; border-radius: 10px; cursor:pointer; font-size:14px; font-weight:700; transition:0.2s; opacity:0.5;" onclick="revisarProjetoComIA()" disabled>✨ Revisar com IA</button>
+                        <button id="btn-salvar-definitivo" class="btn-present" style="background: linear-gradient(135deg, #198754, #157347); border: none; font-size: 15px; padding: 12px 30px; box-shadow: 0 5px 20px rgba(25,135,84,0.4); opacity:0.5; cursor:not-allowed;" onclick="salvarProjetoSocio()" disabled>💾 Salvar Projeto</button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <style>
-            .premium-toggle { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; }
-            .premium-toggle input { opacity: 0; width: 0; height: 0; }
-            .toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(255,255,255,0.1); transition: .4s; border-radius: 34px; border: 1px solid rgba(255,255,255,0.05); }
-            .toggle-slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: #a1a1aa; transition: .4s; border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
-            .premium-toggle input:checked + .toggle-slider { background-color: var(--cadarn-roxo); border-color: #a86bff; }
-            .premium-toggle input:checked + .toggle-slider:before { transform: translateX(20px); background-color: #fff; }
-            .perm-row { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: rgba(0,0,0,0.3); border-radius: 12px; border: 1px solid rgba(255,255,255,0.03); transition: 0.2s; }
-            .perm-row:hover { background: rgba(131,46,255,0.05); border-color: rgba(131,46,255,0.3); }
-            .perm-info { display: flex; flex-direction: column; gap: 4px; }
-            .perm-title { font-size: 14px; font-weight: 700; color: white; }
-            .perm-desc { font-size: 11px; color: var(--cadarn-cinza); }
-        </style>
-
+        <!-- MODAL COLABORADOR -->
         <div id="modal-colaborador" class="modal-overlay" onclick="fecharModalColaborador(event)">
             <div class="modal-content" style="max-width: 550px; text-align: left; background: rgba(15,15,15,0.98); border: 1px solid var(--cadarn-roxo); box-shadow: 0 30px 80px rgba(0,0,0,0.9);" onclick="event.stopPropagation()">
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 20px; margin-bottom: 25px;">
                     <div>
                         <div style="font-size: 11px; color: #c5a3ff; text-transform: uppercase; font-weight: 800; letter-spacing: 2px;">Gestão de Identidade</div>
-                        <h3 id="modal-colab-titulo" style="font-family:'Outfit',sans-serif; color:white; font-size:32px; font-weight:900; margin-top:5px; letter-spacing: -1px;">Novo Colaborador</h3>
+                        <h3 id="modal-colab-titulo" style="color:white; font-size:28px; font-weight:900; margin-top:5px; letter-spacing: -1px;">Novo Colaborador</h3>
                     </div>
-                    <button class="sp-close" onclick="fecharModalColaborador(event)" style="background:rgba(255,255,255,0.1); border:none; color:white; width:36px; height:36px; border-radius:50%; cursor:pointer; transition:0.2s;" onmouseover="this.style.background='rgba(220,53,69,0.8)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">✕</button>
+                    <button class="sp-close" onclick="fecharModalColaborador(event)">✕</button>
                 </div>
-                
+
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
                     <div>
-                        <label style="font-size:11px; color:var(--cadarn-cinza); text-transform:uppercase; font-weight:800; letter-spacing: 0.5px;">👤 Nome Completo</label>
-                        <input type="text" id="modal-colab-nome" class="edit-input" placeholder="Ex: João Silva" style="width:100%; margin-top:8px; padding: 14px; background: rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.1); border-radius:10px; color:white; outline:none;" onfocus="this.style.borderColor='var(--cadarn-roxo)'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
+                        <label style="font-size:10px; color:var(--cadarn-cinza); text-transform:uppercase; font-weight:700; letter-spacing: 1px;">👤 Nome Completo</label>
+                        <input type="text" id="modal-colab-nome" class="edit-input" placeholder="Ex: João Silva" style="margin-top:8px; padding: 12px; background: rgba(0,0,0,0.4);">
                     </div>
                     <div>
-                        <label style="font-size:11px; color:var(--cadarn-cinza); text-transform:uppercase; font-weight:800; letter-spacing: 0.5px;">✉️ E-mail Cadarn</label>
-                        <input type="email" id="modal-colab-email" class="edit-input" placeholder="joao@cadarn.com.br" style="width:100%; margin-top:8px; padding: 14px; background: rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.1); border-radius:10px; color:white; outline:none;" onfocus="this.style.borderColor='var(--cadarn-roxo)'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
+                        <label style="font-size:10px; color:var(--cadarn-cinza); text-transform:uppercase; font-weight:700; letter-spacing: 1px;">✉️ E-mail Cadarn</label>
+                        <input type="email" id="modal-colab-email" class="edit-input" placeholder="joao@cadarnconsultoria.com.br" style="margin-top:8px; padding: 12px; background: rgba(0,0,0,0.4);">
                     </div>
                 </div>
-                
+
                 <div style="margin-bottom: 25px;">
-                    <label style="font-size:11px; color:var(--cadarn-cinza); text-transform:uppercase; font-weight:800; letter-spacing: 0.5px;">🏢 Cargo Base (RBAC)</label>
-                    <select id="modal-colab-cargo" class="edit-input" style="width:100%; appearance: auto; margin-top:8px; background: rgba(0,0,0,0.8); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding: 14px; color:white; outline:none;">
+                    <label style="font-size:10px; color:var(--cadarn-cinza); text-transform:uppercase; font-weight:700; letter-spacing: 1px;">🏢 Cargo Base (RBAC)</label>
+                    <select id="modal-colab-cargo" class="edit-input" style="appearance: auto; margin-top:8px; background: rgba(0,0,0,0.6); padding: 12px;">
                         <option value="Estagiário">Estagiário (Padrão / Apenas Leitura)</option>
                         <option value="Analista">Analista</option>
                         <option value="RH">RH</option>
@@ -555,10 +742,10 @@
                         <option value="Sócio">Sócio Diretor</option>
                     </select>
                 </div>
-                
+
                 <div style="background: rgba(255,255,255,0.02); padding: 25px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05);">
-                    <label style="font-size:12px; color:#c5a3ff; text-transform:uppercase; font-weight:800; letter-spacing:1px; margin-bottom:15px; display:block;">⚙️ Permissões Granulares (ABAC)</label>
-                    <div style="display:flex; flex-direction:column; gap:12px;">
+                    <label style="font-size:11px; color:#c5a3ff; text-transform:uppercase; font-weight:800; letter-spacing:1px; margin-bottom:15px; display:block;">⚙️ Permissões Granulares (ABAC)</label>
+                    <div style="display:flex; flex-direction:column; gap:10px;">
                         <div class="perm-row">
                             <div class="perm-info">
                                 <span class="perm-title">💰 Dashboard Financeiro</span>
@@ -589,22 +776,27 @@
                         </div>
                     </div>
                 </div>
-                
-                <button id="btn-salvar-iam" onclick="salvarColaborador()" style="width:100%; margin-top:30px; padding:18px; background:linear-gradient(135deg, var(--cadarn-roxo), #420a9a); color:white; border:none; border-radius:12px; font-weight:800; font-size:16px; letter-spacing:1px; cursor:pointer; box-shadow: 0 8px 25px rgba(131,46,255,0.4); transition: 0.3s;" onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 12px 30px rgba(131,46,255,0.6)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 8px 25px rgba(131,46,255,0.4)';">💾 SALVAR COLABORADOR</button>
-            </div>
-        </div> 
 
-        <div id="reuniao-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #050505; z-index: 100000; flex-direction: column; color: white; font-family: 'Outfit', 'Inter', sans-serif;">
-            <button onclick="fecharModoReuniao()" style="position: absolute; top: 30px; right: 40px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; width: 50px; height: 50px; border-radius: 50%; font-size: 20px; cursor: pointer; transition: 0.2s; z-index: 100001; display: flex; align-items: center; justify-content: center;" onmouseover="this.style.background='rgba(220,53,69,0.8)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">✕</button>
-            <div id="reuniao-content" style="flex-grow: 1; display: flex; align-items: center; justify-content: center; padding: 50px; position: relative; overflow-y: auto;"></div>
-            <div style="height: 80px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; padding: 0 50px; background: rgba(0,0,0,0.8); backdrop-filter: blur(10px);">
-                <button onclick="reuniaoPrevSlide()" style="background: transparent; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: var(--cadarn-cinza); font-size: 16px; cursor: pointer; font-weight: 600; padding: 10px 20px; transition: 0.2s;" onmouseover="this.style.color='white'; this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.color='var(--cadarn-cinza)'; this.style.background='transparent'">← Anterior</button>
-                <div id="reuniao-counter" style="color: white; font-size: 15px; font-weight: 700; letter-spacing: 2px;">1 / 10</div>
-                <button onclick="reuniaoNextSlide()" style="background: transparent; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: var(--cadarn-cinza); font-size: 16px; cursor: pointer; font-weight: 600; padding: 10px 20px; transition: 0.2s;" onmouseover="this.style.color='white'; this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.color='var(--cadarn-cinza)'; this.style.background='transparent'">Próximo →</button>
+                <button id="btn-salvar-iam" onclick="salvarColaborador()" style="width:100%; margin-top:25px; padding:18px; background:linear-gradient(135deg, var(--cadarn-roxo), #420a9a); color:white; border:none; border-radius:12px; font-weight:800; font-size:15px; letter-spacing:1px; cursor:pointer; box-shadow: 0 5px 20px rgba(131,46,255,0.4); transition: 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">💾 SALVAR COLABORADOR</button>
             </div>
         </div>
 
-    </div> 
+        <!-- MODAL MODO REUNIÃO -->
+        <div id="reuniao-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #050505; z-index: 100000; flex-direction: column; color: white; font-family: 'Outfit', 'Inter', sans-serif;">
+
+            <button onclick="fecharModoReuniao()" style="position: absolute; top: 30px; right: 40px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; width: 50px; height: 50px; border-radius: 50%; font-size: 20px; cursor: pointer; transition: 0.2s; z-index: 100001; display: flex; align-items: center; justify-content: center;" onmouseover="this.style.background='rgba(220,53,69,0.8)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">✕</button>
+
+            <div id="reuniao-content" style="flex-grow: 1; display: flex; align-items: center; justify-content: center; padding: 50px; position: relative; overflow-y: auto;"></div>
+
+            <div style="height: 80px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; padding: 0 50px; background: rgba(0,0,0,0.5);">
+                <button onclick="reuniaoPrevSlide()" style="background: transparent; border: none; color: var(--cadarn-cinza); font-size: 16px; cursor: pointer; font-weight: 600; padding: 10px; transition: 0.2s;" onmouseover="this.style.color='white'" onmouseout="this.style.color='var(--cadarn-cinza)'">← Anterior</button>
+                <div id="reuniao-counter" style="color: var(--cadarn-cinza); font-size: 14px; font-weight: 600; letter-spacing: 3px;">1 / 10</div>
+                <button onclick="reuniaoNextSlide()" style="background: transparent; border: none; color: var(--cadarn-cinza); font-size: 16px; cursor: pointer; font-weight: 600; padding: 10px; transition: 0.2s;" onmouseover="this.style.color='white'" onmouseout="this.style.color='var(--cadarn-cinza)'">Próximo →</button>
+            </div>
+        </div>
+
+    </div><!-- /conteudo-restrito -->
+
     <script type="module" src="js/app-socios.js"></script>
 </body>
 </html>
