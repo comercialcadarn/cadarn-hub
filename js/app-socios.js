@@ -822,7 +822,7 @@ function renderWorkload() {
         if (data.ativas >= 5 || data.atrasadas >= 2) { statusClass = 'wl-status-sobrecarga'; statusText = 'Sobrecarga / Risco'; }
 
         html += `
-            <div style="background: rgba(255,255,255,0.015); border: 1px solid rgba(255,255,255,0.05); border-radius: 20px; padding: 25px; transition: 0.3s; display: flex; flex-direction: column;" onmouseover="this.style.borderColor='rgba(131,46,255,0.3)'; this.style.boxShadow='0 10px 30px rgba(0,0,0,0.5)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'; this.style.boxShadow='none'">
+            <div style="background: rgba(255,255,255,0.015); border: 1px solid rgba(255,255,255,0.05); border-radius: 20px; padding: 25px; transition: 0.3s; display: flex; flex-direction: column; cursor: pointer;" onmouseover="this.style.borderColor='rgba(131,46,255,0.3)'; this.style.boxShadow='0 10px 30px rgba(0,0,0,0.5)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'; this.style.boxShadow='none'" onclick="abrirModalColaborador('${sanitize(nome)}')">
                 
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 15px; margin-bottom: 15px;">
                     <div>
@@ -856,22 +856,27 @@ function renderWorkload() {
     });
     // Barra de busca persistente acima do grid
     const barraHtml = `
-        <div style="margin-bottom: 20px; position: relative;">
-            <input 
-                type="text" 
-                id="workload-search"
-                placeholder="🔍  Buscar colaborador..."
-                value="${window._workloadBusca || ''}"
-                oninput="window._workloadBusca = this.value; renderWorkload();"
-                style="width:100%; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.08);
-                       color:white; padding:12px 16px; border-radius:12px; font-size:14px;
-                       font-family:'Inter',sans-serif; outline:none; transition:0.2s;"
-                onfocus="this.style.borderColor='#832EFF'"
-                onblur="this.style.borderColor='rgba(255,255,255,0.08)'"
-            >
-            ${termoBusca ? `<button onclick="window._workloadBusca=''; renderWorkload();" 
-                style="position:absolute;right:12px;top:50%;transform:translateY(-50%);
-                background:none;border:none;color:var(--cadarn-cinza);cursor:pointer;font-size:16px;">✕</button>` : ''}
+        <div style="margin-bottom: 20px; display: flex; gap: 15px; align-items: center;">
+            <div style="position: relative; flex-grow: 1;">
+                <input 
+                    type="text" 
+                    id="workload-search"
+                    placeholder="🔍  Buscar colaborador para ver acessos e carga..."
+                    value="${window._workloadBusca || ''}"
+                    oninput="window._workloadBusca = this.value; renderWorkload();"
+                    style="width:100%; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.08);
+                           color:white; padding:12px 16px; border-radius:12px; font-size:14px;
+                           font-family:'Inter',sans-serif; outline:none; transition:0.2s;"
+                    onfocus="this.style.borderColor='#832EFF'"
+                    onblur="this.style.borderColor='rgba(255,255,255,0.08)'"
+                >
+                ${termoBusca ? `<button onclick="window._workloadBusca=''; renderWorkload();" 
+                    style="position:absolute;right:12px;top:50%;transform:translateY(-50%);
+                    background:none;border:none;color:var(--cadarn-cinza);cursor:pointer;font-size:16px;">✕</button>` : ''}
+            </div>
+            <button onclick="abrirModalColaborador('')" style="background: linear-gradient(135deg, var(--cadarn-roxo), #420a9a); border: 1px solid rgba(131,46,255,0.5); color: white; padding: 12px 24px; border-radius: 12px; font-weight: 800; cursor: pointer; white-space: nowrap; box-shadow: 0 4px 15px rgba(131,46,255,0.3); transition: 0.3s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                👤+ Novo Colaborador
+            </button>
         </div>
     `;
 
@@ -1975,7 +1980,90 @@ window.salvarDossieForm = async function(nomeColaborador) {
         }
     }
 };
+// =========================================================
+// GESTÃO DE ACESSOS E COLABORADORES (IAM)
+// =========================================================
 
+window.abrirModalColaborador = function(nome = '') {
+    const isEdit = nome !== '';
+    document.getElementById('modal-colab-titulo').innerText = isEdit ? 'Acessos: ' + nome : 'Novo Colaborador';
+    
+    const inputNome = document.getElementById('modal-colab-nome');
+    inputNome.value = isEdit ? nome : '';
+    inputNome.disabled = isEdit; // Bloqueia o nome na edição para não quebrar chaves de banco
+    if(isEdit) inputNome.style.color = "var(--cadarn-cinza)";
+    else inputNome.style.color = "white";
+
+    // Busca os dados existentes em bdColabs (se existirem)
+    let email = '', cargo = 'Estagiário', perms = {};
+    if (isEdit && bdColabs[nome]) {
+        email = bdColabs[nome].email || '';
+        cargo = bdColabs[nome].cargo || 'Estagiário';
+        perms = bdColabs[nome].permissoes || {};
+    }
+
+    document.getElementById('modal-colab-email').value = email;
+    document.getElementById('modal-colab-cargo').value = cargo;
+    document.getElementById('perm-fin').checked = !!perms.verFinanceiro;
+    document.getElementById('perm-dos').checked = !!perms.verDossie;
+    document.getElementById('perm-edit').checked = !!perms.editarProjetos;
+    document.getElementById('perm-ger').checked = !!perms.gerenciarEquipe;
+
+    document.getElementById('modal-colaborador').classList.add('active');
+};
+
+window.fecharModalColaborador = function(e) {
+    if (!e || e.target.classList.contains('modal-overlay') || e.target.classList.contains('sp-close')) {
+        document.getElementById('modal-colaborador').classList.remove('active');
+    }
+};
+
+window.salvarColaborador = async function() {
+    const nome = document.getElementById('modal-colab-nome').value.trim();
+    const email = document.getElementById('modal-colab-email').value.trim();
+    const cargo = document.getElementById('modal-colab-cargo').value;
+
+    if (!nome || !email) {
+        showToast("Nome e E-mail são obrigatórios!", "warning");
+        return;
+    }
+
+    const permissoes = {
+        verFinanceiro: document.getElementById('perm-fin').checked,
+        verDossie: document.getElementById('perm-dos').checked,
+        editarProjetos: document.getElementById('perm-edit').checked,
+        gerenciarEquipe: document.getElementById('perm-ger').checked
+    };
+
+    const dataPayload = {
+        nome,
+        email,
+        cargo,
+        permissoes,
+        atualizadoEm: Date.now(),
+        atualizadoPor: usuarioLogado
+    };
+
+    try {
+        const { doc, setDoc } = firestore;
+        // Salva na coleção 'colaboradores' usando o Nome como chave do documento
+        await setDoc(doc(db, "colaboradores", nome), dataPayload, { merge: true });
+        
+        showToast("Acessos salvos com sucesso!", "success");
+        window.fecharModalColaborador();
+        
+        // Se for um colaborador novo, atualizamos o array na memória temporariamente
+        if (!listaColaboradores.includes(nome)) {
+            listaColaboradores.push(nome);
+            listaColaboradores.sort();
+            iniciarUI(); // Atualiza os dropdowns
+        }
+        
+    } catch(e) {
+        console.error("Erro IAM:", e);
+        showToast("Falha ao salvar acessos na nuvem.", "danger");
+    }
+};
 // EXPOSIÇÃO DE TODAS AS FUNÇÕES AO WINDOW (PARA O HTML ENXERGAR)
 window.abrirDossieColaborador = abrirDossieColaborador;
 window.processarArquivoDossie = processarArquivoDossie;
