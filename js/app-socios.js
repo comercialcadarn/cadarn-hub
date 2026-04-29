@@ -1,6 +1,5 @@
 /* ========================================================= */
 /* LÓGICA DE ENGENHARIA E GESTÃO: ÁREA DO SÓCIO              */
-/* Versão com bugs corrigidos e melhorias de UX/UI            */
 /* ========================================================= */
 
 const listaColaboradores = [
