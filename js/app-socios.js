@@ -2029,6 +2029,7 @@ window.fecharModalColaborador = function(e) {
 };
 
 window.salvarColaborador = async function() {
+    const btnSalvar = document.getElementById('btn-salvar-iam');
     const nome = document.getElementById('modal-colab-nome').value.trim();
     const email = document.getElementById('modal-colab-email').value.trim();
     const cargo = document.getElementById('modal-colab-cargo').value;
@@ -2037,6 +2038,12 @@ window.salvarColaborador = async function() {
         showToast("Nome e E-mail são obrigatórios!", "warning");
         return;
     }
+
+    // UX Feedback
+    const textoOriginal = btnSalvar.innerHTML;
+    btnSalvar.innerHTML = '⏳ SALVANDO...';
+    btnSalvar.disabled = true;
+    btnSalvar.style.opacity = '0.7';
 
     const permissoes = {
         verFinanceiro: document.getElementById('perm-fin').checked,
@@ -2062,7 +2069,7 @@ window.salvarColaborador = async function() {
         showToast("Acessos salvos com sucesso!", "success");
         window.fecharModalColaborador();
         
-        // Se for um colaborador novo, atualizamos o array na memória temporariamente
+        // Se for um colaborador novo, atualizamos o array local e UI
         if (!listaColaboradores.includes(nome)) {
             listaColaboradores.push(nome);
             listaColaboradores.sort();
@@ -2072,6 +2079,11 @@ window.salvarColaborador = async function() {
     } catch(e) {
         console.error("Erro IAM:", e);
         showToast("Falha ao salvar acessos na nuvem.", "danger");
+    } finally {
+        // Restaura o botão
+        btnSalvar.innerHTML = textoOriginal;
+        btnSalvar.disabled = false;
+        btnSalvar.style.opacity = '1';
     }
 };
 // EXPOSIÇÃO DE TODAS AS FUNÇÕES AO WINDOW (PARA O HTML ENXERGAR)
