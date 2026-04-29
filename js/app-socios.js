@@ -120,7 +120,7 @@ function iniciarUI() {
 }
 
 function iniciarListeners() {
-    // Monitora a coleção de projetos no Firebase
+    // Monitora a coleção de PROJETOS
     firestore.onSnapshot(firestore.collection(db, "projetos"), (snapshot) => {
         snapshot.docChanges().forEach((change) => {
             const id = change.doc.id;
@@ -128,7 +128,6 @@ function iniciarListeners() {
             else bdProjetos[id] = change.doc.data();
         });
 
-        // Atualiza todos os componentes visuais do sócio em tempo real
         renderKanban(); 
         renderWorkload();
         renderCronograma('gantt-master-container', filtroResponsavel);
@@ -136,6 +135,17 @@ function iniciarListeners() {
         renderTeamAvailability();
         renderFinancialHealth();
     });
+
+    // Monitora a coleção de COLABORADORES (Gestão de Acessos / IAM)
+    firestore.onSnapshot(firestore.collection(db, "colaboradores"), (snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+            const nome = change.doc.id;
+            if (change.type === "removed") delete bdColabs[nome];
+            else bdColabs[nome] = change.doc.data();
+        });
+        renderDossieList(); // Atualiza a lista de dossiês automaticamente
+    });
+
     inicializarDragAndDrop();
     verificarAlertasDoDia();
 }
