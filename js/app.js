@@ -324,13 +324,13 @@ function abrirPerfil(nome) {
     const conf = configColaboradores[nome] || { foto: '', genero: autoDetectGender(nome), celular: '', email: '', nascimento: '', elogiosRecebidos: [], elogiosEnviados: [] };
     
     document.getElementById('profile-name').innerText = sanitize(nome);
-    document.getElementById('profile-avatar-render').innerHTML = getAvatarHtml(nome, 80);
+    document.getElementById('profile-avatar-render').innerHTML = getAvatarHtml(nome, 90);
     
     document.getElementById('profile-phone').value = conf.celular || '';
     document.getElementById('profile-email').value = conf.email || '';
     document.getElementById('profile-birthday').value = conf.nascimento || '';
     
-    // Calcula e mostra dias até o aniversário
+    // Calcula aniversário
     const birthdayEl = document.getElementById('profile-birthday-countdown');
     if (birthdayEl && conf.nascimento) {
         const hoje = new Date();
@@ -339,13 +339,9 @@ function abrirPerfil(nome) {
         if (proxAniv < hoje) proxAniv.setFullYear(hoje.getFullYear() + 1);
         const diasAte = Math.ceil((proxAniv - hoje) / (1000 * 60 * 60 * 24));
         
-        if (diasAte === 0) {
-            birthdayEl.innerHTML = '🎂 <strong style="color:#ffc107;">Hoje é seu aniversário! 🎉</strong>';
-        } else if (diasAte <= 7) {
-            birthdayEl.innerHTML = `🎂 <strong style="color:#ffc107;">Aniversário em ${diasAte} dia${diasAte > 1 ? 's' : ''}!</strong>`;
-        } else {
-            birthdayEl.innerHTML = `🎂 Aniversário em <strong>${diasAte} dias</strong>`;
-        }
+        if (diasAte === 0) birthdayEl.innerHTML = '🎂 <strong style="color:#ffc107;">Hoje é o aniversário! 🎉</strong>';
+        else if (diasAte <= 7) birthdayEl.innerHTML = `🎂 <strong style="color:#ffc107;">Aniversário em ${diasAte} dia${diasAte > 1 ? 's' : ''}!</strong>`;
+        else birthdayEl.innerHTML = `🎂 Aniversário em <strong>${diasAte} dias</strong>`;
         birthdayEl.style.display = 'block';
     } else if (birthdayEl) {
         birthdayEl.style.display = 'none';
@@ -355,42 +351,65 @@ function abrirPerfil(nome) {
     const privateStars = document.getElementById('profile-private-stars');
     if(nome === usuarioLogado) {
         elogiosSection.style.display = 'block';
-        let rec = (conf.elogiosRecebidos || []).map(e => `<div style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05); font-size:12px; color:var(--cadarn-branco); line-height:1.4;"><strong>De ${sanitize(e.de)}:</strong><br>${sanitize(e.texto)}</div>`).join('');
-        let env = (conf.elogiosEnviados || []).map(e => `<div style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05); font-size:12px; color:var(--cadarn-branco); line-height:1.4;"><strong>Para ${sanitize(e.para)}:</strong><br>${sanitize(e.texto)}</div>`).join('');
+        let rec = (conf.elogiosRecebidos || []).map(e => `<div style="padding:6px; border-bottom:1px solid rgba(255,255,255,0.05); font-size:11px; color:white;"><strong>De ${sanitize(e.de)}:</strong><br>${sanitize(e.texto)}</div>`).join('');
+        let env = (conf.elogiosEnviados || []).map(e => `<div style="padding:6px; border-bottom:1px solid rgba(255,255,255,0.05); font-size:11px; color:white;"><strong>Para ${sanitize(e.para)}:</strong><br>${sanitize(e.texto)}</div>`).join('');
         
-        document.getElementById('elogios-recebidos-list').innerHTML = rec || '<div style="font-size:11px; color:var(--cadarn-cinza);">Nenhum recebido.</div>';
-        document.getElementById('elogios-enviados-list').innerHTML = env || '<div style="font-size:11px; color:var(--cadarn-cinza);">Nenhum enviado.</div>';
-        privateStars.innerText = `${conf.elogiosRecebidos ? conf.elogiosRecebidos.length : 0} ⭐ (Apenas você vê)`;
+        document.getElementById('elogios-recebidos-list').innerHTML = rec || '<div style="font-size:10px; color:var(--cadarn-cinza);">Nenhum recebido.</div>';
+        document.getElementById('elogios-enviados-list').innerHTML = env || '<div style="font-size:10px; color:var(--cadarn-cinza);">Nenhum enviado.</div>';
+        if(privateStars) privateStars.innerText = `${conf.elogiosRecebidos ? conf.elogiosRecebidos.length : 0} Reconhecimentos`;
     } else {
         elogiosSection.style.display = 'none';
-        privateStars.innerText = '';
     }
 
-    let ativos = []; let concluidos = [];
+    let ativos = [];
     let pCount = 0; const MAX_PROJECTS = 5;
+    let pendencias = [];
+    const hojeCompare = new Date(new Date().setHours(0,0,0,0));
 
     for (const [id, proj] of Object.entries(bdProjetos)) {
         if (proj.arquivado || proj.visivelHub === false) continue;
         
+        // Verifica projetos ativos
         const emEquipe = (proj.equipeAtual || []).some(m => m.split('(')[0].trim() === nome);
-        const exEquipe = (proj.equipeAntiga || []).some(m => m.split('(')[0].trim() === nome);
-        
-        if (emEquipe || exEquipe) {
+        const isLider = proj.lider === nome;
+        if (emEquipe || isLider) {
             const todasConcluidas = proj.etapas && proj.etapas.length > 0 && proj.etapas.every(e => e.status === 'concluido');
-            const htmlItem = `<div class="prof-list-item" onclick="abrirProjeto('${id}'); document.getElementById('profile-modal').classList.remove('active');">
-                                <div><strong>${sanitize(proj.nome)}</strong><br><span style="font-size:11px; color:var(--cadarn-cinza);">${sanitize(proj.cliente)}</span></div>
-                                <div style="font-size:10px; opacity:0.7; padding-top:2px;">${exEquipe && !todasConcluidas ? '(Ex-Membro)' : ''}</div>
-                              </div>`;
-            if (todasConcluidas) { concluidos.push(htmlItem); } else if (emEquipe) { ativos.push(htmlItem); pCount++; }
+            if (!todasConcluidas) {
+                ativos.push(`<div class="prof-list-item" onclick="abrirProjeto('${id}'); document.getElementById('profile-modal').classList.remove('active');">
+                                <div><strong style="color:white; font-size:13px;">${sanitize(proj.nome)}</strong><br><span style="font-size:11px; color:var(--cadarn-cinza);">${sanitize(proj.cliente)}</span></div>
+                              </div>`);
+                pCount++;
+            }
         }
+
+        // Coleta Pendências Ativas
+        (proj.etapas || []).forEach(t => {
+            if (t.status !== 'concluido' && t.responsavel && t.responsavel.split('(')[0].trim() === nome) {
+                let badge = '';
+                if (t.prazo) {
+                    const dPrazo = new Date(t.prazo); dPrazo.setMinutes(dPrazo.getMinutes() + dPrazo.getTimezoneOffset());
+                    if (dPrazo < hojeCompare) badge = '<span style="color:#ff8793; font-size:10px; font-weight:bold;">[Atrasado]</span>';
+                    else if (dPrazo.getTime() === hojeCompare.getTime()) badge = '<span style="color:#ffc107; font-size:10px; font-weight:bold;">[Vence Hoje]</span>';
+                }
+                pendencias.push(`
+                    <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; cursor: pointer; transition: 0.2s;" onmouseover="this.style.borderColor='var(--cadarn-roxo)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'" onclick="abrirProjeto('${id}'); document.getElementById('profile-modal').classList.remove('active');">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                            <strong style="font-size:12px; color:white;">${sanitize(t.titulo)}</strong>
+                            ${badge}
+                        </div>
+                        <div style="font-size:10px; color:var(--cadarn-cinza); margin-top:3px;">📁 ${sanitize(proj.nome)}</div>
+                    </div>
+                `);
+            }
+        });
     }
 
     const pct = Math.min(Math.round((pCount / MAX_PROJECTS) * 100), 100);
     let colorAlloc = '#47e299'; if(pct>=80) colorAlloc='#ff8793'; else if(pct>=50) colorAlloc='#ffc107';
-    document.getElementById('profile-alloc').innerHTML = `<span style="color:${colorAlloc}">${pct}% Alocado</span> (${pCount} projetos ativos)`;
+    document.getElementById('profile-alloc').innerHTML = `<span style="color:${colorAlloc}; background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">${pct}% Alocado</span> <span style="color:var(--cadarn-cinza); font-size:11px;">(${pCount} projetos)</span>`;
     
     document.getElementById('profile-active-list').innerHTML = ativos.length ? ativos.join('') : '<div style="font-size:12px; color:var(--cadarn-cinza);">Nenhum projeto em execução.</div>';
-    document.getElementById('profile-past-list').innerHTML = concluidos.length ? concluidos.join('') : '<div style="font-size:12px; color:var(--cadarn-cinza);">Nenhum projeto concluído.</div>';
+    document.getElementById('profile-pendencias-list').innerHTML = pendencias.length ? pendencias.join('') : '<div style="font-size:12px; color:var(--cadarn-cinza); text-align:center; padding: 10px;">Sem pendências ativas.</div>';
 
     document.getElementById('profile-modal').classList.add('active');
 }
@@ -931,13 +950,7 @@ function renderMainProjects() {
         
         const tagsHtml = (proj.tags || []).map(t => `<span class="tag-pill">${sanitize(t)}</span>`).join('');
         
-        const checkboxHtml = canBatchEdit ? `
-            <div style="margin-right: 15px;" onclick="event.stopPropagation()">
-                <input type="checkbox" style="width:18px; height:18px; accent-color: var(--cadarn-roxo); cursor: pointer;" 
-                       ${selectedHubItems.has(id) ? 'checked' : ''} 
-                       onchange="toggleHubItem('${id}')">
-            </div>
-        ` : '';
+        const checkboxHtml = '';
 
         if (modoVisualizacao === 'list') {
             listaNormal += `<div class="project-row" onclick="abrirProjeto('${sanitize(id)}')">
