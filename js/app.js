@@ -2263,11 +2263,37 @@ function toggleSelectAllLixeira() {
 
 window.toggleSelectAllLixeira = toggleSelectAllLixeira;
 // =========================================================
+// SISTEMA DE PONTO ELETRÔNICO (IFRAME MODAL)
+// =========================================================
+
+const LINK_GOOGLE_SCRIPT = "https://script.google.com/a/macros/cadarnconsultoria.com.br/s/AKfycbzg0ROCbiPrpH9jowKDPpQKNdjMxJGv7dgH3_HwhU5adYYc_vZBnAgkpj8m5c1-8q7LrA/exec";
+
+function abrirModalPresenca() {
+    const modal = document.getElementById('modal-presenca');
+    const iframe = document.getElementById('iframe-presenca');
+    
+    if (modal && iframe) {
+        // Só carrega o iframe quando clica (poupa internet no login inicial)
+        if (!iframe.src || iframe.src === window.location.href || iframe.src === '') {
+            iframe.src = LINK_GOOGLE_SCRIPT;
+        }
+        modal.classList.add('active');
+    }
+}
+
+function fecharModalPresenca(e) {
+    if (!e || e.target.classList.contains('modal-overlay') || e.target.classList.contains('sp-close')) {
+        document.getElementById('modal-presenca').classList.remove('active');
+    }
+}
+// =========================================================
 // EXPORTANDO FUNÇÕES PARA O HTML ENXERGAR
 // =========================================================
 window.loginComGoogle = loginComGoogle;
 window.logout = logout;
 window.acessarAreaSocio = acessarAreaSocio;
+window.abrirModalPresenca = abrirModalPresenca;
+window.fecharModalPresenca = fecharModalPresenca;
 window.abrirModalElogio = abrirModalElogio;
 window.fecharModalElogio = fecharModalElogio;
 window.enviarElogio = enviarElogio;
