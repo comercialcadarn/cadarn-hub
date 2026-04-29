@@ -2273,11 +2273,13 @@ function abrirModalPresenca() {
     const iframe = document.getElementById('iframe-presenca');
     
     if (modal && iframe) {
-        // Só carrega o iframe quando clica (poupa internet no login inicial)
+        // Se for o primeiro clique ou a URL não foi setada, insere a URL para forçar o load
         if (!iframe.src || iframe.src === window.location.href || iframe.src === '') {
             iframe.src = LINK_GOOGLE_SCRIPT;
         }
         modal.classList.add('active');
+    } else {
+        showToast("Erro: Modal de presença não encontrado no HTML.", "danger");
     }
 }
 
