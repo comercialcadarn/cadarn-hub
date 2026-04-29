@@ -428,6 +428,27 @@ button, a, .card, .project-row, .kanban-card,
         .modal-overlay.active .modal-content { transform: scale(1); }
         .modal-input { width: 100%; padding: 16px; margin: 25px 0; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.4); color: white; text-align: center; outline: none; font-size: 16px; transition: all 0.3s; }
         .modal-input:focus { border-color: var(--cadarn-roxo); box-shadow: 0 0 15px rgba(131,46,255,0.3); }
+/* POLIMENTO VISUAL DO IFRAME DE PONTO */
+#modal-presenca iframe {
+    flex-grow: 1;
+    width: 100%;
+    border: none;
+    background: transparent;
+    border-radius: 0 0 12px 12px;
+    
+    /* sombra interna para profundidade elegante */
+    box-shadow: inset 0 10px 30px rgba(0,0,0,0.5);
+    
+    /* transição de opacidade para não aparecer "travado" */
+    transition: opacity 0.5s ease;
+    opacity: 0; /* Começa invisível */
+}
+
+/* Quando o modal ativar, o iframe aparece */
+#modal-presenca.active iframe {
+    opacity: 1;
+}
+
 
         /* ==================================================== */
 /* TOAST NOTIFICATIONS — REFINADO                       */
