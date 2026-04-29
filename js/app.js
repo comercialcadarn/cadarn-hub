@@ -349,6 +349,10 @@ function abrirPerfil(nome) {
 
     const elogiosSection = document.getElementById('profile-elogios-section');
     const privateStars = document.getElementById('profile-private-stars');
+    const btnEditProfile = document.getElementById('btn-edit-profile');
+    if (btnEditProfile) {
+        btnEditProfile.style.display = (nome === usuarioLogado) ? 'block' : 'none';
+    }
     if(nome === usuarioLogado) {
         elogiosSection.style.display = 'block';
         let rec = (conf.elogiosRecebidos || []).map(e => `<div style="padding:6px; border-bottom:1px solid rgba(255,255,255,0.05); font-size:11px; color:white;"><strong>De ${sanitize(e.de)}:</strong><br>${sanitize(e.texto)}</div>`).join('');
@@ -2017,15 +2021,15 @@ function renderHubMetas() {
     let html = '';
     tarefasPendentes.slice(0, 8).forEach(t => {
         let prazoHtml = '';
-        let prazoClass = '';
+        let prazoCor = 'var(--border-color)';
         if (t.prazo) {
             const dp = new Date(t.prazo); dp.setMinutes(dp.getMinutes() + dp.getTimezoneOffset());
-            const atrasada = dp < hoje;
-            const venceHoje = dp.getTime() === hoje.getTime();
-            prazoClass = atrasada ? 'color:#ff8793;' : (venceHoje ? 'color:#ffc107;' : 'color:var(--cadarn-cinza);');
-            prazoHtml = `<span style="font-size:11px; ${prazoClass} font-weight:600;">${atrasada ? '⚠️ ' : '📅 '}${dp.toLocaleDateString('pt-BR')}</span>`;
+            const isAtrasada = dp < hoje;
+            const isVenceHoje = dp.getTime() === hoje.getTime();
+            const prazoClass = isAtrasada ? 'color:#ff8793;' : (isVenceHoje ? 'color:#ffc107;' : 'color:var(--cadarn-cinza);');
+            prazoHtml = `<span style="font-size:11px; ${prazoClass} font-weight:600;">${isAtrasada ? '⚠️ ' : '📅 '}${dp.toLocaleDateString('pt-BR')}</span>`;
+            prazoCor = isAtrasada ? '#dc3545' : (isVenceHoje ? '#ffc107' : 'var(--border-color)');
         }
-let prazoCor = atrasada ? '#dc3545' : (venceHoje ? '#ffc107' : 'var(--border-color)');
         
         html += `
         <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 14px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.04); border-left:3px solid ${prazoCor}; border-radius:8px; cursor:pointer; transition:0.2s;" onmouseover="this.style.background='rgba(131,46,255,0.08)'" onmouseout="this.style.background='rgba(255,255,255,0.02)'" onclick="abrirProjeto('${t.projId}')">
@@ -2269,6 +2273,7 @@ window.fecharPerfil = fecharPerfil;
 window.toggleEditProfile = toggleEditProfile;
 window.salvarDadosPerfilManual = salvarDadosPerfilManual;
 window.abrirMeuPerfil = abrirMeuPerfil;
+window.abrirPerfil = abrirPerfil;
 window.abrirCmd = abrirCmd;
 window.toggleTheme = toggleTheme;
 window.toggleFullScreen = toggleFullScreen;
