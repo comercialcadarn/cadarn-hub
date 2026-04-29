@@ -273,7 +273,7 @@
         <div class="cmd-hint" onclick="abrirCmd()">Busca Global <span class="cmd-key">Ctrl+K</span></div>
         <button class="btn-icon" id="theme-toggle" onclick="toggleTheme()" title="Modo Claro">☀️</button>
         <button class="btn-icon tv-btn" onclick="toggleFullScreen()" title="Modo TV (Tela Cheia)">⛶</button>
-        <a href="https://script.google.com/a/macros/cadarnconsultoria.com.br/s/AKfycbzg0ROCbiPrpH9jowKDPpQKNdjMxJGv7dgH3_HwhU5adYYc_vZBnAgkpj8m5c1-8q7LrA/exec" target="_blank" class="btn-presenca">⏱️ Presença</a>
+        <button onclick="abrirModalPresenca()" class="btn-presenca" style="cursor: pointer;">⏱️ Bater Ponto</button>
         <div class="clock-widget"><strong id="live-time">00:00</strong><span id="live-date">...</span></div>
         <button class="user-menu" onclick="abrirMeuPerfil()" title="Meu Perfil">
             <div class="user-text"><span id="display-greeting" style="font-size:10px; color:var(--cadarn-cinza); text-transform:uppercase; letter-spacing:0.5px;">Olá,</span><span id="display-name" class="nome-gradiente">Colaborador</span></div>
@@ -441,7 +441,20 @@
         </div>
     </section>
 </div>
+<div id="modal-presenca" class="modal-overlay" onclick="fecharModalPresenca(event)">
+    <div class="modal-content" style="padding: 0; max-width: 450px; height: 600px; background: rgba(15,15,15,0.95); border: 1px solid var(--cadarn-roxo); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;" onclick="event.stopPropagation()">
+        
+        <div style="background: rgba(0,0,0,0.8); border-bottom: 1px solid rgba(255,255,255,0.1); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 18px;">⏱️</span>
+                <strong style="color: white; font-family: 'Outfit', sans-serif; font-size: 16px; letter-spacing: 1px; text-transform: uppercase;">Ponto Eletrônico</strong>
+            </div>
+            <button class="sp-close" onclick="fecharModalPresenca(event)" style="background: rgba(255,255,255,0.1); border: none; color: white; width: 30px; height: 30px; border-radius: 50%; cursor: pointer;">✕</button>
+        </div>
 
+        <iframe id="iframe-presenca" src="https://script.google.com/a/macros/cadarnconsultoria.com.br/s/AKfycbzg0ROCbiPrpH9jowKDPpQKNdjMxJGv7dgH3_HwhU5adYYc_vZBnAgkpj8m5c1-8q7LrA/exec" style="flex-grow: 1; width: 100%; border: none; background: transparent;"></iframe>
+    </div>
+</div>
 <footer>
     <div class="tradingview-widget-container">
         <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
@@ -570,6 +583,7 @@ async function buscarEventosGCal(token) {
 <script type="module" src="js/app.js"></script>
 </body>
 </html>
+
 
 
 
