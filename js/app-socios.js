@@ -3,12 +3,11 @@
 /* ========================================================= */
 
 const listaColaboradores = [
-    "Ana Carolina Bittencourt", "Ana Clara Fabris", "Ana Clara Yumi", "Barbara Figueiredo",
+    "Ana Carolina Bittencourt", "Ana Clara Fabris", "Barbara Figueiredo",
     "Carlos Oliveira", "Debora Yuan", "Eduardo Figueiredo", "Felipe Penido", "João Pedro Soares",
-    "Juliana Deoracki", "Leonardo Assis", "Leonardo Pierangelli", "Louise Varela", "Manuela Pires",
+    "Juliana Deoracki", "Leonardo Assis", "Leonardo Pierangelli", "Louise Varela",
     "Maria de Macedo", "Maria Eduarda Aguiar", "Maria Emília Velozo", "Matheus Zucon",
-    "Otavio Pimentel", "Rafaela Avila", "Sâmia Franco", "Stefano Miceli", "Susana Vicenti",
-    "Thiago Zamin", "Victor Hugo Mendes"
+    "Otavio Pimentel", "Rafaela Avila", "Sâmia Franco", "Stefano Miceli", "Susana Vicenti", "Victor Hugo Mendes"
 ].sort();
 
 const emailsSocios = [
@@ -317,7 +316,7 @@ function renderKanban() {
         const totalEtapas     = etapas.length;
         const concluidasCount = etapas.filter(t => t.status === 'concluido').length;
         const progressPct     = totalEtapas > 0 ? Math.round((concluidasCount / totalEtapas) * 100) : 0;
-        const progressColor   = progressPct >= 90 ? '#47e299' : progressPct >= 50 ? '#ffc107' : '#832EFF';
+        const progressColor   = progressPct === 0 ? 'rgba(255,255,255,0.1)' : (progressPct >= 90 ? '#47e299' : progressPct >= 50 ? '#ffc107' : '#832EFF');
         const progressBar     = totalEtapas > 0
             ? `<div class="card-progress-bar-bg"><div class="card-progress-bar-fill" style="width:${progressPct}%; background:${progressColor};"></div></div>`
             : '';
@@ -356,7 +355,7 @@ function renderKanban() {
         cardIndex++;
     }
 
-    const emptyMsg = (msg) => `<div style="text-align:center; padding:30px 15px; color:var(--cadarn-cinza); font-size:12px; border: 1px dashed rgba(255,255,255,0.06); border-radius:12px; margin-top:10px;">${msg}</div>`;
+    const emptyMsg = (msg) => `<div class="kanban-no-drag" style="text-align:center; padding:30px 15px; color:var(--cadarn-cinza); font-size:12px; border: 1px dashed rgba(255,255,255,0.06); border-radius:12px; margin-top:10px; cursor: default;">${msg}</div>`;
 
     document.getElementById('col-negociacao').innerHTML = htmlNegociacao || emptyMsg('Nenhuma proposta em negociação.');
     document.getElementById('col-andamento').innerHTML  = htmlAndamento  || emptyMsg('Nenhum projeto em delivery.');
@@ -1093,7 +1092,10 @@ function setupAutocompleteMulti(inputElement, arr) {
 
         const segments       = val.split(',');
         const currentSegment = segments[segments.length - 1].trim().toLowerCase();
-        if (!currentSegment) return;
+        if (!currentSegment) {
+            closeAllLists();
+            return;
+        }
 
         const a = document.createElement('DIV');
         a.setAttribute('id',    this.id + 'autocomplete-list');
