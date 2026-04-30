@@ -1160,31 +1160,32 @@ input[type=number] {
     100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
 }
 /* =========================================================
-   POLIMENTO ESTÉTICO: TRANSIÇÃO PARA MODO CLARO (LIGHT MODE)
+   POLIMENTO ESTÉTICO 2.0: TRANSIÇÃO PARA MODO CLARO
    ========================================================= */
 
-/* Quando o body tem a classe light-mode, as cores base mudam.
-   Abaixo estão as correções para os elementos que usavam cor fixa (white) no HTML. */
-
 body.light-mode {
-    --text-main: #1e293b; /* Texto principal cinza escuro */
-    --text-sub: #64748b; /* Texto secundário cinza médio */
+    --text-main: #1e293b; /* Cinza chumbo escuro (legibilidade máxima) */
+    --text-sub: #64748b; /* Cinza médio */
     --border-color: rgba(0, 0, 0, 0.1);
 }
 
-/* 1. Correção de Textos Brancos forçados no HTML (Modais e Cards) */
+/* 1. TEXTOS BRANCOS (Cobrindo todas as variações de digitação no JS e HTML) */
+body.light-mode [style*="color: white"],
+body.light-mode [style*="color:white"],
+body.light-mode [style*="color: #fff"],
+body.light-mode [style*="color:#fff"],
+body.light-mode [style*="color:var(--cadarn-branco)"],
 body.light-mode .section-header-title,
-body.light-mode .card [style*="color: white"],
-body.light-mode .card [style*="color:#fff"],
-body.light-mode .modal-content [style*="color: white"],
-body.light-mode .modal-content [style*="color:#fff"],
-body.light-mode .briefing-card [style*="color: white"],
-body.light-mode .briefing-card [style*="color:var(--cadarn-branco)"],
-body.light-mode #profile-name {
+body.light-mode #profile-name,
+body.light-mode #colaborador-mes-container div {
     color: var(--text-main) !important;
 }
 
-/* 2. Fundos Translúcidos de Cards e Painéis */
+/* Proteção para não "apagar" as cores vibrantes dentro do Destaque do Mês */
+body.light-mode #colaborador-mes-container div[style*="color:var(--cadarn-roxo-claro)"] { color: #7c3aed !important; }
+body.light-mode #colaborador-mes-container div[style*="color:#ffc107"] { color: #d97706 !important; }
+
+/* 2. FUNDOS DE CARDS E PAINÉIS (Removendo o fundo preto transparente) */
 body.light-mode .card,
 body.light-mode .modal-content,
 body.light-mode .briefing-card,
@@ -1195,56 +1196,61 @@ body.light-mode .cmd-modal {
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05) !important;
 }
 
-/* 3. Inversão dos blocos internos (KPIs, Pendências) que eram "branco transparente" */
-body.light-mode .card div[style*="background: rgba(255,255,255,0.02)"],
-body.light-mode .modal-content div[style*="background: rgba(255,255,255,0.02)"],
-body.light-mode .card div[style*="background: rgba(0,0,0,0.2)"],
-body.light-mode .card div[style*="background: rgba(0,0,0,0.3)"],
+/* 3. BLOCOS INTERNOS (Invertendo de Preto Translúcido para Cinza Claro) */
+body.light-mode [style*="background: rgba(255,255,255,0.02)"],
+body.light-mode [style*="background: rgba(0,0,0,0.2)"],
+body.light-mode [style*="background: rgba(0,0,0,0.3)"],
+body.light-mode [style*="background:rgba(255,255,255,0.02)"],
+body.light-mode [style*="background:rgba(0,0,0,0.2)"],
+body.light-mode [style*="background:rgba(0,0,0,0.3)"],
 body.light-mode .briefing-news-list {
-    background: #f8fafc !important; /* Fundo cinza bem claro */
+    background: #f8fafc !important; /* Slate 50 do Tailwind - super elegante */
     border-color: rgba(0, 0, 0, 0.05) !important;
 }
 
-/* 4. Bordas divisórias finas (Linha entre tarefas e agenda) */
-body.light-mode div[style*="border-left: 1px solid rgba(255,255,255,0.05)"],
-body.light-mode div[style*="border-bottom: 1px solid rgba(255,255,255,0.05)"] {
+/* 4. AS LINHAS DIVISÓRIAS QUE SUMIAM (Bordas) */
+body.light-mode [style*="border-bottom: 1px solid rgba(255"],
+body.light-mode [style*="border-bottom:1px solid rgba(255"],
+body.light-mode [style*="border-left: 1px solid rgba(255"],
+body.light-mode [style*="border-left:1px solid rgba(255"] {
     border-color: rgba(0, 0, 0, 0.1) !important;
 }
 
-/* 5. Inputs de Edição no Perfil */
-body.light-mode .edit-input {
+/* Força a borda específica do calendário e do cabeçalho das Tarefas */
+body.light-mode #google-calendar-section { border-left-color: rgba(0,0,0,0.1) !important; }
+body.light-mode .card > div[style*="border-bottom"], 
+body.light-mode .modal-content > div[style*="border-bottom"] { border-bottom-color: rgba(0,0,0,0.1) !important; }
+
+/* 5. INPUTS DE EDIÇÃO (Perfil e Modais) */
+body.light-mode .edit-input, 
+body.light-mode .edit-textarea {
     background: #f1f5f9 !important;
     color: #1e293b !important;
     border: 1px solid rgba(0,0,0,0.1) !important;
 }
-body.light-mode .edit-input:focus {
+body.light-mode .edit-input:focus, 
+body.light-mode .edit-textarea:focus {
     background: #ffffff !important;
     border-color: var(--cadarn-roxo) !important;
 }
 
-/* 6. Cores Vibrantes Ajustadas (Para não doer os olhos no branco) */
-body.light-mode [style*="color: #ffc107"], 
-body.light-mode [style*="color:#ffc107"] {
-    color: #d97706 !important; /* Amarelo ouro escurecido */
-}
-body.light-mode [style*="color: #47e299"], 
-body.light-mode [style*="color:#47e299"] {
-    color: #059669 !important; /* Verde mais legível */
-}
-body.light-mode [style*="color: #ff8793"], 
-body.light-mode [style*="color:#ff8793"] {
-    color: #e11d48 !important; /* Vermelho mais forte */
-}
-body.light-mode [style*="color: #b68aff"], 
-body.light-mode [style*="color:#b68aff"] {
-    color: #7c3aed !important; /* Roxo mais legível */
-}
+/* 6. CORES VIBRANTES AJUSTADAS (Escurecidas para não doer a vista no fundo branco) */
+body.light-mode [style*="color: #ffc107"], body.light-mode [style*="color:#ffc107"] { color: #d97706 !important; } /* Amarelo -> Ouro escuro */
+body.light-mode [style*="color: #47e299"], body.light-mode [style*="color:#47e299"] { color: #059669 !important; } /* Verde claro -> Esmeralda */
+body.light-mode [style*="color: #ff8793"], body.light-mode [style*="color:#ff8793"] { color: #e11d48 !important; } /* Rosa -> Carmim */
+body.light-mode [style*="color: #b68aff"], body.light-mode [style*="color:#b68aff"] { color: #7c3aed !important; } /* Lilás -> Roxo escuro */
 
-/* 7. Hover em Pendências / Itens clicáveis */
+/* 7. EFEITO HOVER MOUSE EM ITENS CLICÁVEIS (Projetos e Pendências) */
+body.light-mode [onclick]:hover { border-color: rgba(0,0,0,0.15) !important; }
 body.light-mode .card div[onclick]:hover,
 body.light-mode .modal-content div[onclick]:hover {
     background-color: #f1f5f9 !important;
-    border-color: rgba(0,0,0,0.1) !important;
+}
+
+/* Ignora botões coloridos para não estragar o visual deles */
+body.light-mode button[onclick]:hover {
+    background-color: inherit !important;
+    filter: brightness(0.9);
 }
 
 /* Correção para o cabeçalho do Modal de Presença */
