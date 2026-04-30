@@ -69,9 +69,9 @@ function sanitize(str) {
 async function initSegurancaSocios() {
     const { initializeApp }              = await import('https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js');
     const { getAuth, onAuthStateChanged } = await import('https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js');
-    const { getFirestore, collection, onSnapshot, doc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js');
-
-    firestore = { collection, onSnapshot, doc, setDoc };
+    const { getFirestore, collection, onSnapshot, doc, setDoc, getDocs } = await import('https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js');
+    
+    firestore = { collection, onSnapshot, doc, setDoc, getDocs };
 
     const firebaseConfig = {
         apiKey:            'AIzaSyAnClCbOU3JRBehpGvrKj8RrcS86lyl3gg',
@@ -86,27 +86,41 @@ async function initSegurancaSocios() {
     db         = getFirestore(app, 'cadarn-hub');
     const auth = getAuth(app);
 
-    onAuthStateChanged(auth, (user) => {
-        const role = getSocioRole(user ? user.email : '');
-        if (!user || role === 'Visitante') {
-            window.location.href = 'index.html';
-        } else {
-            window.userRole = role;
-            usuarioLogado   = user.displayName || user.email || 'Sócio';
-            localStorage.setItem('cadarn_user',       usuarioLogado);
-            localStorage.setItem('cadarn_user_email', user.email || '');
-            document.getElementById('conteudo-restrito').style.display = 'block';
+    onAuthStateChanged(auth, async (user) => {
+    if (!user) { window.location.href = 'index.html'; return; }
 
-            // ✅ MELHORIA: atualiza avatar e nome no header
-            const avatarEl = document.getElementById('header-user-avatar');
-            const nameEl   = document.getElementById('header-user-name');
-            if (avatarEl) avatarEl.textContent = usuarioLogado.charAt(0).toUpperCase();
-            if (nameEl)   nameEl.textContent   = usuarioLogado.split(' ')[0];
+    let role = getSocioRole(user.email);
 
-            iniciarUI();
-            iniciarListeners();
-        }
-    });
+    // Se não está nas arrays hardcoded, consulta o cargo salvo no Firestore
+    if (role === 'Visitante') {
+        try {
+            const snap = await firestore.getDocs(firestore.collection(db, 'colaboradores'));
+            snap.forEach(docSnap => {
+                const d = docSnap.data();
+                if ((d.email || '').toLowerCase().trim() === user.email.toLowerCase().trim()) {
+                    const cargo = d.cargo || '';
+                    if (['RH', 'DEV', 'Sócio'].includes(cargo)) role = cargo;
+                }
+            });
+        } catch (e) { console.warn('Erro ao verificar cargo no Firestore:', e); }
+
+        if (role === 'Visitante') { window.location.href = 'index.html'; return; }
+    }
+
+    window.userRole = role;
+    usuarioLogado   = user.displayName || user.email || 'Sócio';
+    localStorage.setItem('cadarn_user',       usuarioLogado);
+    localStorage.setItem('cadarn_user_email', user.email || '');
+    document.getElementById('conteudo-restrito').style.display = 'block';
+
+    const avatarEl = document.getElementById('header-user-avatar');
+    const nameEl   = document.getElementById('header-user-name');
+    if (avatarEl) avatarEl.textContent = usuarioLogado.charAt(0).toUpperCase();
+    if (nameEl)   nameEl.textContent   = usuarioLogado.split(' ')[0];
+
+    iniciarUI();
+    iniciarListeners();
+});
 }
 
 // =====================================================
@@ -141,28 +155,42 @@ function iniciarUI() {
 // PERMISSÕES ABAC — APLICAÇÃO EM TEMPO REAL
 // =====================================================
 function atualizarPermissoesLocais() {
-    // Sócio e DEV têm acesso total independente do ABAC
+    // Sócio e DEV: acesso total, sem consultar Firestore
     if (window.userRole === 'Sócio' || window.userRole === 'DEV') {
         window.userPermissoes = { verFinanceiro: true, verDossie: true, editarProjetos: true, gerenciarEquipe: true };
         return;
     }
-    // RH tem acesso nativo a dossiês
+
+    // Base zerada para todos os outros
+    window.userPermissoes = { verFinanceiro: false, verDossie: false, editarProjetos: false, gerenciarEquipe: false };
+
+    // Permissão nativa do role hardcoded (ex: RH da array)
     if (window.userRole === 'RH') {
-        window.userPermissoes = { verFinanceiro: false, verDossie: true, editarProjetos: false, gerenciarEquipe: false };
-    } else {
-        window.userPermissoes = {};
+        window.userPermissoes.verDossie = true;
     }
-    // Sobrescreve com permissões granulares salvas no Firestore
+
+    // Busca o registro do usuário logado no bdColabs para aplicar cargo + toggles ABAC
     const emailAtual = (localStorage.getItem('cadarn_user_email') || '').toLowerCase().trim();
     for (const colab of Object.values(bdColabs)) {
         if ((colab.email || '').toLowerCase().trim() === emailAtual) {
+
+            // 1. RBAC: aplica permissões do cargo salvo no Firestore
+            const cargo = colab.cargo || '';
+            if (cargo === 'Sócio' || cargo === 'DEV') {
+                window.userRole = cargo;
+                window.userPermissoes = { verFinanceiro: true, verDossie: true, editarProjetos: true, gerenciarEquipe: true };
+                return;
+            }
+            if (cargo === 'RH') {
+                window.userPermissoes.verDossie = true;
+            }
+
+            // 2. ABAC: os toggles granulares complementam (nunca subtraem) o que o cargo já deu
             const p = colab.permissoes || {};
-            window.userPermissoes = {
-                verFinanceiro:   window.userPermissoes.verFinanceiro   || !!p.verFinanceiro,
-                verDossie:       window.userPermissoes.verDossie       || !!p.verDossie,
-                editarProjetos:  window.userPermissoes.editarProjetos  || !!p.editarProjetos,
-                gerenciarEquipe: window.userPermissoes.gerenciarEquipe || !!p.gerenciarEquipe
-            };
+            window.userPermissoes.verFinanceiro   = window.userPermissoes.verFinanceiro   || !!p.verFinanceiro;
+            window.userPermissoes.verDossie       = window.userPermissoes.verDossie       || !!p.verDossie;
+            window.userPermissoes.editarProjetos  = window.userPermissoes.editarProjetos  || !!p.editarProjetos;
+            window.userPermissoes.gerenciarEquipe = window.userPermissoes.gerenciarEquipe || !!p.gerenciarEquipe;
             return;
         }
     }
