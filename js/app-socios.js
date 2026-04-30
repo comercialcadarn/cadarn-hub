@@ -1,5 +1,6 @@
 /* ========================================================= */
 /* LÓGICA DE ENGENHARIA E GESTÃO: ÁREA DO SÓCIO              */
+/* ✅ v4 — 4 novas features + bugs corrigidos + UX melhorada  */
 /* ========================================================= */
 
 const listaColaboradores = [
@@ -33,6 +34,7 @@ let db;
 let firestore = {};
 let bdProjetos = {};
 let bdColabs   = {};
+let bdDossies  = {}; // ✅ NOVO: cache local dos dossiês para alertas de contrato
 let filtroResponsavel = '';
 
 let projetoModalAberto = null;
@@ -69,9 +71,10 @@ function sanitize(str) {
 async function initSegurancaSocios() {
     const { initializeApp }              = await import('https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js');
     const { getAuth, onAuthStateChanged } = await import('https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js');
-    const { getFirestore, collection, onSnapshot, doc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js');
+    const { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc } = await import('https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js');
 
-    firestore = { collection, onSnapshot, doc, setDoc };
+    // ✅ NOVO: deleteDoc adicionado ao objeto firestore
+    firestore = { collection, onSnapshot, doc, setDoc, deleteDoc };
 
     const firebaseConfig = {
         apiKey:            'AIzaSyAnClCbOU3JRBehpGvrKj8RrcS86lyl3gg',
@@ -97,7 +100,6 @@ async function initSegurancaSocios() {
             localStorage.setItem('cadarn_user_email', user.email || '');
             document.getElementById('conteudo-restrito').style.display = 'block';
 
-            // ✅ MELHORIA: atualiza avatar e nome no header
             const avatarEl = document.getElementById('header-user-avatar');
             const nameEl   = document.getElementById('header-user-name');
             if (avatarEl) avatarEl.textContent = usuarioLogado.charAt(0).toUpperCase();
@@ -164,6 +166,17 @@ function iniciarListeners() {
         renderDossieList();
     });
 
+    // ✅ NOVO: listener de dossiês para alertas de contrato em tempo real
+    firestore.onSnapshot(firestore.collection(db, 'dossies'), (snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+            const id = change.doc.id;
+            if (change.type === 'removed') delete bdDossies[id];
+            else bdDossies[id] = change.doc.data();
+        });
+        // Após atualizar cache de dossiês, verifica alertas de contrato
+        verificarAlertasContratoRH();
+    });
+
     inicializarDragAndDrop();
     verificarAlertasDoDia();
 }
@@ -188,7 +201,6 @@ function switchTab(tab) {
         targetView.style.display = tab === 'projetos' ? 'grid' : 'block';
         if (targetBtn) targetBtn.classList.add('active');
 
-        // Pequeno delay para disparar transição de opacidade
         requestAnimationFrame(() => {
             requestAnimationFrame(() => {
                 targetView.style.opacity = '1';
@@ -228,9 +240,6 @@ function showToast(message, type = 'info') {
 
 // =====================================================
 // KANBAN RENDER
-// ✅ BUG CORRIGIDO: 4 colunas agora separadas corretamente
-// ✅ BUG CORRIGIDO: atualizarContadoresKanban() chamado ao final
-// ✅ MELHORIA: progress bar por card + animação sequencial
 // =====================================================
 function renderKanban() {
     let htmlNegociacao = '', htmlAndamento = '', htmlIniciado = '', htmlConcluido = '';
@@ -266,7 +275,6 @@ function renderKanban() {
             ? `<div style="background: linear-gradient(135deg, #FFC107, #FF9800); color: #000; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 900; display: inline-block;">R$ ${proj.valorContrato.toLocaleString('pt-BR')}</div>`
             : '';
 
-        // ✅ MELHORIA: barra de progresso das tarefas
         const totalEtapas     = etapas.length;
         const concluidasCount = etapas.filter(t => t.status === 'concluido').length;
         const progressPct     = totalEtapas > 0 ? Math.round((concluidasCount / totalEtapas) * 100) : 0;
@@ -275,7 +283,6 @@ function renderKanban() {
             ? `<div class="card-progress-bar-bg"><div class="card-progress-bar-fill" style="width:${progressPct}%; background:${progressColor};"></div></div>`
             : '';
 
-        // ✅ MELHORIA: animação sequencial (delay por index)
         const delay = Math.min(cardIndex * 40, 300);
 
         const card = `
@@ -300,7 +307,6 @@ function renderKanban() {
             </div>
         `;
 
-        // ✅ BUG CORRIGIDO: 'concluido' agora vai para htmlConcluido, não htmlIniciado
         if      (statusCrm === 'negociacao') htmlNegociacao += card;
         else if (statusCrm === 'andamento')  htmlAndamento  += card;
         else if (statusCrm === 'iniciado')   htmlIniciado   += card;
@@ -316,10 +322,7 @@ function renderKanban() {
     document.getElementById('col-iniciados').innerHTML  = htmlIniciado   || emptyMsg('Nenhum projeto iniciado.');
     document.getElementById('col-concluido').innerHTML  = htmlConcluido  || emptyMsg('Nenhum projeto concluído.');
 
-    // ✅ BUG CORRIGIDO: contador agora é atualizado após renderizar
     atualizarContadoresKanban();
-
-    // Re-inicializa drag-and-drop (fix bug de handlers duplicados)
     inicializarDragAndDrop();
 }
 
@@ -336,7 +339,7 @@ function inicializarDragAndDrop() {
         document.getElementById('col-negociacao'),
         document.getElementById('col-andamento'),
         document.getElementById('col-iniciados'),
-        document.getElementById('col-concluido') // ✅ 4ª coluna incluída
+        document.getElementById('col-concluido')
     ];
 
     colunas.forEach(coluna => {
@@ -374,7 +377,6 @@ function inicializarDragAndDrop() {
     });
 }
 
-// ✅ BUG CORRIGIDO: contador da 4ª coluna (concluido) adicionado
 function atualizarContadoresKanban() {
     const contar = (colId) => document.getElementById(colId)?.querySelectorAll('.kanban-card').length || 0;
     const countNeg  = document.getElementById('count-negociacao');
@@ -398,21 +400,19 @@ function verificarAcessoDossie(resourceOwnerId) {
     return false;
 }
 
+// ✅ BUG CORRIGIDO: salvarDossie agora re-lança o erro para que o chamador possa tratá-lo
 async function salvarDossie(nomeColaborador, dados) {
     if (!verificarAcessoDossie(nomeColaborador)) {
+        const err = new Error('Acesso negado');
         showToast('Acesso Negado: Apenas Sócios e RH podem editar dossiês.', 'danger');
-        return;
+        throw err;
     }
-    try {
-        await firestore.setDoc(
-            firestore.doc(db, 'dossies', nomeColaborador.replace(/\s+/g, '_')),
-            { ...dados, atualizadoEm: Date.now(), atualizadoPor: usuarioLogado },
-            { merge: true }
-        );
-        showToast('Dossiê salvo com segurança.', 'success');
-    } catch (e) {
-        showToast('Erro ao salvar dossiê.', 'danger');
-    }
+    // ✅ BUG CORRIGIDO: removido try/catch interno que engolia erros silenciosamente
+    await firestore.setDoc(
+        firestore.doc(db, 'dossies', nomeColaborador.replace(/\s+/g, '_')),
+        { ...dados, atualizadoEm: Date.now(), atualizadoPor: usuarioLogado },
+        { merge: true }
+    );
 }
 
 async function abrirDossieColaborador(nomeColaborador) {
@@ -436,6 +436,46 @@ async function abrirDossieColaborador(nomeColaborador) {
         if (snap.exists()) dossieData = snap.data();
     } catch (e) { console.warn('Dossie não encontrado:', e); }
 
+    // ✅ NOVO: detectar se é estagiário para mostrar campo de formatura
+    const colabConf   = bdColabs[nomeColaborador] || {};
+    const cargoAtual  = colabConf.cargo || dossieData.tipoContrato || '';
+    const isEstagiario = cargoAtual === 'Estagiário' || dossieData.tipoContrato === 'Estagio';
+
+    // ✅ NOVO: calcular dias até formatura (se houver)
+    let formaturaInfo = '';
+    if (dossieData.dataFormatura) {
+        const hoje     = new Date();
+        const formDate = new Date(dossieData.dataFormatura);
+        formDate.setMinutes(formDate.getMinutes() + formDate.getTimezoneOffset());
+        const diffDias = Math.ceil((formDate - hoje) / (1000 * 60 * 60 * 24));
+        if (diffDias > 0) {
+            const meses = Math.floor(diffDias / 30);
+            formaturaInfo = meses > 0
+                ? `<span style="color:#47e299;font-weight:700;">~${meses} meses (${diffDias} dias)</span>`
+                : `<span style="color:#ffc107;font-weight:700;">${diffDias} dias</span>`;
+        } else {
+            formaturaInfo = `<span style="color:#ff8793;font-weight:700;">Data já passou ou não definida</span>`;
+        }
+    }
+
+    // ✅ NOVO: calcular dias até fim do contrato
+    let fimContratoInfo = '';
+    if (dossieData.dataFimContrato) {
+        const hoje    = new Date();
+        const fimDate = new Date(dossieData.dataFimContrato);
+        fimDate.setMinutes(fimDate.getMinutes() + fimDate.getTimezoneOffset());
+        const diffDias = Math.ceil((fimDate - hoje) / (1000 * 60 * 60 * 24));
+        if (diffDias > 0 && diffDias <= 30)
+            fimContratoInfo = `<span style="background:rgba(220,53,69,0.15);color:#ff8793;padding:2px 8px;border-radius:10px;font-weight:700;font-size:11px;">⚠️ ${diffDias} dias restantes!</span>`;
+        else if (diffDias > 30 && diffDias <= 60)
+            fimContratoInfo = `<span style="background:rgba(255,193,7,0.1);color:#ffc107;padding:2px 8px;border-radius:10px;font-weight:700;font-size:11px;">⏳ ${diffDias} dias restantes</span>`;
+        else if (diffDias <= 0)
+            fimContratoInfo = `<span style="background:rgba(220,53,69,0.2);color:#ff8793;padding:2px 8px;border-radius:10px;font-weight:700;font-size:11px;">🚨 Contrato vencido!</span>`;
+    }
+
+    const old = document.getElementById('modal-dossie');
+    if (old) old.remove();
+
     const modalEl = document.createElement('div');
     modalEl.id = 'modal-dossie';
     modalEl.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.8);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);';
@@ -443,41 +483,77 @@ async function abrirDossieColaborador(nomeColaborador) {
 
     const canEdit = window.userRole === 'Sócio' || window.userRole === 'RH';
 
+    // ✅ NOVO: estilos inline para campos de dossiê (compartilhado)
+    const fieldStyle   = 'width:100%;background:rgba(255,255,255,0.02);border:1px solid transparent;color:#fff;padding:10px;border-radius:8px;font-size:14px;outline:none;transition:all 0.3s;box-sizing:border-box;';
+    const fieldStyleSel= fieldStyle + '-webkit-appearance:none;appearance:none;';
+
     modalEl.innerHTML = `
-        <div id="dossie-modal-box" style="background:rgba(10,10,15,0.99);border:1px solid rgba(255,193,7,0.2);border-radius:20px;padding:35px;width:90%;max-width:600px;max-height:85vh;overflow-y:auto;" onclick="event.stopPropagation()">
+        <div id="dossie-modal-box" style="background:rgba(10,10,15,0.99);border:1px solid rgba(255,193,7,0.2);border-radius:20px;padding:35px;width:90%;max-width:640px;max-height:88vh;overflow-y:auto;" onclick="event.stopPropagation()">
+
+            <!-- HEADER -->
             <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:25px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:20px;">
                 <div>
                     <div style="font-size:11px;color:#ffc107;text-transform:uppercase;font-weight:800;letter-spacing:2px;margin-bottom:8px;">🔒 Dossiê Confidencial</div>
                     <h2 style="font-size:24px;font-weight:800;color:#fff;">${sanitize(nomeColaborador)}</h2>
+                    ${colabConf.cargo ? `<div style="font-size:12px;color:var(--cadarn-cinza);margin-top:4px;">${sanitize(colabConf.cargo)}</div>` : ''}
                 </div>
-                <div style="display: flex; gap: 10px;">
-                    ${canEdit ? `<button id="btn-toggle-edit-dossie" onclick="window.toggleEditDossie()" style="background:rgba(131,46,255,0.15); border:1px solid rgba(131,46,255,0.3); color:#c5a3ff; padding: 8px 16px; border-radius:8px; cursor:pointer; font-size:12px; font-weight:700; transition:0.2s;">✏️ Editar Informações</button>` : ''}
-                    <button onclick="document.getElementById('modal-dossie').remove()" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#fff;width:35px;height:35px;border-radius:50%;cursor:pointer;font-size:16px;">✕</button>
+                <div style="display: flex; gap: 10px; align-items:center;">
+                    ${canEdit ? `<button id="btn-toggle-edit-dossie" onclick="window.toggleEditDossie()" style="background:rgba(131,46,255,0.15);border:1px solid rgba(131,46,255,0.3);color:#c5a3ff;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;transition:0.2s;white-space:nowrap;">✏️ Editar Informações</button>` : ''}
+                    <button onclick="document.getElementById('modal-dossie').remove()" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#fff;width:35px;height:35px;border-radius:50%;cursor:pointer;font-size:16px;flex-shrink:0;">✕</button>
                 </div>
             </div>
 
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:25px;">
+            <!-- CAMPOS PRINCIPAIS -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:20px;">
                 <div>
                     <label style="font-size:10px;color:var(--cadarn-cinza);text-transform:uppercase;font-weight:700;display:block;margin-bottom:6px;">📅 Data de Admissão</label>
-                    <input type="date" id="dossie-admissao" class="dossie-field" value="${dossieData.admissao || ''}" readonly style="width:100%;background:rgba(255,255,255,0.02);border:1px solid transparent;color:#fff;padding:10px;border-radius:8px;font-size:14px;outline:none;transition:0.3s;">
+                    <input type="date" id="dossie-admissao" class="dossie-field" value="${dossieData.admissao || ''}" readonly style="${fieldStyle}">
                 </div>
                 <div>
                     <label style="font-size:10px;color:var(--cadarn-cinza);text-transform:uppercase;font-weight:700;display:block;margin-bottom:6px;">📋 Tipo de Contrato</label>
-                    <select id="dossie-contrato" class="dossie-field" disabled style="width:100%;background:rgba(255,255,255,0.02);border:1px solid transparent;color:#fff;padding:10px;border-radius:8px;font-size:14px;outline:none;transition:0.3s;-webkit-appearance:none;">
-                        <option value=""         ${!dossieData.tipoContrato                      ? 'selected' : ''}>Não definido</option>
-                        <option value="CLT"      ${dossieData.tipoContrato === 'CLT'             ? 'selected' : ''}>CLT</option>
-                        <option value="PJ"       ${dossieData.tipoContrato === 'PJ'              ? 'selected' : ''}>PJ</option>
-                        <option value="Estagio"  ${dossieData.tipoContrato === 'Estagio'         ? 'selected' : ''}>Estágio</option>
-                        <option value="Freelancer" ${dossieData.tipoContrato === 'Freelancer'    ? 'selected' : ''}>Freelancer</option>
+                    <select id="dossie-contrato" class="dossie-field" disabled style="${fieldStyleSel}" onchange="window.onContratoChange(this.value)">
+                        <option value=""         ${!dossieData.tipoContrato                   ? 'selected' : ''}>Não definido</option>
+                        <option value="CLT"      ${dossieData.tipoContrato === 'CLT'          ? 'selected' : ''}>CLT</option>
+                        <option value="PJ"       ${dossieData.tipoContrato === 'PJ'           ? 'selected' : ''}>PJ</option>
+                        <option value="Estagio"  ${dossieData.tipoContrato === 'Estagio'      ? 'selected' : ''}>Estágio</option>
+                        <option value="Freelancer" ${dossieData.tipoContrato === 'Freelancer' ? 'selected' : ''}>Freelancer</option>
                     </select>
                 </div>
             </div>
 
-            <div style="margin-bottom:20px;">
-                <label style="font-size:10px;color:var(--cadarn-cinza);text-transform:uppercase;font-weight:700;display:block;margin-bottom:6px;">📝 Observações de Saúde / Bem-estar</label>
-                <textarea id="dossie-saude" class="dossie-field" readonly placeholder="Nenhuma observação registrada..." style="width:100%;background:rgba(255,255,255,0.02);border:1px solid transparent;color:#fff;padding:10px;border-radius:8px;font-size:14px;resize:none;min-height:80px;outline:none;transition:0.3s;">${dossieData.observacoesSaude || ''}</textarea>
+            <!-- ✅ NOVO: Data de Fim de Contrato -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:20px;">
+                <div>
+                    <label style="font-size:10px;color:var(--cadarn-cinza);text-transform:uppercase;font-weight:700;display:block;margin-bottom:6px;">
+                        🗓️ Data de Fim de Contrato
+                        ${fimContratoInfo ? `<br><span style="text-transform:none;">${fimContratoInfo}</span>` : ''}
+                    </label>
+                    <input type="date" id="dossie-fim-contrato" class="dossie-field" value="${dossieData.dataFimContrato || ''}" readonly style="${fieldStyle}">
+                </div>
+                <!-- ✅ NOVO: Campo Previsão de Formatura (visível para estagiários) -->
+                <div id="dossie-formatura-wrapper" style="display:${isEstagiario ? 'block' : 'none'};">
+                    <label style="font-size:10px;color:var(--cadarn-cinza);text-transform:uppercase;font-weight:700;display:block;margin-bottom:6px;">
+                        🎓 Previsão de Formatura
+                        ${dossieData.dataFormatura && formaturaInfo ? `<br><span style="text-transform:none;font-size:11px;">${formaturaInfo}</span>` : ''}
+                    </label>
+                    <input type="date" id="dossie-formatura" class="dossie-field" value="${dossieData.dataFormatura || ''}" readonly style="${fieldStyle}">
+                    ${dossieData.cursoFormatura ? `<div style="font-size:11px;color:var(--cadarn-cinza);margin-top:5px;">📚 ${sanitize(dossieData.cursoFormatura)}</div>` : ''}
+                </div>
             </div>
 
+            <!-- ✅ NOVO: Campo de Curso (só estagiários) -->
+            <div id="dossie-curso-wrapper" style="display:${isEstagiario ? 'block' : 'none'}; margin-bottom:20px;">
+                <label style="font-size:10px;color:var(--cadarn-cinza);text-transform:uppercase;font-weight:700;display:block;margin-bottom:6px;">📚 Curso / Instituição de Ensino</label>
+                <input type="text" id="dossie-curso" class="dossie-field" value="${sanitize(dossieData.cursoFormatura || '')}" readonly placeholder="Ex: Administração - FGV São Paulo" style="${fieldStyle}">
+            </div>
+
+            <!-- Observações de Saúde -->
+            <div style="margin-bottom:20px;">
+                <label style="font-size:10px;color:var(--cadarn-cinza);text-transform:uppercase;font-weight:700;display:block;margin-bottom:6px;">📝 Observações de Saúde / Bem-estar</label>
+                <textarea id="dossie-saude" class="dossie-field" readonly placeholder="Nenhuma observação registrada..." style="${fieldStyle}resize:none;min-height:80px;">${dossieData.observacoesSaude || ''}</textarea>
+            </div>
+
+            <!-- Documentos Anexados -->
             <div style="margin-bottom:25px;">
                 <label style="font-size:10px;color:var(--cadarn-cinza);text-transform:uppercase;font-weight:700;display:block;margin-bottom:10px;">📎 Documentos Anexados</label>
                 <div id="dossie-docs-list" style="margin-bottom:10px;">
@@ -486,39 +562,125 @@ async function abrirDossieColaborador(nomeColaborador) {
                 </div>
                 <div id="dossie-upload-area" style="display:none;">
                     <input type="file" id="dossie-file-upload" accept=".pdf,.doc,.docx,.jpg,.png" style="display:none" onchange="processarArquivoDossie(event, '${sanitize(nomeColaborador)}')">
-                    <button onclick="document.getElementById('dossie-file-upload').click()" style="padding:8px 16px;background:rgba(131,46,255,0.15);border:1px dashed rgba(131,46,255,0.5);color:#c5a3ff;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;width:100%;">📎 Clicar para Anexar PDF / Exame</button>
+                    <button onclick="document.getElementById('dossie-file-upload').click()" style="padding:10px 16px;background:rgba(131,46,255,0.15);border:1px dashed rgba(131,46,255,0.5);color:#c5a3ff;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;width:100%;transition:0.2s;" onmouseover="this.style.background='rgba(131,46,255,0.25)'" onmouseout="this.style.background='rgba(131,46,255,0.15)'">📎 Clicar para Anexar PDF / Exame</button>
                 </div>
             </div>
 
-            <button id="btn-salvar-dossie" onclick="salvarDossieForm('${sanitize(nomeColaborador)}')" style="display:none; width:100%;padding:14px;background:linear-gradient(135deg,#198754,#157347);border:none;color:#fff;border-radius:10px;cursor:pointer;font-size:14px;font-weight:800;letter-spacing:0.5px;box-shadow:0 4px 15px rgba(25,135,84,0.3);">💾 Confirmar e Salvar Alterações</button>
+            <!-- Botão Salvar -->
+            <button id="btn-salvar-dossie" onclick="salvarDossieForm('${sanitize(nomeColaborador)}')" style="display:none;width:100%;padding:14px;background:linear-gradient(135deg,#198754,#157347);border:none;color:#fff;border-radius:10px;cursor:pointer;font-size:14px;font-weight:800;letter-spacing:0.5px;box-shadow:0 4px 15px rgba(25,135,84,0.3);transition:0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">💾 Confirmar e Salvar Alterações</button>
 
-            ${dossieData.atualizadoPor ? `<div id="dossie-timestamp" style="text-align:center;margin-top:15px;font-size:10px;color:rgba(255,255,255,0.2);">Última atualização por ${sanitize(dossieData.atualizadoPor)}</div>` : ''}
+            ${dossieData.atualizadoPor ? `<div id="dossie-timestamp" style="text-align:center;margin-top:15px;font-size:10px;color:rgba(255,255,255,0.2);">Última atualização por ${sanitize(dossieData.atualizadoPor)} · ${new Date(dossieData.atualizadoEm || Date.now()).toLocaleDateString('pt-BR')}</div>` : ''}
         </div>
     `;
     document.body.appendChild(modalEl);
 }
 
-// ✅ BUG CORRIGIDO: apenas UMA definição de salvarDossieForm (a versão completa)
-// A versão rasa e duplicada que existia anteriormente foi removida
+// ✅ NOVO: callback chamado quando o tipo de contrato muda no dossiê
+window.onContratoChange = function(valor) {
+    const mostrarFormatura = valor === 'Estagio';
+    const wrapperForm   = document.getElementById('dossie-formatura-wrapper');
+    const wrapperCurso  = document.getElementById('dossie-curso-wrapper');
+    if (wrapperForm) wrapperForm.style.display  = mostrarFormatura ? 'block' : 'none';
+    if (wrapperCurso) wrapperCurso.style.display = mostrarFormatura ? 'block' : 'none';
+};
+
+// ✅ BUG CORRIGIDO: salvarDossieForm agora coleta todos os campos e trata erros corretamente
 window.salvarDossieForm = async function (nomeColaborador) {
     const btn = document.getElementById('btn-salvar-dossie');
-    if (btn) { btn.innerHTML = '⏳ Salvando...'; btn.disabled = true; }
+    if (btn) { btn.innerHTML = '⏳ Salvando...'; btn.disabled = true; btn.style.opacity = '0.7'; }
 
     const dados = {
-        admissao:         document.getElementById('dossie-admissao')?.value || '',
-        tipoContrato:     document.getElementById('dossie-contrato')?.value || '',
-        observacoesSaude: document.getElementById('dossie-saude')?.value    || ''
+        admissao:         document.getElementById('dossie-admissao')?.value         || '',
+        tipoContrato:     document.getElementById('dossie-contrato')?.value         || '',
+        dataFimContrato:  document.getElementById('dossie-fim-contrato')?.value     || '',
+        dataFormatura:    document.getElementById('dossie-formatura')?.value        || '',
+        cursoFormatura:   document.getElementById('dossie-curso')?.value            || '',
+        observacoesSaude: document.getElementById('dossie-saude')?.value            || ''
     };
 
     try {
         await salvarDossie(nomeColaborador, dados);
-        showToast('Dossiê atualizado com sucesso!', 'success');
+        showToast('✅ Dossiê atualizado com sucesso!', 'success');
+        // Atualiza cache local
+        const key = nomeColaborador.replace(/\s+/g, '_');
+        if (bdDossies[key]) Object.assign(bdDossies[key], dados);
+        // Sai do modo de edição
         window.isDossieEditing = true;
         window.toggleEditDossie();
+        // Atualiza timestamp no modal
+        const tsEl = document.getElementById('dossie-timestamp');
+        if (tsEl) { tsEl.style.display = 'block'; tsEl.textContent = `Última atualização por ${usuarioLogado} · ${new Date().toLocaleDateString('pt-BR')}`; }
+        // Re-verifica alertas de contrato
+        verificarAlertasContratoRH();
     } catch (e) {
-        showToast('Erro ao salvar dossiê.', 'danger');
+        console.error('Erro ao salvar dossiê:', e);
+        showToast('❌ Erro ao salvar dossiê. Verifique sua conexão.', 'danger');
     } finally {
-        if (btn) { btn.innerHTML = '💾 Confirmar e Salvar Alterações'; btn.disabled = false; }
+        if (btn) { btn.innerHTML = '💾 Confirmar e Salvar Alterações'; btn.disabled = false; btn.style.opacity = '1'; }
+    }
+};
+
+// =====================================================
+// TOGGLE EDIÇÃO DO DOSSIÊ
+// ✅ BUG CORRIGIDO: select agora tem appearance restaurado em modo edição
+// =====================================================
+window.isDossieEditing = false;
+
+window.toggleEditDossie = function () {
+    window.isDossieEditing = !window.isDossieEditing;
+    const fields     = document.querySelectorAll('.dossie-field');
+    const btnSalvar  = document.getElementById('btn-salvar-dossie');
+    const btnToggle  = document.getElementById('btn-toggle-edit-dossie');
+    const uploadArea = document.getElementById('dossie-upload-area');
+    const box        = document.getElementById('dossie-modal-box');
+
+    if (window.isDossieEditing) {
+        fields.forEach(f => {
+            f.removeAttribute('readonly');
+            f.removeAttribute('disabled');
+            f.style.background = 'rgba(0,0,0,0.5)';
+            f.style.border     = '1px solid var(--cadarn-roxo)';
+            // ✅ BUG CORRIGIDO: restaura aparência nativa do select para mostrar dropdown
+            if (f.tagName === 'SELECT') {
+                f.style.webkitAppearance = 'auto';
+                f.style.appearance       = 'auto';
+                f.style.paddingRight     = '30px';
+                f.style.cursor           = 'pointer';
+            }
+            if (f.tagName === 'TEXTAREA') f.style.resize = 'vertical';
+        });
+        if (btnSalvar)   { btnSalvar.style.display  = 'block'; }
+        if (uploadArea)  { uploadArea.style.display = 'block'; }
+        if (btnToggle)   {
+            btnToggle.innerHTML    = '✕ Cancelar Edição';
+            btnToggle.style.color  = '#ff8793';
+            btnToggle.style.borderColor = 'rgba(220,53,69,0.3)';
+            btnToggle.style.background  = 'rgba(220,53,69,0.1)';
+        }
+        if (box) box.style.borderColor = 'var(--cadarn-roxo)';
+    } else {
+        fields.forEach(f => {
+            f.setAttribute('readonly', 'true');
+            f.setAttribute('disabled', 'true');
+            f.style.background = 'rgba(255,255,255,0.02)';
+            f.style.border     = '1px solid transparent';
+            // ✅ BUG CORRIGIDO: volta a esconder o select nativo em modo leitura
+            if (f.tagName === 'SELECT') {
+                f.style.webkitAppearance = 'none';
+                f.style.appearance       = 'none';
+                f.style.cursor           = 'default';
+            }
+            if (f.tagName === 'TEXTAREA') f.style.resize = 'none';
+        });
+        if (btnSalvar)   { btnSalvar.style.display   = 'none'; }
+        if (uploadArea)  { uploadArea.style.display  = 'none'; }
+        if (btnToggle)   {
+            btnToggle.innerHTML    = '✏️ Editar Informações';
+            btnToggle.style.color  = '#c5a3ff';
+            btnToggle.style.borderColor = 'rgba(131,46,255,0.3)';
+            btnToggle.style.background  = 'rgba(131,46,255,0.15)';
+        }
+        if (box) box.style.borderColor = 'rgba(255,193,7,0.2)';
     }
 };
 
@@ -541,7 +703,91 @@ async function processarArquivoDossie(event, nomeColaborador) {
         if (list) {
             list.innerHTML += `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(255,255,255,0.04);border-radius:8px;margin-bottom:6px;font-size:12px;color:#c5a3ff;">📄 ${sanitize(file.name)} <span style="color:var(--cadarn-cinza);font-size:10px;">Agora</span></div>`;
         }
+        showToast('Documento anexado com sucesso!', 'success');
     } catch (e) { showToast('Erro ao salvar documento.', 'danger'); }
+}
+
+// =====================================================
+// ✅ NOVO: ALERTA DE FIM DE CONTRATO PARA RH / SÓCIOS
+// =====================================================
+function verificarAlertasContratoRH() {
+    // Apenas RH e Sócios veem este alerta
+    if (window.userRole !== 'RH' && window.userRole !== 'Sócio' && window.userRole !== 'DEV') return;
+
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+
+    const alertasUrgentes  = []; // ≤ 30 dias
+    const alertasAtencao   = []; // 31–60 dias
+    const contratosVencidos = [];
+
+    Object.entries(bdDossies).forEach(([key, dossie]) => {
+        if (!dossie.dataFimContrato) return;
+        const nomeLegivel = key.replace(/_/g, ' ');
+        const fimDate = new Date(dossie.dataFimContrato);
+        fimDate.setMinutes(fimDate.getMinutes() + fimDate.getTimezoneOffset());
+        fimDate.setHours(0, 0, 0, 0);
+        const diffDias = Math.ceil((fimDate - hoje) / (1000 * 60 * 60 * 24));
+
+        if (diffDias < 0) {
+            contratosVencidos.push({ nome: nomeLegivel, dias: Math.abs(diffDias), data: fimDate });
+        } else if (diffDias <= 30) {
+            alertasUrgentes.push({ nome: nomeLegivel, dias: diffDias, data: fimDate });
+        } else if (diffDias <= 60) {
+            alertasAtencao.push({ nome: nomeLegivel, dias: diffDias, data: fimDate });
+        }
+    });
+
+    // Remove banner anterior se existir
+    const bannerAnterior = document.getElementById('alerta-contrato-banner');
+    if (bannerAnterior) bannerAnterior.remove();
+
+    if (contratosVencidos.length === 0 && alertasUrgentes.length === 0 && alertasAtencao.length === 0) return;
+
+    const banner = document.createElement('div');
+    banner.id = 'alerta-contrato-banner';
+
+    let conteudo = '';
+    let corFundo = 'rgba(255,193,7,0.08)';
+    let corBorda = 'rgba(255,193,7,0.35)';
+
+    if (contratosVencidos.length > 0) {
+        corFundo = 'rgba(220,53,69,0.1)';
+        corBorda = 'rgba(220,53,69,0.4)';
+        conteudo += `<strong>🚨 ${contratosVencidos.length} contrato${contratosVencidos.length > 1 ? 's' : ''} VENCIDO${contratosVencidos.length > 1 ? 'S' : ''}:</strong> `;
+        conteudo += contratosVencidos.map(a => `<span style="color:#ff8793;">${sanitize(a.nome)} (${a.dias}d atrás)</span>`).join(', ');
+        conteudo += '  &nbsp;·&nbsp;  ';
+    }
+    if (alertasUrgentes.length > 0) {
+        conteudo += `<strong>⚠️ Contratos vencendo em até 30 dias:</strong> `;
+        conteudo += alertasUrgentes.map(a => `<span style="color:#ff8793;">${sanitize(a.nome)} (${a.dias}d)</span>`).join(', ');
+        if (alertasAtencao.length > 0) conteudo += '  &nbsp;·&nbsp;  ';
+    }
+    if (alertasAtencao.length > 0) {
+        conteudo += `<strong>📋 Atenção em 60 dias:</strong> `;
+        conteudo += alertasAtencao.map(a => `<span style="color:#ffc107;">${sanitize(a.nome)} (${a.dias}d)</span>`).join(', ');
+    }
+
+    banner.style.cssText = `display:flex;align-items:center;justify-content:space-between;padding:12px 40px;background:${corFundo};border-bottom:1px solid ${corBorda};font-size:13px;color:white;gap:15px;flex-wrap:wrap;`;
+    banner.innerHTML = `
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <span style="font-size:16px;">👔</span>
+            <div>${conteudo}</div>
+            <button onclick="switchTab('dossie')" style="background:rgba(255,193,7,0.15);border:1px solid rgba(255,193,7,0.4);color:#ffc107;padding:5px 14px;border-radius:8px;cursor:pointer;font-size:11px;font-weight:700;white-space:nowrap;transition:0.2s;" onmouseover="this.style.background='rgba(255,193,7,0.25)'" onmouseout="this.style.background='rgba(255,193,7,0.15)'">📂 Ver Dossiês</button>
+        </div>
+        <button onclick="this.parentElement.style.display='none'" style="background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer;font-size:18px;flex-shrink:0;">✕</button>
+    `;
+
+    // Insere após o banner de alertas de projetos (se existir) ou no início do container
+    const conteudo_el = document.getElementById('conteudo-restrito');
+    const bannerDia   = document.getElementById('alerta-dia-banner');
+    if (conteudo_el) {
+        if (bannerDia && bannerDia.nextSibling) {
+            conteudo_el.insertBefore(banner, bannerDia.nextSibling);
+        } else {
+            conteudo_el.prepend(banner);
+        }
+    }
 }
 
 // =====================================================
@@ -611,7 +857,7 @@ function renderTarefasModalTemporario() {
     let optionsColabs = '<option value="">Responsável...</option>';
     listaColaboradores.forEach(nome => { optionsColabs += `<option value="${nome}">${nome}</option>`; });
 
-    const inputStyle = "width: 100%; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 10px 12px; border-radius: 8px; font-size: 12px; outline: none; transition: 0.3s; font-family: 'Inter', sans-serif;";
+    const inputStyle = "width: 100%; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 10px 12px; border-radius: 8px; font-size: 12px; outline: none; transition: 0.3s; font-family: 'Inter', sans-serif; box-sizing: border-box;";
 
     etapasTemporarias.forEach((t, idx) => {
         let optionsResps = optionsColabs.replace(`value="${t.responsavel || ''}"`, `value="${t.responsavel || ''}" selected`);
@@ -865,14 +1111,40 @@ function renderWorkload() {
         if (data.ativas <= 1)                              { statusClass = 'wl-status-ocioso';     statusText = 'Ocioso (Capacidade)'; }
         if (data.ativas >= 5 || data.atrasadas >= 2)       { statusClass = 'wl-status-sobrecarga'; statusText = 'Sobrecarga / Risco'; }
 
+        // ✅ NOVO: verifica se colaborador tem contrato vencendo em breve
+        const colabKey = nome.replace(/\s+/g, '_');
+        const dossie   = bdDossies[colabKey];
+        let alertaContrato = '';
+        if (dossie?.dataFimContrato) {
+            const fimDate = new Date(dossie.dataFimContrato);
+            fimDate.setMinutes(fimDate.getMinutes() + fimDate.getTimezoneOffset());
+            fimDate.setHours(0, 0, 0, 0);
+            const diffDias = Math.ceil((fimDate - hoje) / (1000 * 60 * 60 * 24));
+            if (diffDias >= 0 && diffDias <= 30)
+                alertaContrato = `<span title="Contrato vence em ${diffDias} dias!" style="background:rgba(220,53,69,0.2);color:#ff8793;padding:2px 7px;border-radius:10px;font-size:9px;font-weight:700;display:inline-block;margin-left:6px;">⚠️ ${diffDias}d</span>`;
+            else if (diffDias < 0)
+                alertaContrato = `<span title="Contrato vencido!" style="background:rgba(220,53,69,0.3);color:#ff8793;padding:2px 7px;border-radius:10px;font-size:9px;font-weight:700;display:inline-block;margin-left:6px;">🚨 Vencido</span>`;
+        }
+
         html += `
-            <div style="background: rgba(255,255,255,0.015); border: 1px solid rgba(255,255,255,0.05); border-radius: 20px; padding: 25px; transition: 0.3s; display: flex; flex-direction: column; cursor: pointer;" onmouseover="this.style.borderColor='rgba(131,46,255,0.3)'; this.style.boxShadow='0 10px 30px rgba(0,0,0,0.5)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'; this.style.boxShadow='none'" onclick="abrirModalColaborador('${sanitize(nome)}')">
+            <div style="background: rgba(255,255,255,0.015); border: 1px solid rgba(255,255,255,0.05); border-radius: 20px; padding: 25px; transition: 0.3s; display: flex; flex-direction: column; cursor: pointer; position: relative;" onmouseover="this.style.borderColor='rgba(131,46,255,0.3)'; this.style.boxShadow='0 10px 30px rgba(0,0,0,0.5)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'; this.style.boxShadow='none'" onclick="abrirModalColaborador('${sanitize(nome)}')">
 
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 15px; margin-bottom: 15px;">
-                    <div>
-                        <div style="font-size:16px; font-weight:800; color:white; letter-spacing:-0.5px; margin-bottom: 5px;">👤 ${sanitize(nome)}</div>
+                    <div style="flex-grow:1; min-width:0;">
+                        <div style="font-size:16px; font-weight:800; color:white; letter-spacing:-0.5px; margin-bottom: 5px; display:flex; align-items:center; flex-wrap:wrap; gap:4px;">
+                            👤 ${sanitize(nome)}${alertaContrato}
+                        </div>
                         <div class="wl-status-badge ${statusClass}" style="margin: 0;">${statusText}</div>
                     </div>
+
+                    <!-- ✅ NOVO: Botão de excluir colaborador -->
+                    <button
+                        onclick="event.stopPropagation(); excluirColaborador('${sanitize(nome)}')"
+                        title="Excluir Colaborador"
+                        style="flex-shrink:0; margin-left:12px; background: rgba(220,53,69,0.08); border: 1px solid rgba(220,53,69,0.15); color: rgba(255,100,100,0.6); width:32px; height:32px; border-radius: 8px; cursor: pointer; font-size: 14px; transition: all 0.2s; display: flex; align-items: center; justify-content: center;"
+                        onmouseover="this.style.background='rgba(220,53,69,0.25)'; this.style.borderColor='rgba(220,53,69,0.5)'; this.style.color='#ff8793'; this.style.transform='scale(1.1)'"
+                        onmouseout="this.style.background='rgba(220,53,69,0.08)'; this.style.borderColor='rgba(220,53,69,0.15)'; this.style.color='rgba(255,100,100,0.6)'; this.style.transform='scale(1)'"
+                    >🗑️</button>
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
@@ -934,6 +1206,67 @@ function renderWorkload() {
         searchEl.setSelectionRange(pos, pos);
     }
 }
+
+// =====================================================
+// ✅ NOVO: EXCLUIR COLABORADOR (com confirmação)
+// =====================================================
+window.excluirColaborador = function (nome) {
+    // Remove modal de confirmação anterior
+    const old = document.getElementById('modal-confirmar-exclusao');
+    if (old) old.remove();
+
+    const colabConf = bdColabs[nome] || {};
+    const cargo     = colabConf.cargo || 'Colaborador';
+
+    const modal = document.createElement('div');
+    modal.id = 'modal-confirmar-exclusao';
+    modal.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.75);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);';
+    modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+
+    modal.innerHTML = `
+        <div style="background:rgba(15,8,8,0.99);border:1px solid rgba(220,53,69,0.4);border-radius:20px;padding:40px;width:90%;max-width:420px;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,0.8);" onclick="event.stopPropagation()">
+            <div style="font-size:48px;margin-bottom:15px;">⚠️</div>
+            <h3 style="font-size:20px;font-weight:800;color:#fff;margin-bottom:8px;">Excluir Colaborador?</h3>
+            <p style="color:var(--cadarn-cinza);font-size:14px;margin-bottom:6px;font-weight:600;">${sanitize(nome)}</p>
+            <p style="color:var(--cadarn-cinza);font-size:12px;margin-bottom:24px;">${sanitize(cargo)}</p>
+            <div style="background:rgba(220,53,69,0.08);border:1px solid rgba(220,53,69,0.2);border-radius:10px;padding:14px;margin-bottom:24px;">
+                <p style="color:#ff8793;font-size:12px;line-height:1.5;margin:0;">Esta ação irá remover o colaborador do sistema de acessos. Os projetos e tarefas associados <strong>não</strong> serão excluídos. Esta ação não pode ser desfeita.</p>
+            </div>
+            <div style="display:flex;gap:12px;">
+                <button onclick="document.getElementById('modal-confirmar-exclusao').remove()" style="flex:1;padding:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#aaa;border-radius:10px;cursor:pointer;font-size:14px;font-weight:600;transition:0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">Cancelar</button>
+                <button id="btn-confirmar-exclusao" onclick="confirmarExclusaoColaborador('${sanitize(nome)}')" style="flex:1;padding:12px;background:linear-gradient(135deg,rgba(220,53,69,0.7),rgba(185,28,28,0.8));border:1px solid rgba(220,53,69,0.5);color:#fff;border-radius:10px;cursor:pointer;font-size:14px;font-weight:800;transition:0.2s;box-shadow:0 4px 15px rgba(220,53,69,0.3);" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">🗑️ Confirmar Exclusão</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+};
+
+window.confirmarExclusaoColaborador = async function (nome) {
+    const btn = document.getElementById('btn-confirmar-exclusao');
+    if (btn) { btn.innerHTML = '⏳ Excluindo...'; btn.disabled = true; }
+
+    try {
+        const { deleteDoc, doc } = await import('https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js');
+        // Remove da coleção colaboradores
+        await deleteDoc(doc(db, 'colaboradores', nome));
+        // Remove do cache local e da lista
+        delete bdColabs[nome];
+        const idx = listaColaboradores.indexOf(nome);
+        if (idx !== -1) listaColaboradores.splice(idx, 1);
+        // Re-renderiza
+        renderWorkload();
+        renderDossieList();
+        iniciarUI();
+        // Fecha o modal
+        document.getElementById('modal-confirmar-exclusao')?.remove();
+        showToast(`✅ Colaborador "${nome}" removido com sucesso.`, 'success');
+    } catch (e) {
+        console.error('Erro ao excluir colaborador:', e);
+        showToast('❌ Erro ao excluir colaborador. Tente novamente.', 'danger');
+        if (btn) { btn.innerHTML = '🗑️ Confirmar Exclusão'; btn.disabled = false; }
+    }
+};
 
 // =====================================================
 // CRONOGRAMA GANTT
@@ -1210,7 +1543,7 @@ function irParaHoje() {
 }
 
 // =====================================================
-// BANNER DE ALERTAS DO DIA
+// BANNER DE ALERTAS DO DIA (PRAZOS DE PROJETOS)
 // =====================================================
 function verificarAlertasDoDia() {
     const hoje       = new Date().toISOString().split('T')[0];
@@ -1350,7 +1683,6 @@ function exportarProjetosCSV() {
 
 // =====================================================
 // RINGS DE CAPACIDADE DA EQUIPE
-// ✅ MELHORIA: tooltip com nome completo + carga
 // =====================================================
 function renderTeamAvailability() {
     let workload = {};
@@ -1391,7 +1723,6 @@ function renderTeamAvailability() {
         else if (m.pct >= 50) ringColor = '#ffc107';
 
         const inicial = m.nome.charAt(0).toUpperCase();
-        // ✅ MELHORIA: tooltip com nome completo e número de tarefas
         const tooltip = `${m.nome} — ${m.p} tarefa${m.p !== 1 ? 's' : ''} ativa${m.p !== 1 ? 's' : ''} (${m.pct}% de carga)`;
 
         return `
@@ -1645,11 +1976,46 @@ function renderDossieList() {
         return;
     }
 
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+
     let html = '';
     listaColaboradores.forEach(nome => {
         const conf      = bdColabs[nome] || {};
         const iniciais  = nome.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
         const cargo     = conf.cargo || 'Colaborador(a)';
+
+        // ✅ NOVO: verificar alerta de contrato no card do dossiê
+        const dossieKey = nome.replace(/\s+/g, '_');
+        const dossie    = bdDossies[dossieKey];
+        let alertaBadge = '';
+        let isEstagiario = cargo === 'Estagiário' || dossie?.tipoContrato === 'Estagio';
+        let formaturaInfo = '';
+
+        if (dossie?.dataFimContrato) {
+            const fimDate = new Date(dossie.dataFimContrato);
+            fimDate.setMinutes(fimDate.getMinutes() + fimDate.getTimezoneOffset());
+            fimDate.setHours(0, 0, 0, 0);
+            const diffDias = Math.ceil((fimDate - hoje) / (1000 * 60 * 60 * 24));
+            if (diffDias < 0) {
+                alertaBadge = `<span style="background:rgba(220,53,69,0.2);color:#ff8793;padding:3px 8px;border-radius:10px;font-size:9px;font-weight:800;display:inline-block;margin-bottom:6px;">🚨 Contrato Vencido</span>`;
+            } else if (diffDias <= 30) {
+                alertaBadge = `<span style="background:rgba(220,53,69,0.1);color:#ff8793;padding:3px 8px;border-radius:10px;font-size:9px;font-weight:700;display:inline-block;margin-bottom:6px;">⚠️ Contrato vence em ${diffDias}d</span>`;
+            } else if (diffDias <= 60) {
+                alertaBadge = `<span style="background:rgba(255,193,7,0.08);color:#ffc107;padding:3px 8px;border-radius:10px;font-size:9px;font-weight:700;display:inline-block;margin-bottom:6px;">📋 Contrato vence em ${diffDias}d</span>`;
+            }
+        }
+
+        if (isEstagiario && dossie?.dataFormatura) {
+            const formDate = new Date(dossie.dataFormatura);
+            formDate.setMinutes(formDate.getMinutes() + formDate.getTimezoneOffset());
+            formDate.setHours(0, 0, 0, 0);
+            const diffDias = Math.ceil((formDate - hoje) / (1000 * 60 * 60 * 24));
+            if (diffDias > 0) {
+                const meses = Math.floor(diffDias / 30);
+                formaturaInfo = `<div style="font-size:10px;color:#47e299;margin-top:4px;">🎓 Formatura: ${meses > 0 ? `~${meses} meses` : `${diffDias} dias`}</div>`;
+            }
+        }
 
         html += `
         <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:20px;cursor:pointer;transition:0.25s;"
@@ -1658,11 +2024,13 @@ function renderDossieList() {
              onclick="abrirDossieColaborador('${nome}')">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
                 <div style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#832EFF,#420a9a);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:#fff;flex-shrink:0;">${iniciais}</div>
-                <div>
-                    <div style="font-weight:700;font-size:14px;color:#fff;">${sanitize(nome)}</div>
+                <div style="min-width:0;">
+                    <div style="font-weight:700;font-size:14px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${sanitize(nome)}</div>
                     <div style="font-size:11px;color:var(--cadarn-cinza);">${sanitize(cargo)}</div>
+                    ${formaturaInfo}
                 </div>
             </div>
+            ${alertaBadge ? `<div>${alertaBadge}</div>` : ''}
             <div style="display:flex;justify-content:space-between;align-items:center;">
                 <span style="font-size:11px;color:#ffc107;background:rgba(255,193,7,0.1);border:1px solid rgba(255,193,7,0.2);padding:4px 10px;border-radius:20px;font-weight:700;">🔒 Ver Dossiê</span>
                 ${conf.atualizadoEm ? `<span style="font-size:10px;color:rgba(255,255,255,0.2);">${tempoRelativoSocio(conf.atualizadoEm)}</span>` : ''}
@@ -1782,42 +2150,6 @@ function renderFinanceiroPremium() {
 }
 
 // =====================================================
-// EDIÇÃO DE DOSSIÊ — TOGGLE
-// =====================================================
-window.isDossieEditing = false;
-
-window.toggleEditDossie = function () {
-    window.isDossieEditing = !window.isDossieEditing;
-    const fields    = document.querySelectorAll('.dossie-field');
-    const btnSalvar = document.getElementById('btn-salvar-dossie');
-    const btnToggle = document.getElementById('btn-toggle-edit-dossie');
-    const uploadArea = document.getElementById('dossie-upload-area');
-    const box       = document.getElementById('dossie-modal-box');
-
-    if (window.isDossieEditing) {
-        fields.forEach(f => {
-            f.removeAttribute('readonly'); f.removeAttribute('disabled');
-            f.style.background = 'rgba(0,0,0,0.5)'; f.style.border = '1px solid var(--cadarn-roxo)';
-            if (f.tagName === 'TEXTAREA') f.style.resize = 'vertical';
-        });
-        if (btnSalvar)   btnSalvar.style.display   = 'block';
-        if (uploadArea)  uploadArea.style.display  = 'block';
-        if (btnToggle) { btnToggle.innerHTML = '✕ Cancelar Edição'; btnToggle.style.color = '#ff8793'; btnToggle.style.borderColor = 'rgba(220,53,69,0.3)'; btnToggle.style.background = 'rgba(220,53,69,0.1)'; }
-        if (box) box.style.borderColor = 'var(--cadarn-roxo)';
-    } else {
-        fields.forEach(f => {
-            f.setAttribute('readonly', 'true'); f.setAttribute('disabled', 'true');
-            f.style.background = 'rgba(255,255,255,0.02)'; f.style.border = '1px solid transparent';
-            if (f.tagName === 'TEXTAREA') f.style.resize = 'none';
-        });
-        if (btnSalvar)   btnSalvar.style.display  = 'none';
-        if (uploadArea)  uploadArea.style.display = 'none';
-        if (btnToggle) { btnToggle.innerHTML = '✏️ Editar Informações'; btnToggle.style.color = '#c5a3ff'; btnToggle.style.borderColor = 'rgba(131,46,255,0.3)'; btnToggle.style.background = 'rgba(131,46,255,0.15)'; }
-        if (box) box.style.borderColor = 'rgba(255,193,7,0.2)';
-    }
-};
-
-// =====================================================
 // GESTÃO DE ACESSOS E COLABORADORES (IAM)
 // =====================================================
 window.abrirModalColaborador = function (nome = '') {
@@ -1896,7 +2228,7 @@ window.salvarColaborador = async function () {
 };
 
 // =====================================================
-// ✅ EXPOSIÇÃO GLOBAL CONSOLIDADA (sem duplicatas)
+// EXPOSIÇÃO GLOBAL CONSOLIDADA
 // =====================================================
 window.switchTab             = switchTab;
 window.aplicarFiltros        = aplicarFiltros;
@@ -1927,6 +2259,8 @@ window.processarArquivoDossie    = processarArquivoDossie;
 window.abrirModalDiaCalendario   = abrirModalDiaCalendario;
 window.fecharModalDiaCalendario  = fecharModalDiaCalendario;
 window.verificarAlertasDoDia     = verificarAlertasDoDia;
+window.verificarAlertasContratoRH = verificarAlertasContratoRH; // ✅ NOVO
+window.excluirColaborador        = window.excluirColaborador;   // ✅ NOVO
 
 // =====================================================
 // INIT
