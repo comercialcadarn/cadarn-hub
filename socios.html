@@ -36,6 +36,10 @@
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: rgba(131, 46, 255, 0.3); border-radius: 10px; }
     ::-webkit-scrollbar-thumb:hover { background: rgba(131, 46, 255, 0.6); }
+    .modal-content::-webkit-scrollbar { width: 6px; }
+    .modal-content::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 10px; margin: 10px 0; }
+    .modal-content::-webkit-scrollbar-thumb { background: rgba(131, 46, 255, 0.4); border-radius: 10px; }
+    .modal-content::-webkit-scrollbar-thumb:hover { background: rgba(131, 46, 255, 0.8); }
 
     /* ───────────────────────────────────────────
        HEADER
@@ -237,7 +241,12 @@
         border-radius: 0 0 16px 16px;
     }
 
-    .fin-card:hover { border-color: rgba(255,255,255,0.15); }
+    .fin-card:hover { 
+        border-color: rgba(255,255,255,0.2); 
+        background: rgba(255,255,255,0.04); 
+        transform: translateY(-3px); 
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3); 
+    }
 
     .fin-margem-barra-bg {
         width: 100%; height: 3px;
@@ -302,8 +311,9 @@
     }
 
     .status-badge-count {
-        background: rgba(255,255,255,0.05); padding: 4px 10px;
-        border-radius: 20px; font-size: 10px; color: #666; font-weight: 700;
+        background: rgba(255,255,255,0.1); padding: 4px 10px;
+        border-radius: 20px; font-size: 11px; color: #ffffff; font-weight: 800;
+        text-shadow: 0 0 5px rgba(255,255,255,0.3); box-shadow: inset 0 1px 0 rgba(255,255,255,0.2);
     }
 
     /* ───────────────────────────────────────────
@@ -512,6 +522,48 @@
         .workload-grid { grid-template-columns: 1fr; }
         .financial-health-bar { grid-template-columns: 1fr; }
     }
+    /* Botões de Fechar (X) nos Modais */
+    .sp-close {
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.1);
+        color: #fff;
+        width: 36px; height: 36px;
+        border-radius: 50%;
+        font-size: 16px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .sp-close:hover {
+        background: rgba(220,53,69,0.8);
+        border-color: #dc3545;
+        transform: rotate(90deg);
+        box-shadow: 0 0 15px rgba(220,53,69,0.4);
+    }
+    /* Botões de Ação Secundária (Nova Tarefa, Cancelar) */
+    .sp-btn-edit {
+        border-radius: 8px;
+        cursor: pointer;
+        font-family: 'Inter', sans-serif;
+        font-size: 12px;
+        font-weight: 700;
+        transition: all 0.2s ease;
+        padding: 8px 16px;
+    }
+    .sp-btn-edit:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        filter: brightness(1.2);
+    }
+    .btn-cal-nav { background: rgba(0,0,0,0.5); border: 1px solid var(--glass-border); color: #aaa; padding: 6px 14px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer; transition: 0.2s; }
+    .btn-cal-nav:hover { background: rgba(131,46,255,0.2); color: #fff; border-color: rgba(131,46,255,0.5); }
+    .btn-cal-nav.active { color: #c5a3ff; background: rgba(131,46,255,0.1); border-color: #832EFF; }
+    /* Campos bloqueados aguardando clique de Edição */
+    .dossie-field[readonly], .dossie-field[disabled] {
+        opacity: 0.6;
+        cursor: not-allowed;
+        filter: grayscale(100%);
+    }
     </style>
 </head>
 <body>
@@ -644,9 +696,9 @@
                 <div class="calendar-header">
                     <div class="calendar-title" id="cal-month-year" style="font-family:'Outfit',sans-serif; font-size:20px; font-weight:800; color:#fff;">Abril 2026</div>
                     <div class="calendar-nav" style="display:flex; gap:8px;">
-                        <button class="btn-import" onclick="mudarMes(-1)">← Anterior</button>
-                        <button class="btn-import" onclick="irParaHoje()">Hoje</button>
-                        <button class="btn-import" onclick="mudarMes(1)">Próximo →</button>
+                        <button class="btn-cal-nav" onclick="mudarMes(-1)">← Ant</button>
+                        <button class="btn-cal-nav active" onclick="irParaHoje()">Hoje</button>
+                        <button class="btn-cal-nav" onclick="mudarMes(1)">Próx →</button>
                     </div>
                 </div>
                 <div class="calendar-grid">
