@@ -355,7 +355,7 @@ function renderKanban() {
         cardIndex++;
     }
 
-    const emptyMsg = (msg) => `<div class="kanban-no-drag" style="text-align:center; padding:30px 15px; color:var(--cadarn-cinza); font-size:12px; border: 1px dashed rgba(255,255,255,0.06); border-radius:12px; margin-top:10px; cursor: default;">${msg}</div>`;
+    const emptyMsg = (msg) => `<div class="kanban-no-drag" style="text-align:center; padding:30px 15px; color:var(--cadarn-cinza); font-size:12px; border: 1px dashed rgba(255,255,255,0.06); border-radius:12px; margin: auto 0; cursor: default;">${msg}</div>`;
 
     document.getElementById('col-negociacao').innerHTML = htmlNegociacao || emptyMsg('Nenhuma proposta em negociação.');
     document.getElementById('col-andamento').innerHTML  = htmlAndamento  || emptyMsg('Nenhum projeto em delivery.');
@@ -1310,7 +1310,7 @@ function verificarAlertasDoDia() {
         const cor   = atrasados.length > 0 ? 'rgba(220,53,69,0.15)' : 'rgba(255,193,7,0.1)';
         const borda = atrasados.length > 0 ? 'rgba(220,53,69,0.4)'  : 'rgba(255,193,7,0.4)';
 
-        banner.style.cssText = `display:flex; align-items:center; justify-content:space-between; padding: 12px 40px; background:${cor}; border-bottom: 1px solid ${borda}; font-size: 13px; color: white; gap: 15px;`;
+        banner.style.cssText = `display:flex; align-items:center; justify-content:space-between; padding: 12px 40px; background:${cor}; border: 1px solid ${borda}; font-size: 13px; color: white; gap: 15px; margin: 15px 40px 0 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);`;
         banner.innerHTML = `
             <div style="display:flex; align-items:center; gap:15px; flex-wrap:wrap;">
                 ${partes.join(' &nbsp;·&nbsp; ')}
@@ -1816,8 +1816,8 @@ function renderFinanceiroPremium() {
                 return `
                 <tr style="border-bottom: 1px solid rgba(255,255,255,0.03); transition: 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
                     <td style="padding: 15px 20px; color: white; font-weight: 600;">${sanitize(p.nome)}<br><span style="font-size:10px; color:var(--cadarn-cinza); font-weight:400;">${sanitize(p.cliente)}</span></td>
-                    <td style="padding: 15px 20px; color: #FFC107; font-family: 'Outfit', sans-serif; font-weight: 700;">R$ ${p.fee.toLocaleString('pt-BR')}</td>
-                    <td style="padding: 15px 20px; color: #ff8793; font-family: 'Outfit', sans-serif; font-weight: 600;">R$ ${p.custo.toLocaleString('pt-BR')}</td>
+                   <td style="padding: 15px 20px; color: #FFC107; font-family: 'Outfit', sans-serif; font-weight: 700;">R$ ${p.fee.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td style="padding: 15px 20px; color: #ff8793; font-family: 'Outfit', sans-serif; font-weight: 600;">R$ ${p.custo.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                     <td style="padding: 15px 20px; color: ${margemColor}; font-weight: 700;">${p.margem.toFixed(1)}%</td>
                     <td style="padding: 15px 20px; font-size: 11px; color: var(--cadarn-cinza);">${statusMap[p.status] || p.status}</td>
                 </tr>`;
