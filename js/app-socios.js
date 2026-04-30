@@ -496,9 +496,9 @@ async function abrirDossieColaborador(nomeColaborador) {
                     <div style="font-size:11px;color:#ffc107;text-transform:uppercase;font-weight:800;letter-spacing:2px;margin-bottom:8px;">🔒 Dossiê Confidencial</div>
                     <h2 style="font-size:24px;font-weight:800;color:#fff;">${sanitize(nomeColaborador)}</h2>
                 </div>
-                <div style="display: flex; gap: 10px;">
-                    ${canEdit ? `<button id="btn-toggle-edit-dossie" onclick="window.toggleEditDossie()" style="background:rgba(131,46,255,0.15); border:1px solid rgba(131,46,255,0.3); color:#c5a3ff; padding: 8px 16px; border-radius:8px; cursor:pointer; font-size:12px; font-weight:700; transition:0.2s;">✏️ Editar Informações</button>` : ''}
-                    <button onclick="document.getElementById('modal-dossie').remove()" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#fff;width:35px;height:35px;border-radius:50%;cursor:pointer;font-size:16px;">✕</button>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    ${canEdit ? `<button id="btn-master-dossie" onclick="window.gerenciarFluxoDossie('${sanitize(nomeColaborador)}')" style="background:rgba(131,46,255,0.15); border:1px solid rgba(131,46,255,0.3); color:#c5a3ff; padding: 8px 16px; border-radius:8px; cursor:pointer; font-size:12px; font-weight:700; transition:0.2s;">✏️ Editar Informações</button>` : ''}
+                    <button onclick="document.getElementById('modal-dossie').remove()" class="sp-close" style="width:35px; height:35px; border-radius:50%;">✕</button>
                 </div>
             </div>
 
@@ -545,7 +545,6 @@ async function abrirDossieColaborador(nomeColaborador) {
                 </div>
             </div>
 
-            <button id="btn-salvar-dossie" onclick="salvarDossieForm('${sanitize(nomeColaborador)}')" style="display:none; width:100%;padding:14px;background:linear-gradient(135deg,#198754,#157347);border:none;color:#fff;border-radius:10px;cursor:pointer;font-size:14px;font-weight:800;letter-spacing:0.5px;box-shadow:0 4px 15px rgba(25,135,84,0.3);">💾 Confirmar e Salvar Alterações</button>
 
             ${dossieData.atualizadoPor ? `<div id="dossie-timestamp" style="text-align:center;margin-top:15px;font-size:10px;color:rgba(255,255,255,0.2);">Última atualização por ${sanitize(dossieData.atualizadoPor)}</div>` : ''}
         </div>
@@ -1895,34 +1894,81 @@ function renderFinanceiroPremium() {
 // =====================================================
 window.isDossieEditing = false;
 
-window.toggleEditDossie = function () {
-    window.isDossieEditing = !window.isDossieEditing;
-    const fields    = document.querySelectorAll('.dossie-field');
-    const btnSalvar = document.getElementById('btn-salvar-dossie');
-    const btnToggle = document.getElementById('btn-toggle-edit-dossie');
-    const uploadArea = document.getElementById('dossie-upload-area');
-    const box       = document.getElementById('dossie-modal-box');
-
-    if (window.isDossieEditing) {
-        fields.forEach(f => {
-            f.removeAttribute('readonly'); f.removeAttribute('disabled');
-            f.style.background = 'rgba(0,0,0,0.5)'; f.style.border = '1px solid var(--cadarn-roxo)';
+window.gerenciarFluxoDossie = async function(nome) {
+    const btn = document.getElementById('btn-master-dossie');
+    
+    if (!window.isDossieEditing) {
+        // 1. ENTRAR NO MODO DE EDIÇÃO
+        window.isDossieEditing = true;
+        
+        // Transforma o botão em "Salvar" (Verde)
+        btn.innerHTML = '💾 Salvar Alterações';
+        btn.style.background = 'linear-gradient(135deg, #198754, #157347)';
+        btn.style.color = '#fff';
+        btn.style.borderColor = '#198754';
+        
+        // Libera os campos para o usuário digitar
+        document.querySelectorAll('.dossie-field').forEach(f => {
+            f.removeAttribute('readonly');
+            f.removeAttribute('disabled');
+            f.style.background = 'rgba(0,0,0,0.5)';
+            f.style.border = '1px solid var(--cadarn-roxo)';
             if (f.tagName === 'TEXTAREA') f.style.resize = 'vertical';
         });
-        if (btnSalvar)   btnSalvar.style.display   = 'block';
-        if (uploadArea)  uploadArea.style.display  = 'block';
-        if (btnToggle) { btnToggle.innerHTML = '✕ Cancelar Edição'; btnToggle.style.color = '#ff8793'; btnToggle.style.borderColor = 'rgba(220,53,69,0.3)'; btnToggle.style.background = 'rgba(220,53,69,0.1)'; }
-        if (box) box.style.borderColor = 'var(--cadarn-roxo)';
+        document.getElementById('dossie-upload-area').style.display = 'block';
+        document.getElementById('dossie-modal-box').style.borderColor = 'var(--cadarn-roxo)';
+
     } else {
-        fields.forEach(f => {
-            f.setAttribute('readonly', 'true'); f.setAttribute('disabled', 'true');
-            f.style.background = 'rgba(255,255,255,0.02)'; f.style.border = '1px solid transparent';
-            if (f.tagName === 'TEXTAREA') f.style.resize = 'none';
-        });
-        if (btnSalvar)   btnSalvar.style.display  = 'none';
-        if (uploadArea)  uploadArea.style.display = 'none';
-        if (btnToggle) { btnToggle.innerHTML = '✏️ Editar Informações'; btnToggle.style.color = '#c5a3ff'; btnToggle.style.borderColor = 'rgba(131,46,255,0.3)'; btnToggle.style.background = 'rgba(131,46,255,0.15)'; }
-        if (box) box.style.borderColor = 'rgba(255,193,7,0.2)';
+        // 2. SALVAR OS DADOS E BLOQUEAR NOVAMENTE
+        btn.innerHTML = '⏳ Salvando...';
+        btn.disabled = true;
+
+        // Captura o que o usuário digitou
+        const dados = {
+            admissao:         document.getElementById('dossie-admissao')?.value || '',
+            tipoContrato:     document.getElementById('dossie-contrato')?.value || '',
+            observacoesSaude: document.getElementById('dossie-saude')?.value    || '',
+            dataFimContrato:  document.getElementById('dossie-fim-contrato')?.value || '',
+            dataFormatura:    document.getElementById('dossie-formatura')?.value || ''
+        };
+
+        try {
+            // Salva no banco de dados
+            await salvarDossie(nome, dados);
+            
+            // Espelha dataFimContrato para os alertas do sistema
+            if (dados.dataFimContrato) {
+                await firestore.setDoc(firestore.doc(db, 'colaboradores', nome), { dataFimContrato: dados.dataFimContrato }, { merge: true });
+            }
+
+            showToast('Dossiê salvo com sucesso!', 'success');
+            
+            // Volta tudo ao estado bloqueado original
+            window.isDossieEditing = false;
+            btn.disabled = false;
+            
+            // Transforma o botão de volta para "Editar" (Roxo)
+            btn.innerHTML = '✏️ Editar Informações';
+            btn.style.background = 'rgba(131,46,255,0.15)';
+            btn.style.color = '#c5a3ff';
+            btn.style.borderColor = 'rgba(131,46,255,0.3)';
+
+            document.querySelectorAll('.dossie-field').forEach(f => {
+                f.setAttribute('readonly', 'true');
+                f.setAttribute('disabled', 'true');
+                f.style.background = 'rgba(255,255,255,0.02)';
+                f.style.border = '1px solid transparent';
+                if (f.tagName === 'TEXTAREA') f.style.resize = 'none';
+            });
+            document.getElementById('dossie-upload-area').style.display = 'none';
+            document.getElementById('dossie-modal-box').style.borderColor = 'rgba(255,193,7,0.2)';
+
+        } catch (e) {
+            console.error(e);
+            showToast('Erro ao salvar. Tente novamente.', 'danger');
+            btn.disabled = false;
+            btn.innerHTML = '💾 Tentar Salvar Novamente';
+        }
     }
 };
 
@@ -2042,6 +2088,7 @@ window.validarFormularioProjeto  = validarFormularioProjeto;
 window.revisarProjetoComIA       = revisarProjetoComIA;
 window.atualizarContadoresKanban = atualizarContadoresKanban;
 window.renderDossieList          = renderDossieList;
+window.gerenciarFluxoDossie      = gerenciarFluxoDossie;
 window.abrirModoReuniao          = abrirModoReuniao;
 window.fecharModoReuniao         = fecharModoReuniao;
 window.reuniaoNextSlide          = reuniaoNextSlide;
