@@ -452,7 +452,7 @@
             <button class="sp-close" onclick="fecharModalPresenca(event)" style="background: rgba(255,255,255,0.1); border: none; color: white; width: 30px; height: 30px; border-radius: 50%; cursor: pointer;">✕</button>
         </div>
 
-        <iframe id="iframe-presenca" src="" style="flex-grow: 1; width: 100%; border: none; background: transparent;"></iframe>
+        <iframe id="iframe-presenca" src="" allow="geolocation"style="flex-grow: 1; width: 100%; border: none; background: transparent;"></iframe>
     </div>
 </div>
 </div>
@@ -584,6 +584,7 @@ async function buscarEventosGCal(token) {
 <script type="module" src="js/app.js"></script>
 </body>
 </html>
+
 
 
 
