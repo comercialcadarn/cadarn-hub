@@ -40,6 +40,7 @@ let isCriandoNovo      = false;
 let etapasTemporarias  = [];
 let usuarioLogado      = localStorage.getItem('cadarn_user') || 'Sócio';
 window.userRole        = getSocioRole(localStorage.getItem('cadarn_user_email') || '');
+window.userPermissoes  = {};
 
 // Controle do Calendário
 let dataAtualCalendario = new Date();
@@ -135,8 +136,51 @@ function iniciarUI() {
         const campoFinContrato = document.getElementById('modal-valor-contrato');
         if (campoFinContrato) campoFinContrato.parentElement.parentElement.style.display = 'none';
     }
+    aplicarPermissoesUI();
+}
+// =====================================================
+// PERMISSÕES ABAC — APLICAÇÃO EM TEMPO REAL
+// =====================================================
+function atualizarPermissoesLocais() {
+    // Sócio e DEV têm acesso total independente do ABAC
+    if (window.userRole === 'Sócio' || window.userRole === 'DEV') {
+        window.userPermissoes = { verFinanceiro: true, verDossie: true, editarProjetos: true, gerenciarEquipe: true };
+        return;
+    }
+    // RH tem acesso nativo a dossiês
+    if (window.userRole === 'RH') {
+        window.userPermissoes = { verFinanceiro: false, verDossie: true, editarProjetos: false, gerenciarEquipe: false };
+    } else {
+        window.userPermissoes = {};
+    }
+    // Sobrescreve com permissões granulares salvas no Firestore
+    const emailAtual = (localStorage.getItem('cadarn_user_email') || '').toLowerCase().trim();
+    for (const colab of Object.values(bdColabs)) {
+        if ((colab.email || '').toLowerCase().trim() === emailAtual) {
+            const p = colab.permissoes || {};
+            window.userPermissoes = {
+                verFinanceiro:   window.userPermissoes.verFinanceiro   || !!p.verFinanceiro,
+                verDossie:       window.userPermissoes.verDossie       || !!p.verDossie,
+                editarProjetos:  window.userPermissoes.editarProjetos  || !!p.editarProjetos,
+                gerenciarEquipe: window.userPermissoes.gerenciarEquipe || !!p.gerenciarEquipe
+            };
+            return;
+        }
+    }
 }
 
+function aplicarPermissoesUI() {
+    atualizarPermissoesLocais();
+    const p = window.userPermissoes;
+
+    const tabFin  = document.getElementById('tab-btn-financeiro');
+    const barraFin = document.querySelector('.financial-health-bar');
+    if (tabFin)   tabFin.style.display   = p.verFinanceiro  ? '' : 'none';
+    if (barraFin) barraFin.style.display = p.verFinanceiro  ? '' : 'none';
+
+    const tabDossie = document.getElementById('tab-btn-dossie');
+    if (tabDossie) tabDossie.style.display = p.verDossie ? '' : 'none';
+}
 // =====================================================
 // LISTENERS DO FIRESTORE (TEMPO REAL)
 // =====================================================
@@ -161,7 +205,9 @@ function iniciarListeners() {
             if (change.type === 'removed') delete bdColabs[nome];
             else bdColabs[nome] = change.doc.data();
         });
+        aplicarPermissoesUI();
         renderDossieList();
+        renderWorkload();
     });
 
     inicializarDragAndDrop();
@@ -456,7 +502,7 @@ async function abrirDossieColaborador(nomeColaborador) {
                 </div>
             </div>
 
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:25px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-bottom:25px;">
                 <div>
                     <label style="font-size:10px;color:var(--cadarn-cinza);text-transform:uppercase;font-weight:700;display:block;margin-bottom:6px;">📅 Data de Admissão</label>
                     <input type="date" id="dossie-admissao" class="dossie-field" value="${dossieData.admissao || ''}" readonly style="width:100%;background:rgba(255,255,255,0.02);border:1px solid transparent;color:#fff;padding:10px;border-radius:8px;font-size:14px;outline:none;transition:0.3s;">
@@ -471,11 +517,20 @@ async function abrirDossieColaborador(nomeColaborador) {
                         <option value="Freelancer" ${dossieData.tipoContrato === 'Freelancer'    ? 'selected' : ''}>Freelancer</option>
                     </select>
                 </div>
+                <div>
+                    <label style="font-size:10px;color:var(--cadarn-cinza);text-transform:uppercase;font-weight:700;display:block;margin-bottom:6px;">📅 Fim do Contrato</label>
+                    <input type="date" id="dossie-fim-contrato" class="dossie-field" value="${dossieData.dataFimContrato || ''}" readonly style="width:100%;background:rgba(255,255,255,0.02);border:1px solid transparent;color:#fff;padding:10px;border-radius:8px;font-size:14px;outline:none;transition:0.3s;">
+                </div>
             </div>
 
             <div style="margin-bottom:20px;">
                 <label style="font-size:10px;color:var(--cadarn-cinza);text-transform:uppercase;font-weight:700;display:block;margin-bottom:6px;">📝 Observações de Saúde / Bem-estar</label>
                 <textarea id="dossie-saude" class="dossie-field" readonly placeholder="Nenhuma observação registrada..." style="width:100%;background:rgba(255,255,255,0.02);border:1px solid transparent;color:#fff;padding:10px;border-radius:8px;font-size:14px;resize:none;min-height:80px;outline:none;transition:0.3s;">${dossieData.observacoesSaude || ''}</textarea>
+            </div>
+
+            <div style="margin-bottom:20px;">
+                <label style="font-size:10px;color:var(--cadarn-cinza);text-transform:uppercase;font-weight:700;display:block;margin-bottom:6px;">🎓 Previsão de Formatura <span style="color:rgba(255,255,255,0.25);font-size:9px;font-weight:400;text-transform:none;">(estagiários)</span></label>
+                <input type="date" id="dossie-formatura" class="dossie-field" value="${dossieData.dataFormatura || ''}" readonly style="width:100%;background:rgba(255,255,255,0.02);border:1px solid transparent;color:#fff;padding:10px;border-radius:8px;font-size:14px;outline:none;transition:0.3s;">
             </div>
 
             <div style="margin-bottom:25px;">
@@ -505,13 +560,19 @@ window.salvarDossieForm = async function (nomeColaborador) {
     if (btn) { btn.innerHTML = '⏳ Salvando...'; btn.disabled = true; }
 
     const dados = {
-        admissao:         document.getElementById('dossie-admissao')?.value || '',
-        tipoContrato:     document.getElementById('dossie-contrato')?.value || '',
-        observacoesSaude: document.getElementById('dossie-saude')?.value    || ''
+        admissao:         document.getElementById('dossie-admissao')?.value        || '',
+        tipoContrato:     document.getElementById('dossie-contrato')?.value        || '',
+        observacoesSaude: document.getElementById('dossie-saude')?.value           || '',
+        dataFimContrato:  document.getElementById('dossie-fim-contrato')?.value    || '',
+        dataFormatura:    document.getElementById('dossie-formatura')?.value       || ''
     };
 
     try {
         await salvarDossie(nomeColaborador, dados);
+        // Espelha dataFimContrato em 'colaboradores' para o sistema de alertas funcionar em tempo real
+        if (dados.dataFimContrato) {
+            await firestore.setDoc(firestore.doc(db, 'colaboradores', nomeColaborador), { dataFimContrato: dados.dataFimContrato }, { merge: true });
+        }
         showToast('Dossiê atualizado com sucesso!', 'success');
         window.isDossieEditing = true;
         window.toggleEditDossie();
@@ -548,6 +609,7 @@ async function processarArquivoDossie(event, nomeColaborador) {
 // CONTROLE DO MODAL DE PROJETOS
 // =====================================================
 function novoProjetoSocio() {
+    if (!window.userPermissoes?.editarProjetos) { showToast('Você não tem permissão para criar projetos.', 'danger'); return; }
     isCriandoNovo      = true;
     projetoModalAberto = 'proj_' + Date.now();
     etapasTemporarias  = [{ titulo: 'Planejamento Inicial', responsavel: '', prazo: '', status: 'pendente', kickoff: '' }];
@@ -765,6 +827,7 @@ function renderTagCloud(tags, container) {
 // =====================================================
 async function salvarProjetoSocio() {
     if (!projetoModalAberto) return;
+    if (!window.userPermissoes?.editarProjetos) { showToast('Você não tem permissão para editar projetos.', 'danger'); return; }
 
     const botaoSalvar    = document.getElementById('btn-salvar-definitivo');
     const textoOriginal  = botaoSalvar ? botaoSalvar.innerHTML : '';
@@ -873,6 +936,7 @@ function renderWorkload() {
                         <div style="font-size:16px; font-weight:800; color:white; letter-spacing:-0.5px; margin-bottom: 5px;">👤 ${sanitize(nome)}</div>
                         <div class="wl-status-badge ${statusClass}" style="margin: 0;">${statusText}</div>
                     </div>
+                    ${window.userRole === 'Sócio' ? `<button onclick="event.stopPropagation(); excluirColaborador('${sanitize(nome)}')" style="background:rgba(220,53,69,0.1);border:1px solid rgba(220,53,69,0.3);color:#ff8793;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:14px;transition:0.2s;flex-shrink:0;" onmouseover="this.style.background='rgba(220,53,69,0.25)'" onmouseout="this.style.background='rgba(220,53,69,0.1)'" title="Excluir Colaborador">🗑️</button>` : ''}
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
@@ -914,9 +978,9 @@ function renderWorkload() {
                 >
                 ${termoBusca ? `<button onclick="window._workloadBusca=''; renderWorkload();" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--cadarn-cinza);cursor:pointer;font-size:16px;">✕</button>` : ''}
             </div>
-            <button onclick="abrirModalColaborador('')" style="background: linear-gradient(135deg, var(--cadarn-roxo), #420a9a); border: 1px solid rgba(131,46,255,0.5); color: white; padding: 12px 24px; border-radius: 12px; font-weight: 800; cursor: pointer; white-space: nowrap; box-shadow: 0 4px 15px rgba(131,46,255,0.3); transition: 0.3s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+            ${window.userPermissoes?.gerenciarEquipe ? `<button onclick="abrirModalColaborador('')" style="background: linear-gradient(135deg, var(--cadarn-roxo), #420a9a); border: 1px solid rgba(131,46,255,0.5); color: white; padding: 12px 24px; border-radius: 12px; font-weight: 800; cursor: pointer; white-space: nowrap; box-shadow: 0 4px 15px rgba(131,46,255,0.3); transition: 0.3s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
                 👤+ Novo Colaborador
-            </button>
+            </button>` : ''}
         </div>
     `;
 
@@ -1250,6 +1314,46 @@ function verificarAlertasDoDia() {
         </div>
         <button onclick="this.parentElement.style.display='none'" style="background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer;font-size:18px;flex-shrink:0;">✕</button>
     `;
+
+    // ── Alerta de contratos vencendo (visível apenas para RH e Sócios) ──
+    if (window.userRole === 'RH' || window.userRole === 'Sócio') {
+        const hojeMs     = new Date().setHours(0, 0, 0, 0);
+        const em30DaysMs = hojeMs + (30 * 24 * 60 * 60 * 1000);
+        const vencendo   = [];
+
+        for (const [nome, colab] of Object.entries(bdColabs)) {
+            if (colab.dataFimContrato) {
+                const fimMs = new Date(colab.dataFimContrato).setHours(0, 0, 0, 0);
+                if (fimMs >= hojeMs && fimMs <= em30DaysMs) {
+                    const dias = Math.round((fimMs - hojeMs) / (1000 * 60 * 60 * 24));
+                    vencendo.push({ nome, dias });
+                }
+            }
+        }
+
+        let bannerContrato = document.getElementById('alerta-contrato-banner');
+        if (!bannerContrato) {
+            bannerContrato = document.createElement('div');
+            bannerContrato.id = 'alerta-contrato-banner';
+            const ref = document.getElementById('alerta-dia-banner');
+            if (ref && ref.parentNode) ref.parentNode.insertBefore(bannerContrato, ref.nextSibling);
+            else { const c = document.getElementById('conteudo-restrito'); if (c) c.prepend(bannerContrato); }
+        }
+
+        if (vencendo.length === 0) {
+            bannerContrato.style.display = 'none';
+        } else {
+            const nomes = vencendo.map(v => `<strong style="color:white;">${sanitize(v.nome)}</strong> <span style="color:rgba(255,255,255,0.5);">(${v.dias}d)</span>`).join(', ');
+            bannerContrato.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding: 12px 40px; background: rgba(255,152,0,0.1); border-bottom: 1px solid rgba(255,152,0,0.4); font-size: 13px; color: white; gap: 15px;';
+            bannerContrato.innerHTML = `
+                <div style="display:flex; align-items:center; gap:15px; flex-wrap:wrap;">
+                    <strong>📋 ${vencendo.length} contrato${vencendo.length > 1 ? 's' : ''} vencendo em até 30 dias:</strong>
+                    <span>${nomes}</span>
+                </div>
+                <button onclick="this.parentElement.style.display='none'" style="background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer;font-size:18px;flex-shrink:0;">✕</button>
+            `;
+        }
+    }
 }
 
 // =====================================================
@@ -1820,8 +1924,26 @@ window.toggleEditDossie = function () {
 // =====================================================
 // GESTÃO DE ACESSOS E COLABORADORES (IAM)
 // =====================================================
+window.excluirColaborador = async function (nome) {
+    if (window.userRole !== 'Sócio') { showToast('Apenas Sócios podem excluir colaboradores.', 'danger'); return; }
+    if (!confirm(`Deseja excluir permanentemente "${nome}"? Esta ação não pode ser desfeita.`)) return;
+    try {
+        const { doc, deleteDoc } = await import('https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js');
+        await deleteDoc(doc(db, 'colaboradores', nome));
+        delete bdColabs[nome];
+        const idx = listaColaboradores.indexOf(nome);
+        if (idx > -1) listaColaboradores.splice(idx, 1);
+        iniciarUI();
+        renderWorkload();
+        showToast(`"${nome}" removido com sucesso.`, 'success');
+    } catch (e) {
+        console.error('Erro ao excluir colaborador:', e);
+        showToast('Erro ao excluir. Tente novamente.', 'danger');
+    }
+};
 window.abrirModalColaborador = function (nome = '') {
     const isEdit = nome !== '';
+    if (!isEdit && !window.userPermissoes?.gerenciarEquipe) { showToast('Você não tem permissão para cadastrar colaboradores.', 'danger'); return; }
     document.getElementById('modal-colab-titulo').innerText = isEdit ? 'Acessos: ' + nome : 'Novo Colaborador';
 
     const inputNome = document.getElementById('modal-colab-nome');
