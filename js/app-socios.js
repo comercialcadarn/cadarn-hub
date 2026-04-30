@@ -552,36 +552,6 @@ async function abrirDossieColaborador(nomeColaborador) {
     document.body.appendChild(modalEl);
 }
 
-// ✅ BUG CORRIGIDO: apenas UMA definição de salvarDossieForm (a versão completa)
-// A versão rasa e duplicada que existia anteriormente foi removida
-window.salvarDossieForm = async function (nomeColaborador) {
-    const btn = document.getElementById('btn-salvar-dossie');
-    if (btn) { btn.innerHTML = '⏳ Salvando...'; btn.disabled = true; }
-
-    const dados = {
-        admissao:         document.getElementById('dossie-admissao')?.value        || '',
-        tipoContrato:     document.getElementById('dossie-contrato')?.value        || '',
-        observacoesSaude: document.getElementById('dossie-saude')?.value           || '',
-        dataFimContrato:  document.getElementById('dossie-fim-contrato')?.value    || '',
-        dataFormatura:    document.getElementById('dossie-formatura')?.value       || ''
-    };
-
-    try {
-        await salvarDossie(nomeColaborador, dados);
-        // Espelha dataFimContrato em 'colaboradores' para o sistema de alertas funcionar em tempo real
-        if (dados.dataFimContrato) {
-            await firestore.setDoc(firestore.doc(db, 'colaboradores', nomeColaborador), { dataFimContrato: dados.dataFimContrato }, { merge: true });
-        }
-        showToast('Dossiê atualizado com sucesso!', 'success');
-        window.isDossieEditing = true;
-        window.toggleEditDossie();
-    } catch (e) {
-        showToast('Erro ao salvar dossiê.', 'danger');
-    } finally {
-        if (btn) { btn.innerHTML = '💾 Confirmar e Salvar Alterações'; btn.disabled = false; }
-    }
-};
-
 async function processarArquivoDossie(event, nomeColaborador) {
     const file = event.target.files[0];
     if (!file) return;
@@ -1894,7 +1864,7 @@ function renderFinanceiroPremium() {
 // =====================================================
 window.isDossieEditing = false;
 
-window.gerenciarFluxoDossie = async function(nome) {
+async function gerenciarFluxoDossie(nome) {
     const btn = document.getElementById('btn-master-dossie');
     
     if (!window.isDossieEditing) {
