@@ -1159,3 +1159,95 @@ input[type=number] {
     0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
     100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
 }
+/* =========================================================
+   POLIMENTO ESTÉTICO: TRANSIÇÃO PARA MODO CLARO (LIGHT MODE)
+   ========================================================= */
+
+/* Quando o body tem a classe light-mode, as cores base mudam.
+   Abaixo estão as correções para os elementos que usavam cor fixa (white) no HTML. */
+
+body.light-mode {
+    --text-main: #1e293b; /* Texto principal cinza escuro */
+    --text-sub: #64748b; /* Texto secundário cinza médio */
+    --border-color: rgba(0, 0, 0, 0.1);
+}
+
+/* 1. Correção de Textos Brancos forçados no HTML (Modais e Cards) */
+body.light-mode .section-header-title,
+body.light-mode .card [style*="color: white"],
+body.light-mode .card [style*="color:#fff"],
+body.light-mode .modal-content [style*="color: white"],
+body.light-mode .modal-content [style*="color:#fff"],
+body.light-mode .briefing-card [style*="color: white"],
+body.light-mode .briefing-card [style*="color:var(--cadarn-branco)"],
+body.light-mode #profile-name {
+    color: var(--text-main) !important;
+}
+
+/* 2. Fundos Translúcidos de Cards e Painéis */
+body.light-mode .card,
+body.light-mode .modal-content,
+body.light-mode .briefing-card,
+body.light-mode .side-panel,
+body.light-mode .cmd-modal {
+    background: #ffffff !important;
+    border-color: rgba(0, 0, 0, 0.1) !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* 3. Inversão dos blocos internos (KPIs, Pendências) que eram "branco transparente" */
+body.light-mode .card div[style*="background: rgba(255,255,255,0.02)"],
+body.light-mode .modal-content div[style*="background: rgba(255,255,255,0.02)"],
+body.light-mode .card div[style*="background: rgba(0,0,0,0.2)"],
+body.light-mode .card div[style*="background: rgba(0,0,0,0.3)"],
+body.light-mode .briefing-news-list {
+    background: #f8fafc !important; /* Fundo cinza bem claro */
+    border-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+/* 4. Bordas divisórias finas (Linha entre tarefas e agenda) */
+body.light-mode div[style*="border-left: 1px solid rgba(255,255,255,0.05)"],
+body.light-mode div[style*="border-bottom: 1px solid rgba(255,255,255,0.05)"] {
+    border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+/* 5. Inputs de Edição no Perfil */
+body.light-mode .edit-input {
+    background: #f1f5f9 !important;
+    color: #1e293b !important;
+    border: 1px solid rgba(0,0,0,0.1) !important;
+}
+body.light-mode .edit-input:focus {
+    background: #ffffff !important;
+    border-color: var(--cadarn-roxo) !important;
+}
+
+/* 6. Cores Vibrantes Ajustadas (Para não doer os olhos no branco) */
+body.light-mode [style*="color: #ffc107"], 
+body.light-mode [style*="color:#ffc107"] {
+    color: #d97706 !important; /* Amarelo ouro escurecido */
+}
+body.light-mode [style*="color: #47e299"], 
+body.light-mode [style*="color:#47e299"] {
+    color: #059669 !important; /* Verde mais legível */
+}
+body.light-mode [style*="color: #ff8793"], 
+body.light-mode [style*="color:#ff8793"] {
+    color: #e11d48 !important; /* Vermelho mais forte */
+}
+body.light-mode [style*="color: #b68aff"], 
+body.light-mode [style*="color:#b68aff"] {
+    color: #7c3aed !important; /* Roxo mais legível */
+}
+
+/* 7. Hover em Pendências / Itens clicáveis */
+body.light-mode .card div[onclick]:hover,
+body.light-mode .modal-content div[onclick]:hover {
+    background-color: #f1f5f9 !important;
+    border-color: rgba(0,0,0,0.1) !important;
+}
+
+/* Correção para o cabeçalho do Modal de Presença */
+body.light-mode #modal-presenca .modal-content div[style*="background: rgba(0,0,0,0.8)"] {
+    background: #f8fafc !important;
+}
