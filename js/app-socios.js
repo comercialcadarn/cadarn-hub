@@ -208,6 +208,7 @@ function iniciarListeners() {
         aplicarPermissoesUI();
         renderDossieList();
         renderWorkload();
+        verificarAlertasDoDia();
     });
 
     inicializarDragAndDrop();
@@ -1297,23 +1298,25 @@ function verificarAlertasDoDia() {
         if (conteudo) conteudo.prepend(banner);
     }
 
-    if (vencendoHoje.length === 0 && atrasados.length === 0) { banner.style.display = 'none'; return; }
+   if (vencendoHoje.length === 0 && atrasados.length === 0) {
+        banner.style.display = 'none';
+    } else {
+        const partes = [];
+        if (atrasados.length > 0)    partes.push(`<strong>⚠️ ${atrasados.length} entrega${atrasados.length > 1 ? 's' : ''} atrasada${atrasados.length > 1 ? 's' : ''}</strong>`);
+        if (vencendoHoje.length > 0) partes.push(`<strong>🔥 ${vencendoHoje.length} entrega${vencendoHoje.length > 1 ? 's' : ''} vence${vencendoHoje.length > 1 ? 'm' : ''} hoje</strong>`);
 
-    const partes = [];
-    if (atrasados.length > 0)    partes.push(`<strong>⚠️ ${atrasados.length} entrega${atrasados.length > 1 ? 's' : ''} atrasada${atrasados.length > 1 ? 's' : ''}</strong>`);
-    if (vencendoHoje.length > 0) partes.push(`<strong>🔥 ${vencendoHoje.length} entrega${vencendoHoje.length > 1 ? 's' : ''} vence${vencendoHoje.length > 1 ? 'm' : ''} hoje</strong>`);
+        const cor   = atrasados.length > 0 ? 'rgba(220,53,69,0.15)' : 'rgba(255,193,7,0.1)';
+        const borda = atrasados.length > 0 ? 'rgba(220,53,69,0.4)'  : 'rgba(255,193,7,0.4)';
 
-    const cor   = atrasados.length > 0 ? 'rgba(220,53,69,0.15)' : 'rgba(255,193,7,0.1)';
-    const borda = atrasados.length > 0 ? 'rgba(220,53,69,0.4)'  : 'rgba(255,193,7,0.4)';
-
-    banner.style.cssText = `display:flex; align-items:center; justify-content:space-between; padding: 12px 40px; background:${cor}; border-bottom: 1px solid ${borda}; font-size: 13px; color: white; gap: 15px;`;
-    banner.innerHTML = `
-        <div style="display:flex; align-items:center; gap:15px; flex-wrap:wrap;">
-            ${partes.join(' &nbsp;·&nbsp; ')}
-            <span style="color:var(--cadarn-cinza); font-size:12px;">— verifique o Kanban e o Cronograma</span>
-        </div>
-        <button onclick="this.parentElement.style.display='none'" style="background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer;font-size:18px;flex-shrink:0;">✕</button>
-    `;
+        banner.style.cssText = `display:flex; align-items:center; justify-content:space-between; padding: 12px 40px; background:${cor}; border-bottom: 1px solid ${borda}; font-size: 13px; color: white; gap: 15px;`;
+        banner.innerHTML = `
+            <div style="display:flex; align-items:center; gap:15px; flex-wrap:wrap;">
+                ${partes.join(' &nbsp;·&nbsp; ')}
+                <span style="color:var(--cadarn-cinza); font-size:12px;">— verifique o Kanban e o Cronograma</span>
+            </div>
+            <button onclick="this.parentElement.style.display='none'" style="background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer;font-size:18px;flex-shrink:0;">✕</button>
+        `;
+    }
 
     // ── Alerta de contratos vencendo (visível apenas para RH e Sócios) ──
     if (window.userRole === 'RH' || window.userRole === 'Sócio') {
