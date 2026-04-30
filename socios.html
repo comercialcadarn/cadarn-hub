@@ -564,6 +564,57 @@
         cursor: not-allowed;
         filter: grayscale(100%);
     }
+    /* Estilos globais para campos de Modais */
+    .edit-input, .edit-textarea {
+        width: 100%;
+        background: rgba(0,0,0,0.4);
+        border: 1px solid rgba(255,255,255,0.1);
+        color: #fff;
+        padding: 12px 15px;
+        border-radius: 10px;
+        font-family: 'Inter', sans-serif;
+        font-size: 13px;
+        transition: all 0.3s ease;
+        outline: none;
+    }
+    .edit-textarea { min-height: 100px; resize: vertical; }
+    .edit-input:focus, .edit-textarea:focus {
+        border-color: #832EFF;
+        background: rgba(131, 46, 255, 0.05);
+        box-shadow: 0 0 15px rgba(131, 46, 255, 0.2);
+    }
+    /* Menu Suspenso (Autocomplete) */
+    .autocomplete-items {
+        position: absolute;
+        border: 1px solid rgba(131, 46, 255, 0.5);
+        background: rgba(15, 15, 20, 0.98);
+        border-radius: 10px;
+        z-index: 99999;
+        top: 100%; left: 0; right: 0;
+        max-height: 200px; overflow-y: auto;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.8);
+        backdrop-filter: blur(10px);
+        margin-top: 5px;
+    }
+    .autocomplete-items div {
+        padding: 12px 15px; cursor: pointer; color: white; font-size: 13px; font-family: 'Inter', sans-serif;
+        border-bottom: 1px solid rgba(255,255,255,0.05); transition: 0.2s;
+    }
+    .autocomplete-items div:hover, .autocomplete-active {
+        background: rgba(131, 46, 255, 0.2) !important;
+    }
+    /* Linha demarcadora do Dia Atual no Gantt */
+    .gantt-day-col.hoje {
+        background: rgba(131, 46, 255, 0.15) !important;
+        position: relative;
+    }
+    .gantt-day-col.hoje::after {
+        content: ''; position: absolute;
+        top: 100%; left: 50%; transform: translateX(-50%);
+        width: 2px; height: 100vh; /* Desce pela tabela toda */
+        background: rgba(131, 46, 255, 0.4);
+        z-index: 1; pointer-events: none;
+    }
     </style>
 </head>
 <body>
