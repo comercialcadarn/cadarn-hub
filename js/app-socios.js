@@ -487,7 +487,7 @@ async function abrirDossieColaborador(nomeColaborador) {
     modalEl.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.8);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);';
     modalEl.onclick = (e) => { if (e.target === modalEl) modalEl.remove(); };
 
-    const canEdit = window.userRole === 'Sócio' || window.userRole === 'RH';
+    const canEdit = window.userRole === 'Sócio' || window.userRole === 'RH' || window.userRole === 'DEV';
 
     modalEl.innerHTML = `
         <div id="dossie-modal-box" style="background:rgba(10,10,15,0.99);border:1px solid rgba(255,193,7,0.2);border-radius:20px;padding:35px;width:90%;max-width:600px;max-height:85vh;overflow-y:auto;" onclick="event.stopPropagation()">
