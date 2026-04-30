@@ -119,7 +119,13 @@
     /* ───────────────────────────────────────────
        BARRA DE COMANDO (DASHBOARD CTRL)
     ─────────────────────────────────────────── */
-    .dashboard-ctrl {
+    /* Limpeza de focos nativos do navegador */
+    input:focus, textarea:focus, select:focus {
+        outline: none !important;
+        border-color: rgba(131, 46, 255, 0.6) !important;
+        box-shadow: 0 0 10px rgba(131, 46, 255, 0.2);
+    }
+        .dashboard-ctrl {
         background: var(--glass);
         border: 1px solid var(--glass-border);
         border-radius: 16px; padding: 15px 25px;
@@ -332,6 +338,9 @@
         color: #ffffff;
         margin-bottom: 6px;
         line-height: 1.3;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     /* Barra de progresso das tarefas no card */
@@ -472,6 +481,37 @@
     .toast-danger  { border-left: 4px solid #dc3545; }
     .toast-warning { border-left: 4px solid #ffc107; }
     .toast-info    { border-left: 4px solid #4cc9f0; }
+        
+/* Estilos base e animação para Modais */
+    .modal-overlay {
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        background: rgba(0,0,0,0.8); z-index: 99999;
+        display: flex; align-items: center; justify-content: center;
+        backdrop-filter: blur(5px);
+        opacity: 0; visibility: hidden; transition: 0.3s ease;
+        cursor: pointer; /* Indica que clicar fora fecha */
+    }
+    .modal-overlay.active {
+        opacity: 1; visibility: visible;
+    }
+    .modal-content {
+        cursor: default; /* Remove o cursor de fechar no conteúdo */
+        transform: translateY(30px); transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .modal-overlay.active .modal-content {
+        transform: translateY(0);
+    }
+@media (max-width: 1024px) {
+        .kanban-socio-board { grid-template-columns: repeat(2, 1fr); }
+        .dashboard-ctrl { flex-direction: column; align-items: stretch; }
+        .nav-tabs { overflow-x: auto; white-space: nowrap; }
+        header { flex-direction: column; gap: 15px; text-align: center; }
+    }
+    @media (max-width: 768px) {
+        .kanban-socio-board { grid-template-columns: 1fr; }
+        .workload-grid { grid-template-columns: 1fr; }
+        .financial-health-bar { grid-template-columns: 1fr; }
+    }
     </style>
 </head>
 <body>
