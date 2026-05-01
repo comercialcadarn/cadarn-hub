@@ -98,7 +98,13 @@ firestore = { collection, onSnapshot, doc, setDoc, getDocs };
                 const d = docSnap.data();
                 if ((d.email || '').toLowerCase().trim() === user.email.toLowerCase().trim()) {
                     const cargo = d.cargo || '';
-                    if (['RH', 'DEV', 'Sócio'].includes(cargo)) role = cargo;
+                   if (['RH', 'DEV', 'Sócio'].includes(cargo)) {
+    role = cargo;
+} else {
+    // Cargos comuns (Estagiário, Analista): libera acesso se tiver ao menos 1 permissão ABAC ativa
+    const temPermissao = Object.values(d.permissoes || {}).some(v => v === true);
+    if (temPermissao) role = 'Colaborador';
+}
                 }
             });
         } catch (e) { console.warn('Erro ao verificar cargo no Firestore:', e); }
@@ -199,30 +205,30 @@ function aplicarPermissoesUI() {
     atualizarPermissoesLocais();
     const p = window.userPermissoes;
 
-    // --- verFinanceiro ---
-    const tabFin   = document.getElementById('tab-btn-financeiro');
-    const barraFin = document.querySelector('.financial-health-bar');
-    if (tabFin)   tabFin.style.display   = p.verFinanceiro ? '' : 'none';
-    if (barraFin) barraFin.style.display = p.verFinanceiro ? '' : 'none';
+    // ── verFinanceiro: aba, barra do topo e campos de valor/horas no modal ──
+    const tabFin    = document.getElementById('tab-btn-financeiro');
+    const barraFin  = document.querySelector('.financial-health-bar');
+    if (tabFin)     tabFin.style.display   = p.verFinanceiro ? '' : 'none';
+    if (barraFin)   barraFin.style.display = p.verFinanceiro ? '' : 'none';
 
-    // --- verDossie ---
-    const tabDossie = document.getElementById('tab-btn-dossie');
-    if (tabDossie) tabDossie.style.display = p.verDossie ? '' : 'none';
-
-    // --- editarProjetos ---
-    const btnCriar   = document.getElementById('btn-criar-projeto');
-    const btnReuniao = document.getElementById('btn-modo-reuniao');
-    const grpImport  = document.getElementById('btn-group-import');
-    if (btnCriar)   btnCriar.style.display   = p.editarProjetos ? '' : 'none';
-    if (btnReuniao) btnReuniao.style.display = p.editarProjetos ? '' : 'none';
-    if (grpImport)  grpImport.style.display  = p.editarProjetos ? '' : 'none';
-
-    // --- gerenciarEquipe: já é tratado dentro do renderWorkload() ---
-    // (o botão "Novo Colaborador" e o lixeira já são renderizados condicionalmente)
-    // Garante re-render caso o workload já tenha sido montado
-    if (document.getElementById('workload-container')?.innerHTML) {
-        renderWorkload();
+    const campoContrato = document.getElementById('modal-valor-contrato');
+    if (campoContrato && campoContrato.parentElement?.parentElement) {
+        campoContrato.parentElement.parentElement.style.display = p.verFinanceiro ? '' : 'none';
     }
+
+    // ── verDossie: aba de dossiês ──
+    const tabDossie = document.getElementById('tab-btn-dossie');
+    if (tabDossie)  tabDossie.style.display = p.verDossie ? '' : 'none';
+
+    // ── editarProjetos: botão "Criar Projeto" e botões de importação ──
+    const btnCriar = document.querySelector('button.btn-create[onclick="novoProjetoSocio()"]');
+    if (btnCriar)   btnCriar.style.display = p.editarProjetos ? '' : 'none';
+
+    const btnImportPipe    = document.querySelector('button[onclick*="file-import-pipe"]');
+    const btnImportProj    = document.querySelector('button[onclick*="file-import-projetos"]');
+    if (btnImportPipe)  btnImportPipe.style.display  = p.editarProjetos ? '' : 'none';
+    if (btnImportProj)  btnImportProj.style.display  = p.editarProjetos ? '' : 'none';
+
 }
 // =====================================================
 // LISTENERS DO FIRESTORE (TEMPO REAL)
