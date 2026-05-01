@@ -200,13 +200,30 @@ function aplicarPermissoesUI() {
     atualizarPermissoesLocais();
     const p = window.userPermissoes;
 
-    const tabFin  = document.getElementById('tab-btn-financeiro');
+    // --- verFinanceiro ---
+    const tabFin   = document.getElementById('tab-btn-financeiro');
     const barraFin = document.querySelector('.financial-health-bar');
-    if (tabFin)   tabFin.style.display   = p.verFinanceiro  ? '' : 'none';
-    if (barraFin) barraFin.style.display = p.verFinanceiro  ? '' : 'none';
+    if (tabFin)   tabFin.style.display   = p.verFinanceiro ? '' : 'none';
+    if (barraFin) barraFin.style.display = p.verFinanceiro ? '' : 'none';
 
+    // --- verDossie ---
     const tabDossie = document.getElementById('tab-btn-dossie');
     if (tabDossie) tabDossie.style.display = p.verDossie ? '' : 'none';
+
+    // --- editarProjetos ---
+    const btnCriar   = document.getElementById('btn-criar-projeto');
+    const btnReuniao = document.getElementById('btn-modo-reuniao');
+    const grpImport  = document.getElementById('btn-group-import');
+    if (btnCriar)   btnCriar.style.display   = p.editarProjetos ? '' : 'none';
+    if (btnReuniao) btnReuniao.style.display = p.editarProjetos ? '' : 'none';
+    if (grpImport)  grpImport.style.display  = p.editarProjetos ? '' : 'none';
+
+    // --- gerenciarEquipe: já é tratado dentro do renderWorkload() ---
+    // (o botão "Novo Colaborador" e o lixeira já são renderizados condicionalmente)
+    // Garante re-render caso o workload já tenha sido montado
+    if (document.getElementById('workload-container')?.innerHTML) {
+        renderWorkload();
+    }
 }
 // =====================================================
 // LISTENERS DO FIRESTORE (TEMPO REAL)
