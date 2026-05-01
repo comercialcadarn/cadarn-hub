@@ -32,7 +32,9 @@ let db;
 let firestore = {};
 let bdProjetos = {};
 let bdColabs   = {};
+let bdPerfis   = {}; // NOVO: Armazena as matrizes de acesso dinâmicas
 let filtroResponsavel = '';
+
 
 let projetoModalAberto = null;
 let isCriandoNovo      = false;
@@ -162,47 +164,49 @@ function iniciarUI() {
 function atualizarPermissoesLocais() {
     const emailAtual = (localStorage.getItem('cadarn_user_email') || '').toLowerCase().trim();
 
+    // Estado base (Visitante restrito)
+    window.userRole = 'Visitante';
+    window.userPermissoes = { verFinanceiro: false, verDossie: false, editarProjetos: false, gerenciarEquipe: false, gerenciarPerfis: false };
+
     // ── 1. FIRESTORE É A FONTE DE VERDADE ──
-    // Procura o registro do usuário logado no bdColabs
+    let encontrouNoBanco = false;
     for (const colab of Object.values(bdColabs)) {
         if ((colab.email || '').toLowerCase().trim() !== emailAtual) continue;
+        encontrouNoBanco = true;
 
-        const cargo = colab.cargo || '';
+        const cargo = colab.cargo || 'Estagiário';
+        window.userRole = cargo;
 
-        // Cargos com acesso total
-        if (cargo === 'Sócio' || cargo === 'DEV') {
-            window.userRole = cargo;
-            window.userPermissoes = { verFinanceiro: true, verDossie: true, editarProjetos: true, gerenciarEquipe: true };
-            return;
-        }
+        // Recupera a matriz do Perfil (RBAC Dinâmico) do Hub
+        const permissoesPerfil = bdPerfis[cargo]?.permissoes || {};
 
-        // Todos os outros cargos: parte do zero e aplica RBAC + ABAC
-        window.userRole = cargo || 'Colaborador';
-        window.userPermissoes = { verFinanceiro: false, verDossie: false, editarProjetos: false, gerenciarEquipe: false };
-
-        // RBAC: RH herda verDossie pelo cargo
-        if (cargo === 'RH') {
-            window.userPermissoes.verDossie = true;
-        }
-
-        // ABAC: toggles granulares são a palavra final
+        // Recupera Permissões Individuais (ABAC Granular)
         const p = colab.permissoes || {};
-        window.userPermissoes.verFinanceiro   = !!p.verFinanceiro;
-        window.userPermissoes.verDossie       = window.userPermissoes.verDossie || !!p.verDossie;
-        window.userPermissoes.editarProjetos  = !!p.editarProjetos;
-        window.userPermissoes.gerenciarEquipe = !!p.gerenciarEquipe;
-        return;
+
+        // Regra: ABAC (Individual) sobrescreve RBAC (Perfil) se existir. Senão, assume o Perfil.
+        window.userPermissoes = {
+            verFinanceiro:   p.verFinanceiro   !== undefined ? p.verFinanceiro   : !!permissoesPerfil.verFinanceiro,
+            verDossie:       p.verDossie       !== undefined ? p.verDossie       : !!permissoesPerfil.verDossie,
+            editarProjetos:  p.editarProjetos  !== undefined ? p.editarProjetos  : !!permissoesPerfil.editarProjetos,
+            gerenciarEquipe: p.gerenciarEquipe !== undefined ? p.gerenciarEquipe : !!permissoesPerfil.gerenciarEquipe,
+            gerenciarPerfis: p.gerenciarPerfis !== undefined ? p.gerenciarPerfis : !!permissoesPerfil.gerenciarPerfis
+        };
+
+        // Trava de segurança para impedir *lockout* da plataforma
+        if (cargo === 'Sócio' || cargo === 'DEV') {
+            window.userPermissoes.gerenciarPerfis = true;
+        }
+        break;
     }
 
-    // ── 2. FALLBACK: usuário não encontrado no Firestore → usa arrays hardcoded ──
-    // Isso cobre o caso de sócios/devs que nunca foram cadastrados no modal IAM
-    const roleHardcoded = getSocioRole(emailAtual);
-    if (roleHardcoded === 'Sócio' || roleHardcoded === 'DEV' || roleHardcoded === 'RH') {
+    // ── 2. FALLBACK (Hardcode de contingência) ──
+    if (!encontrouNoBanco) {
+        const roleHardcoded = getSocioRole(emailAtual);
         window.userRole = roleHardcoded;
-        if (roleHardcoded === 'RH') {
-            window.userPermissoes = { verFinanceiro: false, verDossie: true, editarProjetos: false, gerenciarEquipe: false };
-        } else {
-            window.userPermissoes = { verFinanceiro: true, verDossie: true, editarProjetos: true, gerenciarEquipe: true };
+        if (roleHardcoded === 'Sócio' || roleHardcoded === 'DEV') {
+            window.userPermissoes = { verFinanceiro: true, verDossie: true, editarProjetos: true, gerenciarEquipe: true, gerenciarPerfis: true };
+        } else if (roleHardcoded === 'RH') {
+            window.userPermissoes.verDossie = true;
         }
     }
 }
@@ -233,7 +237,9 @@ function aplicarPermissoesUI() {
     const btnImportProj    = document.querySelector('button[onclick*="file-import-projetos"]');
     if (btnImportPipe)  btnImportPipe.style.display  = p.editarProjetos ? '' : 'none';
     if (btnImportProj)  btnImportProj.style.display  = p.editarProjetos ? '' : 'none';
-
+// Mostra/Oculta botão do Hub de Perfis
+    const btnPerfis = document.getElementById('btn-gestao-perfis');
+    if (btnPerfis) btnPerfis.style.display = p.gerenciarPerfis ? 'block' : 'none';
 }
 // =====================================================
 // LISTENERS DO FIRESTORE (TEMPO REAL)
@@ -259,6 +265,17 @@ function iniciarListeners() {
             if (change.type === 'removed') delete bdColabs[nome];
             else bdColabs[nome] = change.doc.data();
         });
+        firestore.onSnapshot(firestore.collection(db, 'perfis'), (snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+            const id = change.doc.id;
+            if (change.type === 'removed') delete bdPerfis[id];
+            else bdPerfis[id] = change.doc.data();
+        });
+        aplicarPermissoesUI();
+        if (document.getElementById('modal-gestao-perfis')?.classList.contains('active')) {
+            renderListaPerfisSidebar();
+        }
+    });
         aplicarPermissoesUI();
         renderDossieList();
         renderWorkload();
@@ -2093,7 +2110,165 @@ window.salvarColaborador = async function () {
         btnSalvar.style.opacity = '1';
     }
 };
+// =====================================================
+// GESTÃO DE PERFIS (RBAC HUB)
+// =====================================================
+window.abrirModalPerfis = function() {
+    if (!window.userPermissoes?.gerenciarPerfis) { showToast('Acesso negado ao Hub de Perfis.', 'danger'); return; }
+    document.getElementById('modal-gestao-perfis').classList.add('active');
+    document.getElementById('perfil-editor-container').style.display = 'none';
+    document.getElementById('perfil-empty-state').style.display = 'flex';
+    
+    // Alimentar Dropdown de Usuários para Vinculação
+    const select = document.getElementById('hub-select-usuarios');
+    select.innerHTML = '<option value="">Adicionar usuário a este perfil...</option>' + 
+        listaColaboradores.map(nome => `<option value="${nome}">${nome}</option>`).join('');
 
+    renderListaPerfisSidebar();
+};
+
+window.fecharModalPerfis = function(e) {
+    if (!e || e.target.classList.contains('modal-overlay') || e.target.classList.contains('sp-close')) {
+        document.getElementById('modal-gestao-perfis').classList.remove('active');
+    }
+};
+
+window.renderListaPerfisSidebar = function() {
+    const container = document.getElementById('lista-perfis-sidebar');
+    let perfis = Object.keys(bdPerfis);
+    
+    // Garante que os perfis base sempre existam visualmente, mesmo que vazios no BD
+    ['Sócio', 'DEV', 'RH', 'Analista', 'Estagiário'].forEach(p => { if(!perfis.includes(p)) perfis.push(p); });
+    perfis = [...new Set(perfis)].sort(); // Remove duplicatas
+
+    container.innerHTML = perfis.map(nomePerfil => {
+        const qtdUsers = Object.values(bdColabs).filter(c => c.cargo === nomePerfil).length;
+        const idAtivo = document.getElementById('perfil-id-atual')?.value;
+        const isActive = idAtivo === nomePerfil;
+        const bg = isActive ? 'rgba(131,46,255,0.2)' : 'transparent';
+        const border = isActive ? 'border-left: 3px solid #832EFF;' : 'border-left: 3px solid transparent;';
+        
+        return `
+        <div onclick="selecionarPerfilEdicao('${sanitize(nomePerfil)}')" style="padding: 12px 15px; margin-bottom: 5px; cursor: pointer; border-radius: 8px; background: ${bg}; ${border} transition: 0.2s;" onmouseover="this.style.background='rgba(131,46,255,0.1)'" onmouseout="this.style.background='${bg}'">
+            <div style="color: white; font-weight: 700; font-size: 13px;">${sanitize(nomePerfil)}</div>
+            <div style="color: var(--cadarn-cinza); font-size: 10px; margin-top: 3px;">👥 ${qtdUsers} usuário(s)</div>
+        </div>`;
+    }).join('');
+};
+
+window.criarNovoPerfil = function() {
+    document.getElementById('perfil-empty-state').style.display = 'none';
+    document.getElementById('perfil-editor-container').style.display = 'block';
+    
+    document.getElementById('perfil-id-atual').value = '';
+    const inputNome = document.getElementById('perfil-nome-input');
+    inputNome.value = '';
+    inputNome.disabled = false;
+    inputNome.focus();
+
+    ['fin', 'dos', 'edit', 'ger', 'admin'].forEach(id => document.getElementById(`hub-perm-${id}`).checked = false);
+    document.getElementById('hub-lista-usuarios-vinculados').innerHTML = '<div style="color:var(--cadarn-cinza); font-size:11px;">Salve o perfil antes de vincular usuários.</div>';
+};
+
+window.selecionarPerfilEdicao = function(nomePerfil) {
+    document.getElementById('perfil-empty-state').style.display = 'none';
+    document.getElementById('perfil-editor-container').style.display = 'block';
+    
+    document.getElementById('perfil-id-atual').value = nomePerfil;
+    
+    const inputNome = document.getElementById('perfil-nome-input');
+    inputNome.value = nomePerfil;
+    // Impede alteração de nome dos perfis essenciais
+    inputNome.disabled = ['Sócio', 'DEV', 'RH', 'Analista', 'Estagiário'].includes(nomePerfil);
+
+    const perm = bdPerfis[nomePerfil]?.permissoes || {};
+    document.getElementById('hub-perm-fin').checked   = !!perm.verFinanceiro;
+    document.getElementById('hub-perm-dos').checked   = !!perm.verDossie;
+    document.getElementById('hub-perm-edit').checked  = !!perm.editarProjetos;
+    document.getElementById('hub-perm-ger').checked   = !!perm.gerenciarEquipe;
+    document.getElementById('hub-perm-admin').checked = !!perm.gerenciarPerfis;
+
+    renderUsuariosDoPerfil(nomePerfil);
+    renderListaPerfisSidebar(); // Atualiza highlight
+};
+
+window.renderUsuariosDoPerfil = function(nomePerfil) {
+    const container = document.getElementById('hub-lista-usuarios-vinculados');
+    const usuarios = Object.entries(bdColabs).filter(([nome, dados]) => dados.cargo === nomePerfil);
+    
+    if(usuarios.length === 0) {
+        container.innerHTML = '<div style="color:var(--cadarn-cinza); font-size:11px;">Nenhum usuário vinculado a este perfil.</div>';
+        return;
+    }
+
+    container.innerHTML = usuarios.map(([nome, dados]) => `
+        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+            <div style="font-size: 12px; color: white;">👤 ${sanitize(nome)}</div>
+            <button onclick="removerUsuarioDoPerfil('${sanitize(nome)}')" style="background: rgba(220,53,69,0.1); border: none; color: #ff8793; width: 22px; height: 22px; border-radius: 4px; cursor: pointer;">✕</button>
+        </div>
+    `).join('');
+};
+
+window.salvarPerfilHub = async function() {
+    const idAtual = document.getElementById('perfil-id-atual').value;
+    const nomeNovo = document.getElementById('perfil-nome-input').value.trim();
+    
+    if (!nomeNovo) { showToast('Nome do perfil é obrigatório', 'warning'); return; }
+    
+    const perfilRef = idAtual || nomeNovo; // Se é novo, usa o nome digitado como ID
+
+    const permissoes = {
+        verFinanceiro:   document.getElementById('hub-perm-fin').checked,
+        verDossie:       document.getElementById('hub-perm-dos').checked,
+        editarProjetos:  document.getElementById('hub-perm-edit').checked,
+        gerenciarEquipe: document.getElementById('hub-perm-ger').checked,
+        gerenciarPerfis: document.getElementById('hub-perm-admin').checked
+    };
+
+    const btn = document.getElementById('btn-salvar-perfil');
+    btn.innerHTML = '⏳ Salvando...'; btn.disabled = true;
+
+    try {
+        await firestore.setDoc(firestore.doc(db, 'perfis', perfilRef), { nome: nomeNovo, permissoes }, { merge: true });
+        
+        // Se trocou o nome, precisaríamos migrar (complexo para NoSQL, então bloqueamos a troca de ID, mantemos apenas o ID como Chave).
+        document.getElementById('perfil-id-atual').value = perfilRef;
+        showToast('Perfil atualizado. Efeito propagado a todos os usuários.', 'success');
+        renderListaPerfisSidebar();
+    } catch(e) {
+        console.error(e);
+        showToast('Erro ao salvar Perfil.', 'danger');
+    } finally {
+        btn.innerHTML = '💾 Salvar Alterações Globais'; btn.disabled = false;
+    }
+};
+
+window.vincularUsuarioAoPerfilAtual = async function() {
+    const nomePerfil = document.getElementById('perfil-id-atual').value;
+    const select = document.getElementById('hub-select-usuarios');
+    const nomeUsuario = select.value;
+
+    if (!nomePerfil) { showToast('Salve o perfil antes de vincular usuários.', 'warning'); return; }
+    if (!nomeUsuario) return;
+
+    try {
+        await firestore.setDoc(firestore.doc(db, 'colaboradores', nomeUsuario), { cargo: nomePerfil }, { merge: true });
+        showToast(`Usuário vinculado a ${nomePerfil}`, 'success');
+        select.value = '';
+        renderUsuariosDoPerfil(nomePerfil);
+        renderListaPerfisSidebar();
+    } catch(e) { showToast('Erro ao vincular usuário.', 'danger'); }
+};
+
+window.removerUsuarioDoPerfil = async function(nomeUsuario) {
+    const nomePerfil = document.getElementById('perfil-id-atual').value;
+    try {
+        // Remove jogando para o perfil base "Estagiário"
+        await firestore.setDoc(firestore.doc(db, 'colaboradores', nomeUsuario), { cargo: 'Estagiário' }, { merge: true });
+        renderUsuariosDoPerfil(nomePerfil);
+        renderListaPerfisSidebar();
+    } catch(e) { showToast('Erro ao remover usuário.', 'danger'); }
+};
 // =====================================================
 // ✅ EXPOSIÇÃO GLOBAL CONSOLIDADA (sem duplicatas)
 // =====================================================
@@ -2127,6 +2302,13 @@ window.processarArquivoDossie    = processarArquivoDossie;
 window.abrirModalDiaCalendario   = abrirModalDiaCalendario;
 window.fecharModalDiaCalendario  = fecharModalDiaCalendario;
 window.verificarAlertasDoDia     = verificarAlertasDoDia;
+window.abrirModalPerfis = abrirModalPerfis;
+window.fecharModalPerfis = fecharModalPerfis;
+window.criarNovoPerfil = criarNovoPerfil;
+window.selecionarPerfilEdicao = selecionarPerfilEdicao;
+window.salvarPerfilHub = salvarPerfilHub;
+window.vincularUsuarioAoPerfilAtual = vincularUsuarioAoPerfilAtual;
+window.removerUsuarioDoPerfil = removerUsuarioDoPerfil;
 
 // =====================================================
 // INIT
