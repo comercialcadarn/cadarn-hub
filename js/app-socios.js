@@ -162,41 +162,30 @@ function iniciarUI() {
 function atualizarPermissoesLocais() {
     const emailAtual = (localStorage.getItem('cadarn_user_email') || '').toLowerCase().trim();
 
-    // ── Sócio e DEV hardcoded: acesso total imutável ──
-    // Usa getSocioRole com o email ATUAL (nunca o window.userRole stale)
-    const roleHardcoded = getSocioRole(emailAtual);
-    if (roleHardcoded === 'Sócio' || roleHardcoded === 'DEV') {
-        window.userRole = roleHardcoded;
-        window.userPermissoes = { verFinanceiro: true, verDossie: true, editarProjetos: true, gerenciarEquipe: true };
-        return;
-    }
-
-    // ── Reset: parte do zero para todos os outros ──
-    window.userPermissoes = { verFinanceiro: false, verDossie: false, editarProjetos: false, gerenciarEquipe: false };
-
-    // ── Busca o cargo e os toggles ATUAIS do Firestore (bdColabs) ──
+    // ── 1. FIRESTORE É A FONTE DE VERDADE ──
+    // Procura o registro do usuário logado no bdColabs
     for (const colab of Object.values(bdColabs)) {
         if ((colab.email || '').toLowerCase().trim() !== emailAtual) continue;
 
         const cargo = colab.cargo || '';
 
-        // Cargos privilegiados salvos no Firestore
+        // Cargos com acesso total
         if (cargo === 'Sócio' || cargo === 'DEV') {
             window.userRole = cargo;
             window.userPermissoes = { verFinanceiro: true, verDossie: true, editarProjetos: true, gerenciarEquipe: true };
             return;
         }
 
-        // Atualiza o role com o cargo atual do Firestore (corrige valor stale)
+        // Todos os outros cargos: parte do zero e aplica RBAC + ABAC
         window.userRole = cargo || 'Colaborador';
+        window.userPermissoes = { verFinanceiro: false, verDossie: false, editarProjetos: false, gerenciarEquipe: false };
 
-        // RBAC: baseline do cargo (RH sempre herda verDossie)
+        // RBAC: RH herda verDossie pelo cargo
         if (cargo === 'RH') {
             window.userPermissoes.verDossie = true;
         }
 
-        // ABAC: os toggles são a PALAVRA FINAL para as demais permissões
-        // (para verDossie, o toggle pode ADICIONAR mas não pode remover o que o cargo RH já garantiu)
+        // ABAC: toggles granulares são a palavra final
         const p = colab.permissoes || {};
         window.userPermissoes.verFinanceiro   = !!p.verFinanceiro;
         window.userPermissoes.verDossie       = window.userPermissoes.verDossie || !!p.verDossie;
@@ -205,7 +194,17 @@ function atualizarPermissoesLocais() {
         return;
     }
 
-    // Usuário não encontrado no bdColabs ainda (ex: primeira carga): mantém zerado
+    // ── 2. FALLBACK: usuário não encontrado no Firestore → usa arrays hardcoded ──
+    // Isso cobre o caso de sócios/devs que nunca foram cadastrados no modal IAM
+    const roleHardcoded = getSocioRole(emailAtual);
+    if (roleHardcoded === 'Sócio' || roleHardcoded === 'DEV' || roleHardcoded === 'RH') {
+        window.userRole = roleHardcoded;
+        if (roleHardcoded === 'RH') {
+            window.userPermissoes = { verFinanceiro: false, verDossie: true, editarProjetos: false, gerenciarEquipe: false };
+        } else {
+            window.userPermissoes = { verFinanceiro: true, verDossie: true, editarProjetos: true, gerenciarEquipe: true };
+        }
+    }
 }
 function aplicarPermissoesUI() {
     atualizarPermissoesLocais();
