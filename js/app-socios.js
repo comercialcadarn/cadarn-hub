@@ -70,8 +70,7 @@ async function initSegurancaSocios() {
     const { initializeApp }              = await import('https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js');
     const { getAuth, onAuthStateChanged } = await import('https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js');
     const { getFirestore, collection, onSnapshot, doc, setDoc, getDocs } = await import('https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js');
-    
-    firestore = { collection, onSnapshot, doc, setDoc, getDocs };
+firestore = { collection, onSnapshot, doc, setDoc, getDocs };
 
     const firebaseConfig = {
         apiKey:            'AIzaSyAnClCbOU3JRBehpGvrKj8RrcS86lyl3gg',
