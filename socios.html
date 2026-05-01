@@ -680,21 +680,21 @@
                     <option value="">Toda a Equipe</option>
                 </select>
 
-                <div style="display: flex; gap: 8px;">
-                    <input type="file" id="file-import-pipe" accept=".csv" style="display:none" onchange="importarDados(event, 'pipe')">
-                    <input type="file" id="file-import-projetos" accept=".csv" style="display:none" onchange="importarDados(event, 'projetos')">
-                    <button class="btn-import" onclick="document.getElementById('file-import-pipe').click()" title="Importar pipeline via CSV">📥 Pipe</button>
-                    <button class="btn-import" onclick="document.getElementById('file-import-projetos').click()" title="Importar projetos via CSV">📂 Projetos</button>
-                    <button class="btn-import" onclick="exportarProjetosCSV()" title="Exportar todos os projetos como CSV">📤 Exportar</button>
-                </div>
+                <div id="btn-group-import" style="display: flex; gap: 8px;">
+    <input type="file" id="file-import-pipe" accept=".csv" style="display:none" onchange="importarDados(event, 'pipe')">
+    <input type="file" id="file-import-projetos" accept=".csv" style="display:none" onchange="importarDados(event, 'projetos')">
+    <button class="btn-import" onclick="document.getElementById('file-import-pipe').click()" title="Importar pipeline via CSV">📥 Pipe</button>
+    <button class="btn-import" onclick="document.getElementById('file-import-projetos').click()" title="Importar projetos via CSV">📂 Projetos</button>
+    <button class="btn-import" onclick="exportarProjetosCSV()" title="Exportar todos os projetos como CSV">📤 Exportar</button>
+</div>
 
-                <button onclick="abrirModoReuniao()" style="background: linear-gradient(135deg, #832EFF, #420a9a); color: white; border: 1px solid rgba(131,46,255,0.5); padding: 10px 18px; border-radius: 10px; font-size: 13px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(131, 46, 255, 0.3); transition: 0.3s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 25px rgba(131, 46, 255, 0.5)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(131, 46, 255, 0.3)';">
-                    🎤 Modo Reunião
-                </button>
+                <button id="btn-modo-reuniao" onclick="abrirModoReuniao()" style="background: linear-gradient(135deg, #832EFF, #420a9a); color: white; border: 1px solid rgba(131,46,255,0.5); padding: 10px 18px; border-radius: 10px; font-size: 13px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(131, 46, 255, 0.3); transition: 0.3s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 25px rgba(131, 46, 255, 0.5)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(131, 46, 255, 0.3)';">
+    🎤 Modo Reunião
+</button>
 
-                <button class="btn-create" onclick="novoProjetoSocio()">
-                    <span>+</span> Criar Projeto
-                </button>
+                <button id="btn-criar-projeto" class="btn-create" onclick="novoProjetoSocio()">
+    <span>+</span> Criar Projeto
+</button>
             </div>
         </div>
 
