@@ -187,8 +187,9 @@ function atualizarPermissoesLocais() {
                 return;
             }
             if (cargo === 'RH') {
-                window.userPermissoes.verDossie = true;
-            }
+    window.userRole = 'RH';
+    window.userPermissoes.verDossie = true;
+}
 
             // 2. ABAC: os toggles granulares complementam (nunca subtraem) o que o cargo já deu
             const p = colab.permissoes || {};
@@ -489,6 +490,7 @@ function atualizarContadoresKanban() {
 function verificarAcessoDossie(resourceOwnerId) {
     const role = window.userRole || 'Estagiário';
     if (role === 'Sócio' || role === 'RH' || role === 'DEV') return true;
+    if (window.userPermissoes?.verDossie) return true;
     const primeiroNome = (usuarioLogado || '').split(' ')[0].toLowerCase();
     if (resourceOwnerId && resourceOwnerId.toLowerCase().includes(primeiroNome)) return true;
     return false;
@@ -1340,7 +1342,7 @@ function verificarAlertasDoDia() {
     }
 
     // ── Alerta de contratos vencendo (visível apenas para RH e Sócios) ──
-    if (window.userRole === 'RH' || window.userRole === 'Sócio') {
+    if (window.userRole === 'RH' || window.userRole === 'Sócio' || window.userPermissoes?.verDossie) {
         const hojeMs     = new Date().setHours(0, 0, 0, 0);
         const em30DaysMs = hojeMs + (30 * 24 * 60 * 60 * 1000);
         const vencendo   = [];
@@ -1761,7 +1763,7 @@ function renderDossieList() {
     const container = document.getElementById('dossie-colab-list');
     if (!container) return;
 
-    const canAccess = window.userRole === 'Sócio' || window.userRole === 'RH' || window.userRole === 'DEV';
+    const canAccess = window.userPermissoes?.verDossie || window.userRole === 'Sócio' || window.userRole === 'RH' || window.userRole === 'DEV';
 
     if (!canAccess) {
         container.innerHTML = `
