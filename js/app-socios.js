@@ -280,6 +280,13 @@ function iniciarListeners() {
         renderDossieList();
         renderWorkload();
         verificarAlertasDoDia();
+        
+        // Se o Hub de Perfis estiver aberto, força a re-renderização das listas
+        if (document.getElementById('modal-gestao-perfis')?.classList.contains('active')) {
+            const perfilAberto = document.getElementById('perfil-id-atual')?.value;
+            if (perfilAberto) renderUsuariosDoPerfil(perfilAberto);
+            renderListaPerfisSidebar();
+        }
     });
 
     inicializarDragAndDrop();
@@ -2163,10 +2170,12 @@ window.criarNovoPerfil = function() {
     document.getElementById('perfil-id-atual').value = '';
     const inputNome = document.getElementById('perfil-nome-input');
     inputNome.value = '';
-    inputNome.disabled = false;
+    inputNome.disabled = false; // Apenas novos perfis podem ser nomeados
     inputNome.focus();
 
     ['fin', 'dos', 'edit', 'ger', 'admin'].forEach(id => document.getElementById(`hub-perm-${id}`).checked = false);
+    
+    document.getElementById('hub-select-usuarios').innerHTML = '<option value="">Salve o perfil antes de vincular...</option>';
     document.getElementById('hub-lista-usuarios-vinculados').innerHTML = '<div style="color:var(--cadarn-cinza); font-size:11px;">Salve o perfil antes de vincular usuários.</div>';
 };
 
@@ -2178,8 +2187,8 @@ window.selecionarPerfilEdicao = function(nomePerfil) {
     
     const inputNome = document.getElementById('perfil-nome-input');
     inputNome.value = nomePerfil;
-    // Impede alteração de nome dos perfis essenciais
-    inputNome.disabled = ['Sócio', 'DEV', 'RH', 'Analista', 'Estagiário'].includes(nomePerfil);
+    // TRAVA DE SEGURANÇA: Impede renomear perfis existentes para evitar quebra de ID no banco NoSQL
+    inputNome.disabled = true;
 
     const perm = bdPerfis[nomePerfil]?.permissoes || {};
     document.getElementById('hub-perm-fin').checked   = !!perm.verFinanceiro;
@@ -2189,58 +2198,36 @@ window.selecionarPerfilEdicao = function(nomePerfil) {
     document.getElementById('hub-perm-admin').checked = !!perm.gerenciarPerfis;
 
     renderUsuariosDoPerfil(nomePerfil);
-    renderListaPerfisSidebar(); // Atualiza highlight
+    renderListaPerfisSidebar();
 };
 
 window.renderUsuariosDoPerfil = function(nomePerfil) {
     const container = document.getElementById('hub-lista-usuarios-vinculados');
-    const usuarios = Object.entries(bdColabs).filter(([nome, dados]) => dados.cargo === nomePerfil);
+    const select = document.getElementById('hub-select-usuarios');
     
-    if(usuarios.length === 0) {
+    const usuariosNoPerfil = Object.entries(bdColabs).filter(([nome, dados]) => dados.cargo === nomePerfil);
+    const nomesNoPerfil = usuariosNoPerfil.map(([nome]) => nome);
+
+    // Filtra o Select para ocultar quem já pertence ao perfil
+    let optionsHtml = '<option value="">Adicionar usuário a este perfil...</option>';
+    listaColaboradores.forEach(nome => {
+        if (!nomesNoPerfil.includes(nome)) {
+            optionsHtml += `<option value="${nome}">${nome}</option>`;
+        }
+    });
+    select.innerHTML = optionsHtml;
+    
+    if(usuariosNoPerfil.length === 0) {
         container.innerHTML = '<div style="color:var(--cadarn-cinza); font-size:11px;">Nenhum usuário vinculado a este perfil.</div>';
         return;
     }
 
-    container.innerHTML = usuarios.map(([nome, dados]) => `
+    container.innerHTML = usuariosNoPerfil.map(([nome, dados]) => `
         <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
             <div style="font-size: 12px; color: white;">👤 ${sanitize(nome)}</div>
-            <button onclick="removerUsuarioDoPerfil('${sanitize(nome)}')" style="background: rgba(220,53,69,0.1); border: none; color: #ff8793; width: 22px; height: 22px; border-radius: 4px; cursor: pointer;">✕</button>
+            <button onclick="removerUsuarioDoPerfil('${sanitize(nome)}')" style="background: rgba(220,53,69,0.1); border: none; color: #ff8793; width: 22px; height: 22px; border-radius: 4px; cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='rgba(220,53,69,0.3)'" onmouseout="this.style.background='rgba(220,53,69,0.1)'">✕</button>
         </div>
     `).join('');
-};
-
-window.salvarPerfilHub = async function() {
-    const idAtual = document.getElementById('perfil-id-atual').value;
-    const nomeNovo = document.getElementById('perfil-nome-input').value.trim();
-    
-    if (!nomeNovo) { showToast('Nome do perfil é obrigatório', 'warning'); return; }
-    
-    const perfilRef = idAtual || nomeNovo; // Se é novo, usa o nome digitado como ID
-
-    const permissoes = {
-        verFinanceiro:   document.getElementById('hub-perm-fin').checked,
-        verDossie:       document.getElementById('hub-perm-dos').checked,
-        editarProjetos:  document.getElementById('hub-perm-edit').checked,
-        gerenciarEquipe: document.getElementById('hub-perm-ger').checked,
-        gerenciarPerfis: document.getElementById('hub-perm-admin').checked
-    };
-
-    const btn = document.getElementById('btn-salvar-perfil');
-    btn.innerHTML = '⏳ Salvando...'; btn.disabled = true;
-
-    try {
-        await firestore.setDoc(firestore.doc(db, 'perfis', perfilRef), { nome: nomeNovo, permissoes }, { merge: true });
-        
-        // Se trocou o nome, precisaríamos migrar (complexo para NoSQL, então bloqueamos a troca de ID, mantemos apenas o ID como Chave).
-        document.getElementById('perfil-id-atual').value = perfilRef;
-        showToast('Perfil atualizado. Efeito propagado a todos os usuários.', 'success');
-        renderListaPerfisSidebar();
-    } catch(e) {
-        console.error(e);
-        showToast('Erro ao salvar Perfil.', 'danger');
-    } finally {
-        btn.innerHTML = '💾 Salvar Alterações Globais'; btn.disabled = false;
-    }
 };
 
 window.vincularUsuarioAoPerfilAtual = async function() {
@@ -2253,8 +2240,12 @@ window.vincularUsuarioAoPerfilAtual = async function() {
 
     try {
         await firestore.setDoc(firestore.doc(db, 'colaboradores', nomeUsuario), { cargo: nomePerfil }, { merge: true });
+        
+        // Atualiza cache local instantaneamente para a UI não falhar/piscar
+        if (!bdColabs[nomeUsuario]) bdColabs[nomeUsuario] = {};
+        bdColabs[nomeUsuario].cargo = nomePerfil;
+
         showToast(`Usuário vinculado a ${nomePerfil}`, 'success');
-        select.value = '';
         renderUsuariosDoPerfil(nomePerfil);
         renderListaPerfisSidebar();
     } catch(e) { showToast('Erro ao vincular usuário.', 'danger'); }
@@ -2263,8 +2254,11 @@ window.vincularUsuarioAoPerfilAtual = async function() {
 window.removerUsuarioDoPerfil = async function(nomeUsuario) {
     const nomePerfil = document.getElementById('perfil-id-atual').value;
     try {
-        // Remove jogando para o perfil base "Estagiário"
         await firestore.setDoc(firestore.doc(db, 'colaboradores', nomeUsuario), { cargo: 'Estagiário' }, { merge: true });
+        
+        // Atualiza cache local instantaneamente para remover da lista imediatamente
+        if (bdColabs[nomeUsuario]) bdColabs[nomeUsuario].cargo = 'Estagiário';
+        
         renderUsuariosDoPerfil(nomePerfil);
         renderListaPerfisSidebar();
     } catch(e) { showToast('Erro ao remover usuário.', 'danger'); }
