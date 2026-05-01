@@ -2229,7 +2229,38 @@ window.renderUsuariosDoPerfil = function(nomePerfil) {
         </div>
     `).join('');
 };
+window.salvarPerfilHub = async function() {
+    const idAtual = document.getElementById('perfil-id-atual').value;
+    const nomeNovo = document.getElementById('perfil-nome-input').value.trim();
+    
+    if (!nomeNovo) { showToast('Nome do perfil é obrigatório', 'warning'); return; }
+    
+    const perfilRef = idAtual || nomeNovo; // Se é novo, usa o nome digitado como ID
 
+    const permissoes = {
+        verFinanceiro:   document.getElementById('hub-perm-fin').checked,
+        verDossie:       document.getElementById('hub-perm-dos').checked,
+        editarProjetos:  document.getElementById('hub-perm-edit').checked,
+        gerenciarEquipe: document.getElementById('hub-perm-ger').checked,
+        gerenciarPerfis: document.getElementById('hub-perm-admin').checked
+    };
+
+    const btn = document.getElementById('btn-salvar-perfil');
+    btn.innerHTML = '⏳ Salvando...'; btn.disabled = true;
+
+    try {
+        await firestore.setDoc(firestore.doc(db, 'perfis', perfilRef), { nome: nomeNovo, permissoes }, { merge: true });
+        
+        document.getElementById('perfil-id-atual').value = perfilRef;
+        showToast('Perfil atualizado. Efeito propagado a todos os usuários.', 'success');
+        renderListaPerfisSidebar();
+    } catch(e) {
+        console.error(e);
+        showToast('Erro ao salvar Perfil.', 'danger');
+    } finally {
+        btn.innerHTML = '💾 Salvar Alterações Globais'; btn.disabled = false;
+    }
+};
 window.vincularUsuarioAoPerfilAtual = async function() {
     const nomePerfil = document.getElementById('perfil-id-atual').value;
     const select = document.getElementById('hub-select-usuarios');
