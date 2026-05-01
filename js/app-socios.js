@@ -70,8 +70,7 @@ async function initSegurancaSocios() {
     const { initializeApp }              = await import('https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js');
     const { getAuth, onAuthStateChanged } = await import('https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js');
     const { getFirestore, collection, onSnapshot, doc, setDoc, getDocs } = await import('https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js');
-    
-    firestore = { collection, onSnapshot, doc, setDoc, getDocs };
+firestore = { collection, onSnapshot, doc, setDoc, getDocs };
 
     const firebaseConfig = {
         apiKey:            'AIzaSyAnClCbOU3JRBehpGvrKj8RrcS86lyl3gg',
@@ -91,24 +90,32 @@ async function initSegurancaSocios() {
 
     let role = getSocioRole(user.email);
 
-    // Se não está nas arrays hardcoded, consulta o cargo salvo no Firestore
+    // Usuário não está nas arrays hardcoded: consulta cargo no Firestore
     if (role === 'Visitante') {
         try {
             const snap = await firestore.getDocs(firestore.collection(db, 'colaboradores'));
+            let encontrado = false;
             snap.forEach(docSnap => {
                 const d = docSnap.data();
                 if ((d.email || '').toLowerCase().trim() === user.email.toLowerCase().trim()) {
+                    encontrado = true;
                     const cargo = d.cargo || '';
-                    if (['RH', 'DEV', 'Sócio'].includes(cargo)) role = cargo;
+                    if      (cargo === 'Sócio') role = 'Sócio';
+                    else if (cargo === 'DEV')   role = 'DEV';
+                    else if (cargo === 'RH')    role = 'RH';
+                    else                        role = cargo; // Estagiário, Analista, etc.
                 }
             });
-        } catch (e) { console.warn('Erro ao verificar cargo no Firestore:', e); }
-
-        if (role === 'Visitante') { window.location.href = 'index.html'; return; }
+            // Se não tem nenhum registro, bloqueia
+            if (!encontrado) { window.location.href = 'index.html'; return; }
+        } catch (e) {
+            console.warn('Erro ao verificar cargo:', e);
+            window.location.href = 'index.html'; return;
+        }
     }
 
     window.userRole = role;
-    usuarioLogado   = user.displayName || user.email || 'Sócio';
+    usuarioLogado   = user.displayName || user.email || 'Usuário';
     localStorage.setItem('cadarn_user',       usuarioLogado);
     localStorage.setItem('cadarn_user_email', user.email || '');
     document.getElementById('conteudo-restrito').style.display = 'block';
@@ -155,26 +162,26 @@ function iniciarUI() {
 // PERMISSÕES ABAC — APLICAÇÃO EM TEMPO REAL
 // =====================================================
 function atualizarPermissoesLocais() {
-    // Sócio e DEV: acesso total, sem consultar Firestore
+    // Sócio e DEV: acesso total, ponto final
     if (window.userRole === 'Sócio' || window.userRole === 'DEV') {
         window.userPermissoes = { verFinanceiro: true, verDossie: true, editarProjetos: true, gerenciarEquipe: true };
         return;
     }
 
-    // Base zerada para todos os outros
+    // Ponto de partida: sem nenhuma permissão
     window.userPermissoes = { verFinanceiro: false, verDossie: false, editarProjetos: false, gerenciarEquipe: false };
 
-    // Permissão nativa do role hardcoded (ex: RH da array)
+    // Permissão nativa do RH hardcoded
     if (window.userRole === 'RH') {
         window.userPermissoes.verDossie = true;
     }
 
-    // Busca o registro do usuário logado no bdColabs para aplicar cargo + toggles ABAC
+    // Busca o registro do usuário logado no Firestore para aplicar cargo + ABAC
     const emailAtual = (localStorage.getItem('cadarn_user_email') || '').toLowerCase().trim();
     for (const colab of Object.values(bdColabs)) {
         if ((colab.email || '').toLowerCase().trim() === emailAtual) {
 
-            // 1. RBAC: aplica permissões do cargo salvo no Firestore
+            // RBAC: cargo salvo no Firestore pode elevar o role
             const cargo = colab.cargo || '';
             if (cargo === 'Sócio' || cargo === 'DEV') {
                 window.userRole = cargo;
@@ -185,12 +192,13 @@ function atualizarPermissoesLocais() {
                 window.userPermissoes.verDossie = true;
             }
 
-            // 2. ABAC: os toggles granulares complementam (nunca subtraem) o que o cargo já deu
+            // ABAC: os toggles granulares funcionam para QUALQUER cargo,
+            // incluindo Estagiário e Analista — somam ao que o cargo já deu
             const p = colab.permissoes || {};
-            window.userPermissoes.verFinanceiro   = window.userPermissoes.verFinanceiro   || !!p.verFinanceiro;
-            window.userPermissoes.verDossie       = window.userPermissoes.verDossie       || !!p.verDossie;
-            window.userPermissoes.editarProjetos  = window.userPermissoes.editarProjetos  || !!p.editarProjetos;
-            window.userPermissoes.gerenciarEquipe = window.userPermissoes.gerenciarEquipe || !!p.gerenciarEquipe;
+            if (p.verFinanceiro)   window.userPermissoes.verFinanceiro   = true;
+            if (p.verDossie)       window.userPermissoes.verDossie       = true;
+            if (p.editarProjetos)  window.userPermissoes.editarProjetos  = true;
+            if (p.gerenciarEquipe) window.userPermissoes.gerenciarEquipe = true;
             return;
         }
     }
