@@ -2060,7 +2060,17 @@ window.abrirModalColaborador = function (nome = '') {
     if (isEdit && bdColabs[nome]) {
         email = bdColabs[nome].email || '';
         cargo = bdColabs[nome].cargo || 'Estagiário';
-        perms = bdColabs[nome].permissoes || {};
+        
+        // 🧠 LÓGICA DE HERANÇA: Puxa o Perfil (RBAC) e mescla com a regra individual (ABAC)
+        const permPerfil = bdPerfis[cargo]?.permissoes || {};
+        const permIndividual = bdColabs[nome].permissoes || {};
+
+        perms = {
+            verFinanceiro:   permIndividual.verFinanceiro   !== undefined ? permIndividual.verFinanceiro   : !!permPerfil.verFinanceiro,
+            verDossie:       permIndividual.verDossie       !== undefined ? permIndividual.verDossie       : !!permPerfil.verDossie,
+            editarProjetos:  permIndividual.editarProjetos  !== undefined ? permIndividual.editarProjetos  : !!permPerfil.editarProjetos,
+            gerenciarEquipe: permIndividual.gerenciarEquipe !== undefined ? permIndividual.gerenciarEquipe : !!permPerfil.gerenciarEquipe
+        };
     }
 
     document.getElementById('modal-colab-email').value      = email;
