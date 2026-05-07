@@ -2169,7 +2169,7 @@ window.renderListaPerfisSidebar = function() {
 
 window.criarNovoPerfil = function() {
     document.getElementById('perfil-empty-state').style.display = 'none';
-    document.getElementById('perfil-editor-container').style.display = 'block';
+    document.getElementById('perfil-editor-container').style.display = 'flex';
     
     document.getElementById('perfil-id-atual').value = '';
     const inputNome = document.getElementById('perfil-nome-input');
@@ -2185,7 +2185,7 @@ window.criarNovoPerfil = function() {
 
 window.selecionarPerfilEdicao = function(nomePerfil) {
     document.getElementById('perfil-empty-state').style.display = 'none';
-    document.getElementById('perfil-editor-container').style.display = 'block';
+    document.getElementById('perfil-editor-container').style.display = 'flex';
     
     document.getElementById('perfil-id-atual').value = nomePerfil;
     
@@ -2274,27 +2274,6 @@ window.vincularUsuarioAoPerfilAtual = async function() {
     if (!nomeUsuario) return;
 
     try {
-        await firestore.setDoc(firestore.doc(db, 'colaboradores', nomeUsuario), { cargo: nomePerfil }, { merge: true });
-        
-        // Atualiza cache local instantaneamente para a UI não falhar/piscar
-        if (!bdColabs[nomeUsuario]) bdColabs[nomeUsuario] = {};
-        bdColabs[nomeUsuario].cargo = nomePerfil;
-
-        showToast(`Usuário vinculado a ${nomePerfil}`, 'success');
-        renderUsuariosDoPerfil(nomePerfil);
-        renderListaPerfisSidebar();
-    } catch(e) { showToast('Erro ao vincular usuário.', 'danger'); }
-};
-
-window.vincularUsuarioAoPerfilAtual = async function() {
-    const nomePerfil = document.getElementById('perfil-id-atual').value;
-    const select = document.getElementById('hub-select-usuarios');
-    const nomeUsuario = select.value;
-
-    if (!nomePerfil) { showToast('Salve o perfil antes de vincular usuários.', 'warning'); return; }
-    if (!nomeUsuario) return;
-
-    try {
         // INCLUÍDO: Campos de auditoria para passar nas regras de segurança do Firestore
         const payload = { 
             cargo: nomePerfil,
@@ -2344,6 +2323,7 @@ window.removerUsuarioDoPerfil = async function(nomeUsuario) {
         showToast('Erro de permissão ao remover usuário.', 'danger'); 
     }
 };
+
 // =====================================================
 // ✅ EXPOSIÇÃO GLOBAL CONSOLIDADA (sem duplicatas)
 // =====================================================
@@ -2377,13 +2357,6 @@ window.processarArquivoDossie    = processarArquivoDossie;
 window.abrirModalDiaCalendario   = abrirModalDiaCalendario;
 window.fecharModalDiaCalendario  = fecharModalDiaCalendario;
 window.verificarAlertasDoDia     = verificarAlertasDoDia;
-window.abrirModalPerfis = abrirModalPerfis;
-window.fecharModalPerfis = fecharModalPerfis;
-window.criarNovoPerfil = criarNovoPerfil;
-window.selecionarPerfilEdicao = selecionarPerfilEdicao;
-window.salvarPerfilHub = salvarPerfilHub;
-window.vincularUsuarioAoPerfilAtual = vincularUsuarioAoPerfilAtual;
-window.removerUsuarioDoPerfil = removerUsuarioDoPerfil;
 
 // =====================================================
 // INIT
