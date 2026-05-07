@@ -245,12 +245,10 @@ function aplicarPermissoesUI() {
 // LISTENERS DO FIRESTORE (TEMPO REAL)
 // =====================================================
 function iniciarListeners() {
-    // Tratador de falha global para evitar quebra silenciosa da interface
-    const tratadorDeErro = (err) => {
-        console.error("Erro no Listener (Firebase):", err);
-        if (err.code === 'permission-denied') {
-            showToast('Aviso: Restrição de acesso detectada pelo servidor.', 'danger');
-        }
+    // Tratador silencioso: Não joga popups vermelhos na tela. 
+    // O sistema sobrevive usando o fallback local se o Firebase bloquear a leitura.
+    const tratadorDeErro = (tabela) => (err) => {
+        console.warn(`🔒 Firebase bloqueou acesso à tabela '${tabela}':`, err.message);
     };
 
     // 1. OUVINTE DE PROJETOS
@@ -266,9 +264,9 @@ function iniciarListeners() {
         renderCalendario();
         renderTeamAvailability();
         renderFinancialHealth();
-    }, tratadorDeErro);
+    }, tratadorDeErro('projetos'));
 
-    // 2. OUVINTE DE COLABORADORES (Desvinculado de Perfis)
+    // 2. OUVINTE DE COLABORADORES
     firestore.onSnapshot(firestore.collection(db, 'colaboradores'), (snapshot) => {
         snapshot.docChanges().forEach((change) => {
             const nome = change.doc.id;
@@ -286,9 +284,9 @@ function iniciarListeners() {
             if (perfilAberto) renderUsuariosDoPerfil(perfilAberto);
             renderListaPerfisSidebar();
         }
-    }, tratadorDeErro);
+    }, tratadorDeErro('colaboradores'));
 
-    // 3. OUVINTE DE PERFIS (RBAC) - Agora roda limpo em paralelo
+    // 3. OUVINTE DE PERFIS (RBAC)
     firestore.onSnapshot(firestore.collection(db, 'perfis'), (snapshot) => {
         snapshot.docChanges().forEach((change) => {
             const id = change.doc.id;
@@ -299,7 +297,7 @@ function iniciarListeners() {
         if (document.getElementById('modal-gestao-perfis')?.classList.contains('active')) {
             renderListaPerfisSidebar();
         }
-    }, tratadorDeErro);
+    }, tratadorDeErro('perfis'));
 
     inicializarDragAndDrop();
     verificarAlertasDoDia();
