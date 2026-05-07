@@ -245,6 +245,15 @@ function aplicarPermissoesUI() {
 // LISTENERS DO FIRESTORE (TEMPO REAL)
 // =====================================================
 function iniciarListeners() {
+    // Tratador de falha global para evitar quebra silenciosa da interface
+    const tratadorDeErro = (err) => {
+        console.error("Erro no Listener (Firebase):", err);
+        if (err.code === 'permission-denied') {
+            showToast('Aviso: Restrição de acesso detectada pelo servidor.', 'danger');
+        }
+    };
+
+    // 1. OUVINTE DE PROJETOS
     firestore.onSnapshot(firestore.collection(db, 'projetos'), (snapshot) => {
         snapshot.docChanges().forEach((change) => {
             const id = change.doc.id;
@@ -257,15 +266,30 @@ function iniciarListeners() {
         renderCalendario();
         renderTeamAvailability();
         renderFinancialHealth();
-    });
+    }, tratadorDeErro);
 
+    // 2. OUVINTE DE COLABORADORES (Desvinculado de Perfis)
     firestore.onSnapshot(firestore.collection(db, 'colaboradores'), (snapshot) => {
         snapshot.docChanges().forEach((change) => {
             const nome = change.doc.id;
             if (change.type === 'removed') delete bdColabs[nome];
             else bdColabs[nome] = change.doc.data();
         });
-        firestore.onSnapshot(firestore.collection(db, 'perfis'), (snapshot) => {
+        aplicarPermissoesUI();
+        renderDossieList();
+        renderWorkload();
+        verificarAlertasDoDia();
+        
+        // Atualiza a tela de Perfis caso ela esteja aberta
+        if (document.getElementById('modal-gestao-perfis')?.classList.contains('active')) {
+            const perfilAberto = document.getElementById('perfil-id-atual')?.value;
+            if (perfilAberto) renderUsuariosDoPerfil(perfilAberto);
+            renderListaPerfisSidebar();
+        }
+    }, tratadorDeErro);
+
+    // 3. OUVINTE DE PERFIS (RBAC) - Agora roda limpo em paralelo
+    firestore.onSnapshot(firestore.collection(db, 'perfis'), (snapshot) => {
         snapshot.docChanges().forEach((change) => {
             const id = change.doc.id;
             if (change.type === 'removed') delete bdPerfis[id];
@@ -275,24 +299,11 @@ function iniciarListeners() {
         if (document.getElementById('modal-gestao-perfis')?.classList.contains('active')) {
             renderListaPerfisSidebar();
         }
-    });
-        aplicarPermissoesUI();
-        renderDossieList();
-        renderWorkload();
-        verificarAlertasDoDia();
-        
-        // Se o Hub de Perfis estiver aberto, força a re-renderização das listas
-        if (document.getElementById('modal-gestao-perfis')?.classList.contains('active')) {
-            const perfilAberto = document.getElementById('perfil-id-atual')?.value;
-            if (perfilAberto) renderUsuariosDoPerfil(perfilAberto);
-            renderListaPerfisSidebar();
-        }
-    });
+    }, tratadorDeErro);
 
     inicializarDragAndDrop();
     verificarAlertasDoDia();
 }
-
 // =====================================================
 // TROCA DE ABAS
 // =====================================================
@@ -2282,17 +2293,63 @@ window.vincularUsuarioAoPerfilAtual = async function() {
     } catch(e) { showToast('Erro ao vincular usuário.', 'danger'); }
 };
 
+window.vincularUsuarioAoPerfilAtual = async function() {
+    const nomePerfil = document.getElementById('perfil-id-atual').value;
+    const select = document.getElementById('hub-select-usuarios');
+    const nomeUsuario = select.value;
+
+    if (!nomePerfil) { showToast('Salve o perfil antes de vincular usuários.', 'warning'); return; }
+    if (!nomeUsuario) return;
+
+    try {
+        // INCLUÍDO: Campos de auditoria para passar nas regras de segurança do Firestore
+        const payload = { 
+            cargo: nomePerfil,
+            atualizadoEm: Date.now(),
+            atualizadoPor: usuarioLogado
+        };
+        await firestore.setDoc(firestore.doc(db, 'colaboradores', nomeUsuario), payload, { merge: true });
+        
+        // Atualiza cache local
+        if (!bdColabs[nomeUsuario]) bdColabs[nomeUsuario] = {};
+        bdColabs[nomeUsuario].cargo = nomePerfil;
+
+        showToast(`Usuário vinculado a ${nomePerfil}`, 'success');
+        renderUsuariosDoPerfil(nomePerfil);
+        renderListaPerfisSidebar();
+    } catch(e) { 
+        console.error(e);
+        showToast('Erro de permissão ao vincular usuário no banco.', 'danger'); 
+    }
+};
+
 window.removerUsuarioDoPerfil = async function(nomeUsuario) {
     const nomePerfil = document.getElementById('perfil-id-atual').value;
+    
+    // TRAVA DE SEGURANÇA: Impede o administrador de remover a si mesmo e travar o sistema
+    if (nomeUsuario === usuarioLogado || nomeUsuario === usuarioLogado.split(' ')[0]) {
+        showToast('Segurança: Você não pode remover seus próprios acessos.', 'danger');
+        return;
+    }
+
     try {
-        await firestore.setDoc(firestore.doc(db, 'colaboradores', nomeUsuario), { cargo: 'Estagiário' }, { merge: true });
+        // INCLUÍDO: Campos de auditoria para passar nas regras de segurança do Firestore
+        const payload = { 
+            cargo: 'Estagiário', // Remove do perfil atual e joga para o base
+            atualizadoEm: Date.now(),
+            atualizadoPor: usuarioLogado
+        };
+        await firestore.setDoc(firestore.doc(db, 'colaboradores', nomeUsuario), payload, { merge: true });
         
-        // Atualiza cache local instantaneamente para remover da lista imediatamente
+        // Atualiza cache local
         if (bdColabs[nomeUsuario]) bdColabs[nomeUsuario].cargo = 'Estagiário';
         
         renderUsuariosDoPerfil(nomePerfil);
         renderListaPerfisSidebar();
-    } catch(e) { showToast('Erro ao remover usuário.', 'danger'); }
+    } catch(e) { 
+        console.error(e);
+        showToast('Erro de permissão ao remover usuário.', 'danger'); 
+    }
 };
 // =====================================================
 // ✅ EXPOSIÇÃO GLOBAL CONSOLIDADA (sem duplicatas)
