@@ -245,13 +245,9 @@ function aplicarPermissoesUI() {
 // LISTENERS DO FIRESTORE (TEMPO REAL)
 // =====================================================
 function iniciarListeners() {
-    // Tratador silencioso: Não joga popups vermelhos na tela. 
-    // O sistema sobrevive usando o fallback local se o Firebase bloquear a leitura.
-    const tratadorDeErro = (tabela) => (err) => {
-        console.warn(`🔒 Firebase bloqueou acesso à tabela '${tabela}':`, err.message);
-    };
+    const erroListener = (tag) => (err) => console.warn(`🔒 Acesso restrito Firebase [${tag}]:`, err.message);
 
-    // 1. OUVINTE DE PROJETOS
+    // Listener de Projetos
     firestore.onSnapshot(firestore.collection(db, 'projetos'), (snapshot) => {
         snapshot.docChanges().forEach((change) => {
             const id = change.doc.id;
@@ -264,9 +260,9 @@ function iniciarListeners() {
         renderCalendario();
         renderTeamAvailability();
         renderFinancialHealth();
-    }, tratadorDeErro('projetos'));
+    }, erroListener('projetos'));
 
-    // 2. OUVINTE DE COLABORADORES
+    // Listener de Colaboradores (Independente)
     firestore.onSnapshot(firestore.collection(db, 'colaboradores'), (snapshot) => {
         snapshot.docChanges().forEach((change) => {
             const nome = change.doc.id;
@@ -278,15 +274,14 @@ function iniciarListeners() {
         renderWorkload();
         verificarAlertasDoDia();
         
-        // Atualiza a tela de Perfis caso ela esteja aberta
+        // Atualiza UI do Hub se estiver aberto
         if (document.getElementById('modal-gestao-perfis')?.classList.contains('active')) {
-            const perfilAberto = document.getElementById('perfil-id-atual')?.value;
-            if (perfilAberto) renderUsuariosDoPerfil(perfilAberto);
-            renderListaPerfisSidebar();
+            const perfilAtivo = document.getElementById('perfil-id-atual')?.value;
+            if (perfilAtivo) renderUsuariosDoPerfil(perfilAtivo);
         }
-    }, tratadorDeErro('colaboradores'));
+    }, erroListener('colaboradores'));
 
-    // 3. OUVINTE DE PERFIS (RBAC)
+    // Listener de Perfis (Independente)
     firestore.onSnapshot(firestore.collection(db, 'perfis'), (snapshot) => {
         snapshot.docChanges().forEach((change) => {
             const id = change.doc.id;
@@ -297,7 +292,7 @@ function iniciarListeners() {
         if (document.getElementById('modal-gestao-perfis')?.classList.contains('active')) {
             renderListaPerfisSidebar();
         }
-    }, tratadorDeErro('perfis'));
+    }, erroListener('perfis'));
 
     inicializarDragAndDrop();
     verificarAlertasDoDia();
