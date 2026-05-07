@@ -987,7 +987,8 @@
                 <button onclick="reuniaoNextSlide()" style="background: transparent; border: none; color: var(--cadarn-cinza); font-size: 16px; cursor: pointer; font-weight: 600; padding: 10px; transition: 0.2s;" onmouseover="this.style.color='white'" onmouseout="this.style.color='var(--cadarn-cinza)'">Próximo →</button>
             </div>
         </div>
-<div class="modal-content" style="display: flex; max-width: 950px; width: 95%; height: 85vh; background: rgba(15,15,15,0.99); border: 1px solid var(--cadarn-roxo); box-shadow: 0 30px 80px rgba(0,0,0,0.9); border-radius: 20px; overflow: hidden;" onclick="event.stopPropagation()">
+<div id="modal-gestao-perfis" class="modal-overlay" onclick="fecharModalPerfis(event)">
+            <div class="modal-content" style="display: flex; max-width: 950px; width: 95%; height: 85vh; background: rgba(15,15,15,0.99); border: 1px solid var(--cadarn-roxo); box-shadow: 0 30px 80px rgba(0,0,0,0.9); border-radius: 20px; overflow: hidden;" onclick="event.stopPropagation()">
                 
                 <div style="width: 280px; background: rgba(0,0,0,0.3); border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column;">
                     <div style="padding: 25px; border-bottom: 1px solid rgba(255,255,255,0.05);">
