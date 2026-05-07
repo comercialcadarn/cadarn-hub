@@ -987,76 +987,76 @@
                 <button onclick="reuniaoNextSlide()" style="background: transparent; border: none; color: var(--cadarn-cinza); font-size: 16px; cursor: pointer; font-weight: 600; padding: 10px; transition: 0.2s;" onmouseover="this.style.color='white'" onmouseout="this.style.color='var(--cadarn-cinza)'">Próximo →</button>
             </div>
         </div>
-<div id="modal-gestao-perfis" class="modal-overlay" onclick="fecharModalPerfis(event)">
-            <div class="modal-content" style="display: flex; max-width: 900px; width: 95%; height: 80vh; background: rgba(15,15,15,0.98); border: 1px solid var(--cadarn-roxo); box-shadow: 0 30px 80px rgba(0,0,0,0.9); border-radius: 20px; overflow: hidden;" onclick="event.stopPropagation()">
+<div class="modal-content" style="display: flex; max-width: 950px; width: 95%; height: 85vh; background: rgba(15,15,15,0.99); border: 1px solid var(--cadarn-roxo); box-shadow: 0 30px 80px rgba(0,0,0,0.9); border-radius: 20px; overflow: hidden;" onclick="event.stopPropagation()">
                 
-                <div style="width: 300px; background: rgba(0,0,0,0.4); border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column;">
-                    <div style="padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                        <h3 style="color: white; font-size: 16px; font-weight: 800; margin-bottom: 10px;">🛡️ Hub de Perfis</h3>
-                        <button onclick="criarNovoPerfil()" style="width: 100%; padding: 10px; background: rgba(131,46,255,0.2); border: 1px dashed #832EFF; color: #c5a3ff; border-radius: 8px; font-weight: 700; cursor: pointer;">+ Criar Novo Perfil</button>
+                <div style="width: 280px; background: rgba(0,0,0,0.3); border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column;">
+                    <div style="padding: 25px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <h3 style="color: white; font-size: 16px; font-weight: 800; margin-bottom: 15px; font-family: 'Outfit';">🛡️ Hub de Perfis</h3>
+                        <button onclick="criarNovoPerfil()" style="width: 100%; padding: 12px; background: rgba(131,46,255,0.15); border: 1px dashed #832EFF; color: #c5a3ff; border-radius: 10px; font-weight: 700; cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='rgba(131,46,255,0.25)'" onmouseout="this.style.background='rgba(131,46,255,0.15)'">+ Criar Novo Perfil</button>
                     </div>
-                    <div id="lista-perfis-sidebar" style="flex-grow: 1; overflow-y: auto; padding: 10px;">
+                    <div id="lista-perfis-sidebar" style="flex-grow: 1; overflow-y: auto; padding: 15px;">
                         </div>
                 </div>
 
-                <div style="flex-grow: 1; padding: 30px; overflow-y: auto; display: flex; flex-direction: column; position: relative;">
-                    <button class="sp-close" onclick="fecharModalPerfis()" style="position: absolute; top: 20px; right: 20px;">✕</button>
+                <div style="flex-grow: 1; display: flex; flex-direction: column; position: relative; background: radial-gradient(circle at top right, rgba(131, 46, 255, 0.05), transparent);">
+                    <button class="sp-close" onclick="fecharModalPerfis()" style="position: absolute; top: 20px; right: 20px; z-index: 10;">✕</button>
                     
-                    <div id="perfil-editor-container" style="display: none;">
-                        <input type="hidden" id="perfil-id-atual">
-                        
-                        <label style="font-size:10px; color:var(--cadarn-cinza); text-transform:uppercase; font-weight:700;">Nome do Perfil</label>
-                        <input type="text" id="perfil-nome-input" class="edit-input" style="font-size: 24px; font-weight: 800; background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.1); padding: 5px 0; margin-bottom: 30px; border-radius: 0;">
+                    <div id="perfil-editor-container" style="display: none; flex-direction: column; height: 100%;">
+                        <div style="padding: 30px 40px 20px 40px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                            <label style="font-size:10px; color:var(--cadarn-cinza); text-transform:uppercase; font-weight:700; letter-spacing: 1px;">Configurando Acessos de:</label>
+                            <input type="hidden" id="perfil-id-atual">
+                            <input type="text" id="perfil-nome-input" class="edit-input" style="font-size: 28px; font-weight: 900; background: transparent; border: none; padding: 5px 0; color: white; font-family: 'Outfit';" placeholder="Nome do Perfil">
+                        </div>
 
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
-                            <div>
-                                <h4 style="color: #c5a3ff; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px;">⚙️ Matriz de Permissões</h4>
-                                <div style="display: flex; flex-direction: column; gap: 10px;">
-                                    <div class="perm-row">
-                                        <div class="perm-info"><span class="perm-title">💰 Dashboard Financeiro</span></div>
-                                        <label class="premium-toggle"><input type="checkbox" id="hub-perm-fin"><span class="toggle-slider"></span></label>
-                                    </div>
-                                    <div class="perm-row">
-                                        <div class="perm-info"><span class="perm-title">🔒 Dossiês de RH</span></div>
-                                        <label class="premium-toggle"><input type="checkbox" id="hub-perm-dos"><span class="toggle-slider"></span></label>
-                                    </div>
-                                    <div class="perm-row">
-                                        <div class="perm-info"><span class="perm-title">✏️ Editar Projetos</span></div>
-                                        <label class="premium-toggle"><input type="checkbox" id="hub-perm-edit"><span class="toggle-slider"></span></label>
-                                    </div>
-                                    <div class="perm-row">
-                                        <div class="perm-info"><span class="perm-title">👥 Gerenciar Equipe</span></div>
-                                        <label class="premium-toggle"><input type="checkbox" id="hub-perm-ger"><span class="toggle-slider"></span></label>
-                                    </div>
-                                    <div class="perm-row" style="border-color: #832EFF;">
-                                        <div class="perm-info"><span class="perm-title" style="color:#c5a3ff;">🛡️ Gerenciar Perfis (Admin)</span></div>
-                                        <label class="premium-toggle"><input type="checkbox" id="hub-perm-admin"><span class="toggle-slider"></span></label>
+                        <div style="flex-grow: 1; overflow-y: auto; padding: 30px 40px;">
+                            <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 40px;">
+                                <div>
+                                    <h4 style="color: #c5a3ff; font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 20px; font-weight: 800;">⚙️ Matriz de Permissões (RBAC)</h4>
+                                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                                        <div class="perm-row">
+                                            <div class="perm-info"><span class="perm-title">💰 Dashboard Financeiro</span><span class="perm-desc">Visualiza Fees e Margens.</span></div>
+                                            <label class="premium-toggle"><input type="checkbox" id="hub-perm-fin"><span class="toggle-slider"></span></label>
+                                        </div>
+                                        <div class="perm-row">
+                                            <div class="perm-info"><span class="perm-title">🔒 Dossiês de RH</span><span class="perm-desc">Acesso a dados confidenciais.</span></div>
+                                            <label class="premium-toggle"><input type="checkbox" id="hub-perm-dos"><span class="toggle-slider"></span></label>
+                                        </div>
+                                        <div class="perm-row">
+                                            <div class="perm-info"><span class="perm-title">✏️ Gestão de Projetos</span><span class="perm-desc">Criar/Editar/Arquivar.</span></div>
+                                            <label class="premium-toggle"><input type="checkbox" id="hub-perm-edit"><span class="toggle-slider"></span></label>
+                                        </div>
+                                        <div class="perm-row">
+                                            <div class="perm-info"><span class="perm-title">👥 Gerenciar Equipe</span><span class="perm-desc">Modificar dados de membros.</span></div>
+                                            <label class="premium-toggle"><input type="checkbox" id="hub-perm-ger"><span class="toggle-slider"></span></label>
+                                        </div>
+                                        <div class="perm-row" style="border-color: rgba(131,46,255,0.3); background: rgba(131,46,255,0.05);">
+                                            <div class="perm-info"><span class="perm-title" style="color:#c5a3ff;">🛡️ Administrador de Perfis</span><span class="perm-desc">Acesso a este Hub de Gestão.</span></div>
+                                            <label class="premium-toggle"><input type="checkbox" id="hub-perm-admin"><span class="toggle-slider"></span></label>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div>
-                                <h4 style="color: #47e299; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px;">👥 Usuários Vinculados</h4>
-                                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                                    <select id="hub-select-usuarios" class="edit-input" style="flex-grow: 1; padding: 8px;">
-                                        <option value="">Adicionar usuário a este perfil...</option>
-                                    </select>
-                                    <button onclick="vincularUsuarioAoPerfilAtual()" style="background: rgba(71,226,153,0.2); border: 1px solid #47e299; color: #47e299; border-radius: 8px; padding: 0 15px; font-weight: 700; cursor: pointer;">+</button>
-                                </div>
-                                <div id="hub-lista-usuarios-vinculados" style="display: flex; flex-direction: column; gap: 5px; max-height: 250px; overflow-y: auto;">
+                                <div>
+                                    <h4 style="color: #47e299; font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 20px; font-weight: 800;">👥 Usuários neste Perfil</h4>
+                                    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                                        <select id="hub-select-usuarios" class="edit-input" style="flex-grow: 1; font-size: 12px;"></select>
+                                        <button onclick="vincularUsuarioAoPerfilAtual()" style="background: #47e299; color: #000; border: none; border-radius: 8px; width: 35px; font-weight: 900; cursor: pointer;">+</button>
                                     </div>
+                                    <div id="hub-lista-usuarios-vinculados" style="display: flex; flex-direction: column; gap: 8px;"></div>
+                                </div>
                             </div>
                         </div>
 
-                        <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: flex-end;">
-                            <button id="btn-salvar-perfil" onclick="salvarPerfilHub()" style="background: linear-gradient(135deg, var(--cadarn-roxo), #420a9a); color: white; padding: 12px 30px; border: none; border-radius: 12px; font-weight: 800; cursor: pointer; box-shadow: 0 5px 20px rgba(131,46,255,0.3); transition: 0.2s;">💾 Salvar Alterações Globais</button>
+                        <div style="padding: 20px 40px; background: rgba(0,0,0,0.4); border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 11px; color: var(--cadarn-cinza);">⚠️ Alterações afetam todos os membros do perfil.</span>
+                            <button id="btn-salvar-perfil" onclick="salvarPerfilHub()" style="background: linear-gradient(135deg, #198754, #157347); color: white; padding: 14px 40px; border: none; border-radius: 12px; font-weight: 800; cursor: pointer; box-shadow: 0 10px 30px rgba(25,135,84,0.3); transition: 0.3s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">💾 SALVAR ALTERAÇÕES GLOBAIS</button>
                         </div>
                     </div>
                     
-                    <div id="perfil-empty-state" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--cadarn-cinza);">
-                        <div style="font-size: 50px; margin-bottom: 15px;">🛡️</div>
-                        <h3>Selecione um Perfil</h3>
-                        <p style="font-size: 12px;">Crie ou edite as matrizes de acesso da plataforma.</p>
+                    <div id="perfil-empty-state" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--cadarn-cinza); text-align: center;">
+                        <div style="font-size: 60px; margin-bottom: 20px; filter: drop-shadow(0 0 20px rgba(131,46,255,0.3));">🛡️</div>
+                        <h3 style="color: white; font-family: 'Outfit'; font-weight: 800;">Hub de Governança</h3>
+                        <p style="font-size: 13px; max-width: 300px; line-height: 1.5;">Selecione um perfil à esquerda para auditar permissões ou vincular novos colaboradores.</p>
                     </div>
                 </div>
             </div>
